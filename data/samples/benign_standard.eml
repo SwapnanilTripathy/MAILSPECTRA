@@ -1,0 +1,64 @@
+Delivered-To: victim-analyst@defense.org
+Received: by 2002:a05:6512:128b:0:0:0:0 with SMTP id v11csp1234567lfd;
+        Sat, 29 Aug 2026 14:22:15 -0700 (PDT)
+X-Google-Smtp-Source: AGHT+IF9q0Z1mQj71A==
+X-Received: by 2002:a17:902:cc8b:b0:1c2:887:44e2 with SMTP id e11-20020a170902cc8b00b001c2088744e2mr3829141plb.38.1724966535123;
+        Sat, 29 Aug 2026 14:22:15 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1724966535; cv=none;
+        d=google.com; s=arc-20240605;
+        b=NlT1...
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@legitcorp.com header.s=s2024 header.b=X9c8;
+       spf=pass (google.com: domain of newsletter@legitcorp.com designates 198.51.100.25 as permitted sender) smtp.mailfrom=newsletter@legitcorp.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=legitcorp.com
+Return-Path: <newsletter@legitcorp.com>
+Received: from mail-out.legitcorp.com (mail-out.legitcorp.com. [198.51.100.25])
+        by mx.google.com with ESMTPS id o18si3928198plk.12.2026.08.29.14.22.14
+        for <victim-analyst@defense.org>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Sat, 29 Aug 2026 14:22:14 -0700 (PDT)
+Received-SPF: pass (google.com: domain of newsletter@legitcorp.com designates 198.51.100.25 as permitted sender) client-ip=198.51.100.25;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@legitcorp.com header.s=s2024;
+       spf=pass (google.com: domain of newsletter@legitcorp.com designates 198.51.100.25 as permitted sender) smtp.mailfrom=newsletter@legitcorp.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=legitcorp.com
+Received: from internal-relay.corp.local (10.0.1.50) by mail-out.legitcorp.com (Postfix) with ESMTPA id 4VqZ9m4N2zz20;
+        Sat, 29 Aug 2026 21:22:10 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=legitcorp.com; s=s2024;
+        h=content-type:mime-version:subject:message-id:to:from:date;
+        bh=abcdef1234567890=;
+        b=X9c8...
+From: "LegitCorp Quarterly" <newsletter@legitcorp.com>
+To: "Forensic Analyst" <victim-analyst@defense.org>
+Subject: Q3 Engineering Security Update & Best Practices
+Date: Sat, 29 Aug 2026 21:22:08 +0000
+Message-ID: <20260829212208.4VqZ9m4N2zz20@mail-out.legitcorp.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="----=_Part_12345_67890"
+
+------=_Part_12345_67890
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Hello Security Team,
+
+Here is our Q3 engineering summary and defensive infrastructure updates.
+Please review the official security guidelines at https://docs.legitcorp.com/security/2026.
+
+Best regards,
+LegitCorp Engineering
+------=_Part_12345_67890
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Hello Security Team,</h2>
+  <p>Here is our Q3 engineering summary and defensive infrastructure updates.</p>
+  <p>Please review the official security guidelines at <a href="https://docs.legitcorp.com/security/2026">LegitCorp Security Docs</a>.</p>
+  <br>
+  <p>Best regards,<br>LegitCorp Engineering</p>
+</body>
+</html>
+------=_Part_12345_67890--

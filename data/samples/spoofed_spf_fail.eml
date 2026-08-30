@@ -1,0 +1,43 @@
+Received: from mail-in.victim-corp.com (mail-in.victim-corp.com [192.0.2.100])
+	by internal-mx.victim-corp.local with ESMTP id 5K89J201;
+	Sun, 30 Aug 2026 01:20:10 +0000
+Authentication-Results: mail-in.victim-corp.com;
+	spf=fail (mail-in.victim-corp.com: domain of ceo@victim-corp.com does not designate 185.220.101.5 as permitted sender) smtp.mailfrom=ceo@victim-corp.com;
+	dkim=none;
+	dmarc=fail (p=REJECT) header.from=victim-corp.com
+Received: from tor-exit.anonymous-vpn.org (tor-exit.anonymous-vpn.org [185.220.101.5])
+	by mail-in.victim-corp.com with ESMTP id 98124FA2;
+	Sun, 30 Aug 2026 01:20:02 +0000
+From: "CEO John Doe" <ceo@victim-corp.com>
+To: "Finance Team" <finance@victim-corp.com>
+Reply-To: "Executive Office" <john.doe.exec@gmail.com>
+Return-Path: <spoofed-bounce@attacker-hub.net>
+Subject: URGENT: Wire Transfer & Overdue Invoice Settlement
+Date: Sun, 30 Aug 2026 01:19:40 +0000
+Message-ID: <invoice-wire-20260830-112@victim-corp.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="====_NextPart_9981726354"
+
+--====_NextPart_9981726354
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Finance Team,
+
+Please find attached the overdue supplier invoice that requires immediate settlement via wire transfer before end of day.
+
+Review the attached document and process the payment right away.
+
+Regards,
+John Doe
+Chief Executive Officer
+--====_NextPart_9981726354
+Content-Type: application/vnd.ms-word.document.macroEnabled.12; name="Overdue_Invoice_Payment.docm"
+Content-Disposition: attachment; filename="Overdue_Invoice_Payment.docm"
+Content-Transfer-Encoding: base64
+
+UEsDBBQAAAAIAAAAIQDqT2h1cQEAAJADAAAQAAAAd29yZC9kb2N1bWVudC54bWyUk01v0zAUhu9I
+/Ieqd1LStiupRVo6DdQ2DYl1j9s4cbG1sQ3p72fSpW5ICJ5s33v8eN5v4k8fD/vN0Z+W3Xo4b3vV
+bZ7ffZ7fd5uXvXm3fd/152331599333333333333333333333333333333333333333333333333
+3333333333333333333333333333333333333333333333333333333333333333333333333333
+--====_NextPart_9981726354--

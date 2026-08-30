@@ -1,0 +1,145 @@
+{
+  "_metadata": {
+    "dataset_name": "DeepTrace Demonstration Threat Corpus",
+    "dataset_type": "DEMONSTRATION_TRAINING_DATA",
+    "description": "Curated demonstration dataset covering 7 email threat categories for reproducible baseline model training. NOTE: This dataset is designed for development, testing, and pipeline verification; it is structured to be seamlessly replaced with public benchmark corpora (e.g. Enron, Nazario, CEAS, Fraud Email Corpus) in production.",
+    "total_samples": 21,
+    "classes": [
+      "LEGITIMATE",
+      "PHISHING",
+      "BUSINESS_EMAIL_COMPROMISE",
+      "IMPERSONATION",
+      "FRAUD",
+      "CREDENTIAL_HARVESTING",
+      "SUSPICIOUS"
+    ]
+  },
+  "samples": [
+    {
+      "id": "DEMO-LEGIT-01",
+      "label": "LEGITIMATE",
+      "description": "Standard engineering team quarterly newsletter with valid SPF/DKIM/DMARC",
+      "raw_eml": "Received: from mail-out.legitcorp.com (mail-out.legitcorp.com [198.51.100.25]) by mx.google.com with ESMTPS id o18si3928198plk.12;\nSat, 29 Aug 2026 14:22:14 -0700\nAuthentication-Results: mx.google.com; spf=pass smtp.mailfrom=newsletter@legitcorp.com; dkim=pass header.i=@legitcorp.com; dmarc=pass header.from=legitcorp.com\nFrom: \"LegitCorp Quarterly\" <newsletter@legitcorp.com>\nTo: \"Team\" <team@legitcorp.com>\nSubject: Q3 Engineering Security Update & Best Practices\nDate: Sat, 29 Aug 2026 21:22:08 +0000\nMessage-ID: <20260829212208.4VqZ9m4N2zz20@mail-out.legitcorp.com>\nContent-Type: text/plain; charset=\"utf-8\"\n\nHello Team,\n\nPlease find attached the summary of our Q3 engineering benchmarks.\nReview the security checklist at https://docs.legitcorp.com/security/2026.\n\nBest regards,\nEngineering Ops"
+    },
+    {
+      "id": "DEMO-LEGIT-02",
+      "label": "LEGITIMATE",
+      "description": "Legitimate calendar meeting invitation from verified colleague",
+      "raw_eml": "Received: from mail.partner-firm.com (mail.partner-firm.com [198.51.100.30]) by mx.partner.com with ESMTPS id p82910;\nFri, 28 Aug 2026 10:00:00 +0000\nAuthentication-Results: mx.partner.com; spf=pass smtp.mailfrom=alice@partner-firm.com; dkim=pass header.i=@partner-firm.com; dmarc=pass header.from=partner-firm.com\nFrom: \"Alice Smith\" <alice@partner-firm.com>\nTo: \"Bob Jones\" <bob@defense.org>\nSubject: Project Sync & Architecture Review Meeting\nDate: Fri, 28 Aug 2026 10:00:00 +0000\nMessage-ID: <invite-20260828-100@partner-firm.com>\nContent-Type: text/plain; charset=\"utf-8\"\n\nHi Bob,\n\nLooking forward to our sync next Tuesday regarding the API deployment roadmap.\nLet me know if 2 PM UTC works for your team.\n\nRegards,\nAlice Smith\nPartner Firm"
+    },
+    {
+      "id": "DEMO-LEGIT-03",
+      "label": "LEGITIMATE",
+      "description": "Standard automated CI/CD build success notification",
+      "raw_eml": "Received: from ci-runner.devops-cloud.io (ci-runner.devops-cloud.io [198.51.100.35]) by mx.devops.com with ESMTPS id ci88192;\nThu, 27 Aug 2026 18:30:00 +0000\nAuthentication-Results: mx.devops.com; spf=pass smtp.mailfrom=notifications@devops-cloud.io; dkim=pass header.i=@devops-cloud.io; dmarc=pass header.from=devops-cloud.io\nFrom: \"DevOps CI System\" <notifications@devops-cloud.io>\nTo: \"Developers\" <devs@defense.org>\nSubject: Build Passed: Release v2.4.0 Container Image\nDate: Thu, 27 Aug 2026 18:30:00 +0000\nMessage-ID: <build-pass-8821@devops-cloud.io>\nContent-Type: text/plain; charset=\"utf-8\"\n\nAll 142 pipeline tests completed successfully.\nView build logs at https://ci.devops-cloud.io/builds/98214.\nStatus: Green"
+    },
+    {
+      "id": "DEMO-PHISH-01",
+      "label": "PHISHING",
+      "description": "Urgent fake bank alert with direct IP host login link",
+      "raw_eml": "Received: from malicious-vps.attacker-net.org (malicious-vps.attacker-net.org [203.0.113.88]) by mx.target.com with ESMTPS id ph101;\nSun, 30 Aug 2026 01:15:15 +0530\nAuthentication-Results: mx.target.com; spf=fail smtp.mailfrom=security-alert@global-banking-corp.com; dkim=fail; dmarc=fail header.from=global-banking-corp.com\nFrom: \"Global Banking Security\" <security-alert@global-banking-corp.com>\nReply-To: \"Collector\" <harvest@darkweb-relay.ru>\nReturn-Path: <bounces@darkweb-relay.ru>\nTo: <victim@target.com>\nSubject: URGENT: Immediate Action Required - Unauthorized Access Detected!\nDate: Sun, 30 Aug 2026 01:14:55 +0530\nMessage-ID: <phish-99128@attacker-net.org>\nContent-Type: text/html; charset=\"utf-8\"\n\n<html><body><p>Dear Customer, your corporate bank account has been suspended.</p><p><a href=\"http://198.51.100.45/portal/login.php?session=928472910\">VERIFY CREDENTIALS NOW</a></p><p>Failure to verify will lead to permanent restriction.</p></body></html>"
+    },
+    {
+      "id": "DEMO-PHISH-02",
+      "label": "PHISHING",
+      "description": "Fake cloud storage document share phishing link via URL shortener",
+      "raw_eml": "Received: from rogue-relay.evil-mail.top (rogue-relay.evil-mail.top [185.220.101.99]) by mx.victim.com with SMTP id rs9921;\nSat, 29 Aug 2026 15:00:00 +0000\nAuthentication-Results: mx.victim.com; spf=fail smtp.mailfrom=doc-share@cloud-storage-corp.xyz; dkim=none; dmarc=fail header.from=cloud-storage-corp.xyz\nFrom: \"Cloud Storage Team\" <doc-share@cloud-storage-corp.xyz>\nTo: <victim@victim.com>\nSubject: Action Required: You have received a confidential shared document\nDate: Sat, 29 Aug 2026 15:00:00 +0000\nMessage-ID: <docshare-88192@cloud-storage-corp.xyz>\nContent-Type: text/html; charset=\"utf-8\"\n\n<html><body><p>A secure PDF document has been shared with you.</p><a href=\"https://bit.ly/3xFakeDocLogin\">Click here to view document online</a><p>Expires in 24 hours.</p></body></html>"
+    },
+    {
+      "id": "DEMO-PHISH-03",
+      "label": "PHISHING",
+      "description": "Webmail quota exceeded warning phishing attack",
+      "raw_eml": "Received: from spam-host.attacker.xyz (spam-host.attacker.xyz [194.26.29.11]) by mx.company.com with SMTP id quota1;\nFri, 28 Aug 2026 11:20:00 +0000\nAuthentication-Results: mx.company.com; spf=fail smtp.mailfrom=helpdesk@company.com; dkim=none; dmarc=fail header.from=company.com\nFrom: \"IT Helpdesk\" <helpdesk@company.com>\nReply-To: \"Support Center\" <helpdesk-support@freemail-xyz.click>\nTo: <employee@company.com>\nSubject: Critical Alert: Your Mailbox Quota has Exceeded 99%\nDate: Fri, 28 Aug 2026 11:20:00 +0000\nMessage-ID: <quota-warning-112@company.com>\nContent-Type: text/html; charset=\"utf-8\"\n\n<html><body><p>Your incoming messages are pending delivery due to exceeded quota.</p><a href=\"http://203.0.113.190/webmail/upgrade_quota.php\">Click here immediately to increase storage</a></body></html>"
+    },
+    {
+      "id": "DEMO-BEC-01",
+      "label": "BUSINESS_EMAIL_COMPROMISE",
+      "description": "Urgent executive wire transfer and invoice settlement request",
+      "raw_eml": "Received: from mail-relay.suspicious-vpn.net (mail-relay.suspicious-vpn.net [185.220.101.5]) by mail-in.victim-corp.com with ESMTP id bec1;\nSun, 30 Aug 2026 01:20:00 +0000\nAuthentication-Results: mail-in.victim-corp.com; spf=fail smtp.mailfrom=ceo@victim-corp.com; dkim=none; dmarc=fail header.from=victim-corp.com\nFrom: \"CEO John Doe\" <ceo@victim-corp.com>\nReply-To: \"Executive Office\" <john.doe.exec@gmail.com>\nReturn-Path: <spoofed-bounce@attacker-hub.net>\nTo: \"Finance Team\" <finance@victim-corp.com>\nSubject: URGENT: Wire Transfer & Overdue Invoice Settlement\nDate: Sun, 30 Aug 2026 01:19:40 +0000\nMessage-ID: <invoice-wire-20260830-112@victim-corp.com>\nContent-Type: text/plain; charset=\"utf-8\"\n\nFinance Team,\n\nPlease find the overdue supplier invoice that requires immediate settlement via wire transfer before end of day.\nI am in meetings all afternoon so handle this personally and send me the swift confirmation.\n\nRegards,\nJohn Doe\nChief Executive Officer"
+    },
+    {
+      "id": "DEMO-BEC-02",
+      "label": "BUSINESS_EMAIL_COMPROMISE",
+      "description": "Urgent supplier bank account routing change request",
+      "raw_eml": "Received: from vps-mailer.offshore.net (vps-mailer.offshore.net [193.106.191.22]) by mx.corporate.com with ESMTP id bec2;\nSat, 29 Aug 2026 09:15:00 +0000\nAuthentication-Results: mx.corporate.com; spf=fail smtp.mailfrom=accounts@key-vendor.com; dkim=none; dmarc=fail header.from=key-vendor.com\nFrom: \"Accounts Receivable - Key Vendor\" <accounts@key-vendor.com>\nReply-To: \"Vendor Treasury\" <vendor.treasury.dept@mail.com>\nTo: <accounting@corporate.com>\nSubject: Important: Updated Banking Details for Pending Remittance\nDate: Sat, 29 Aug 2026 09:15:00 +0000\nMessage-ID: <remittance-change-99@key-vendor.com>\nContent-Type: text/plain; charset=\"utf-8\"\n\nDear Accounting Team,\n\nPlease note our primary bank account details have changed due to our annual audit.\nKindly update the IBAN and routing number for all future invoice payments immediately.\nDo not send payment to the previous bank account.\n\nBest regards,\nTreasury Operations"
+    },
+    {
+      "id": "DEMO-BEC-03",
+      "label": "BUSINESS_EMAIL_COMPROMISE",
+      "description": "Executive request for employee W-2 and payroll direct deposit change",
+      "raw_eml": "Received: from anon-mailer.network (anon-mailer.network [45.154.255.80]) by mx.enterprise.com with ESMTP id bec3;\nFri, 28 Aug 2026 14:40:00 +0000\nAuthentication-Results: mx.enterprise.com; spf=fail smtp.mailfrom=cfo@enterprise.com; dkim=none; dmarc=fail header.from=enterprise.com\nFrom: \"CFO Sarah Jenkins\" <cfo@enterprise.com>\nReply-To: \"Sarah Jenkins Personal\" <sarah.jenkins.corp@outlook.com>\nTo: <hr-payroll@enterprise.com>\nSubject: Urgent: Payroll Direct Deposit Change for Next Pay Cycle\nDate: Fri, 28 Aug 2026 14:40:00 +0000\nMessage-ID: <payroll-update-112@enterprise.com>\nContent-Type: text/plain; charset=\"utf-8\"\n\nHello HR Team,\n\nI need to switch my direct deposit banking information before the upcoming payroll cut-off today.\nPlease confirm what documents are needed or process the attached new bank details immediately.\n\nThanks,\nSarah Jenkins\nChief Financial Officer"
+    },
+    {
+      "id": "DEMO-IMPERSON-01",
+      "label": "IMPERSONATION",
+      "description": "Display name spoofing embedding executive address in displayName but sending from freemail",
+      "raw_eml": "Received: from mail-out.freemail-sender.org (mail-out.freemail-sender.org [185.100.85.12]) by mx.targetcorp.com with ESMTPS id imp1;\nSat, 29 Aug 2026 16:30:00 +0000\nAuthentication-Results: mx.targetcorp.com; spf=none; dkim=none; dmarc=none\nFrom: \"President David Miller <david.miller@targetcorp.com>\" <attacker982@free-web-mail.top>\nReply-To: <attacker982@free-web-mail.top>\nTo: <staff@targetcorp.com>\nSubject: Confidential Task - Are you at your desk?\nDate: Sat, 29 Aug 2026 16:30:00 +0000\nMessage-ID: <task-desk-8819@free-web-mail.top>\nContent-Type: text/plain; charset=\"utf-8\"\n\nAre you available right now? I need you to assist me with a time-sensitive confidential request for the board.\nReply to this email directly on my private channel as I am in a board meeting.\n\nDavid Miller\nPresident"
+    },
+    {
+      "id": "DEMO-IMPERSON-02",
+      "label": "IMPERSONATION",
+      "description": "Lookalike domain impersonating Microsoft 365 security administration",
+      "raw_eml": "Received: from mail.m1crosoft-security-admin.xyz (mail.m1crosoft-security-admin.xyz [194.26.29.55]) by mx.victim.com with SMTP id imp2;\nFri, 28 Aug 2026 12:00:00 +0000\nAuthentication-Results: mx.victim.com; spf=fail; dkim=none; dmarc=fail header.from=m1crosoft-security-admin.xyz\nFrom: \"Microsoft 365 Security Team\" <admin@m1crosoft-security-admin.xyz>\nTo: <user@victim.com>\nSubject: Security Advisory: Critical Vulnerability Patch Required for Office 365\nDate: Fri, 28 Aug 2026 12:00:00 +0000\nMessage-ID: <msft-adv-8812@m1crosoft-security-admin.xyz>\nContent-Type: text/html; charset=\"utf-8\"\n\n<html><body><p>Microsoft has released an urgent patch for your tenant.</p><a href=\"https://m1crosoft-security-admin.xyz/patch/auth.html\">Install Security Update Now</a></body></html>"
+    },
+    {
+      "id": "DEMO-IMPERSON-03",
+      "label": "IMPERSONATION",
+      "description": "VIP CEO impersonation soliciting gift cards for client appreciation",
+      "raw_eml": "Received: from smtp.external-server.biz (smtp.external-server.biz [103.251.167.20]) by mx.agency.com with ESMTPS id imp3;\nThu, 27 Aug 2026 08:45:00 +0000\nAuthentication-Results: mx.agency.com; spf=none; dkim=none; dmarc=none\nFrom: \"CEO Robert Taylor\" <robert.taylor.corp@gmail.com>\nTo: <assistant@agency.com>\nSubject: Quick Favor - Client Appreciation Gift Cards\nDate: Thu, 27 Aug 2026 08:45:00 +0000\nMessage-ID: <favor-gift-1192@gmail.com>\nContent-Type: text/plain; charset=\"utf-8\"\n\nHi,\n\nI need you to purchase 5 Apple gift cards ($200 each) for our client presentation today.\nScratch the back, take clear photos of the codes, and email them to me right away.\nI will reimburse you through expense report tomorrow.\n\nRobert Taylor\nChief Executive Officer"
+    },
+    {
+      "id": "DEMO-FRAUD-01",
+      "label": "FRAUD",
+      "description": "Classic inheritance and lottery advance-fee fraud scam",
+      "raw_eml": "Received: from mail.intl-lottery-claims.cf (mail.intl-lottery-claims.cf [185.190.140.10]) by mx.consumer.com with SMTP id frd1;\nSat, 29 Aug 2026 02:00:00 +0000\nAuthentication-Results: mx.consumer.com; spf=fail; dkim=none; dmarc=fail header.from=intl-lottery-claims.cf\nFrom: \"Barrister Williams Esq.\" <claims@intl-lottery-claims.cf>\nReply-To: \"Barrister Williams\" <barrister.williams.legal@yahoo.com>\nTo: <recipient@consumer.com>\nSubject: Notification of Undelivered Inheritance Settlement Fund ($10.5 Million USD)\nDate: Sat, 29 Aug 2026 02:00:00 +0000\nMessage-ID: <funds-claim-88192@intl-lottery-claims.cf>\nContent-Type: text/plain; charset=\"utf-8\"\n\nDear Beneficiary,\n\nWe have received an official mandate to release the sum of $10,500,000.00 USD to your nominated account.\nPlease provide your full name, direct telephone number, and residential address to process immediate payment."
+    },
+    {
+      "id": "DEMO-FRAUD-02",
+      "label": "FRAUD",
+      "description": "Crypto investment high-yield investment fraud offer",
+      "raw_eml": "Received: from blast.crypto-trader-bot.top (blast.crypto-trader-bot.top [91.240.118.45]) by mx.target.org with SMTP id frd2;\nFri, 28 Aug 2026 22:15:00 +0000\nAuthentication-Results: mx.target.org; spf=fail; dkim=none; dmarc=none\nFrom: \"Crypto Wealth Management\" <invest@crypto-trader-bot.top>\nTo: <target@target.org>\nSubject: Guaranteed 500% Weekly Returns on Automated AI Bitcoin Trading\nDate: Fri, 28 Aug 2026 22:15:00 +0000\nMessage-ID: <crypto-yield-8819@crypto-trader-bot.top>\nContent-Type: text/plain; charset=\"utf-8\"\n\nGuaranteed daily profits of 50% using our exclusive quantum AI trading algorithm.\nDeposit a minimum of 0.05 BTC to start earning immediate returns.\nSend funds to Bitcoin wallet: 1BoatSLRHtKNngkdXEeobR76b53LETtpyT"
+    },
+    {
+      "id": "DEMO-FRAUD-03",
+      "label": "FRAUD",
+      "description": "Fake Geek Squad / Antivirus subscription renewal invoice refund scam",
+      "raw_eml": "Received: from mail.tech-care-billing.icu (mail.tech-care-billing.icu [193.106.191.100]) by mx.victim.com with SMTP id frd3;\nThu, 27 Aug 2026 14:00:00 +0000\nAuthentication-Results: mx.victim.com; spf=none; dkim=none; dmarc=none\nFrom: \"Geek Tech Billing Department\" <billing@tech-care-billing.icu>\nTo: <customer@victim.com>\nSubject: Invoice #89281: Automatic Renewal of $499.99 for Total Protection Plan\nDate: Thu, 27 Aug 2026 14:00:00 +0000\nMessage-ID: <inv-renewal-88192@tech-care-billing.icu>\nContent-Type: text/plain; charset=\"utf-8\"\n\nThank you for your renewal payment of $499.99 for Antivirus Total Care.\nIf you did not authorize this charge, call our cancellation desk immediately at +1-800-555-0199 for an instant refund."
+    },
+    {
+      "id": "DEMO-CRED-01",
+      "label": "CREDENTIAL_HARVESTING",
+      "description": "Password expiration warning leading to fake authentication portal",
+      "raw_eml": "Received: from relay-node.darknet-auth.xyz (relay-node.darknet-auth.xyz [198.51.100.45]) by mx.targetcorp.com with ESMTPS id crd1;\nSun, 30 Aug 2026 01:00:00 +0000\nAuthentication-Results: mx.targetcorp.com; spf=fail smtp.mailfrom=admin@targetcorp.com; dkim=fail; dmarc=fail header.from=targetcorp.com\nFrom: \"TargetCorp Identity Management\" <admin@targetcorp.com>\nReturn-Path: <bounces@darknet-auth.xyz>\nTo: <employee@targetcorp.com>\nSubject: Notice: Corporate Active Directory Password Expires in 2 Hours\nDate: Sun, 30 Aug 2026 01:00:00 +0000\nMessage-ID: <pass-expire-88192@targetcorp.com>\nContent-Type: text/html; charset=\"utf-8\"\n\n<html><body><p>Your network access password is scheduled to expire today.</p><p><a href=\"http://198.51.100.45/adfs/ls/idp.php\">Keep Current Password & Re-authenticate</a></p><p>Failure to authenticate will lock your single sign-on access.</p></body></html>"
+    },
+    {
+      "id": "DEMO-CRED-02",
+      "label": "CREDENTIAL_HARVESTING",
+      "description": "Multi-factor authentication reset credential phishing portal",
+      "raw_eml": "Received: from node.mfa-verify.top (node.mfa-verify.top [185.220.101.40]) by mx.enterprise.org with SMTP id crd2;\nSat, 29 Aug 2026 19:20:00 +0000\nAuthentication-Results: mx.enterprise.org; spf=fail; dkim=none; dmarc=fail header.from=enterprise.org\nFrom: \"Security Token Verification\" <mfa-admin@enterprise.org>\nReply-To: <mfa-collect@mfa-verify.top>\nTo: <user@enterprise.org>\nSubject: Action Required: Re-register your Microsoft Authenticator Token\nDate: Sat, 29 Aug 2026 19:20:00 +0000\nMessage-ID: <mfa-reset-9921@enterprise.org>\nContent-Type: text/html; charset=\"utf-8\"\n\n<html><body><p>Your MFA push notification session has expired.</p><p><a href=\"https://mfa-verify.top/auth/login.html\">Sign in to verify your authenticator passcode</a></p></body></html>"
+    },
+    {
+      "id": "DEMO-CRED-03",
+      "label": "CREDENTIAL_HARVESTING",
+      "description": "Suspicious voicemail audio notification linking to login harvester",
+      "raw_eml": "Received: from mail.vmail-cloud-voip.xyz (mail.vmail-cloud-voip.xyz [194.26.29.88]) by mx.telecom.com with ESMTPS id crd3;\nFri, 28 Aug 2026 17:10:00 +0000\nAuthentication-Results: mx.telecom.com; spf=fail; dkim=none; dmarc=fail header.from=telecom.com\nFrom: \"Cisco Unified Messaging\" <voicemail-system@telecom.com>\nTo: <employee@telecom.com>\nSubject: New Audio Voicemail Received (0:48 seconds) from Unknown Caller\nDate: Fri, 28 Aug 2026 17:10:00 +0000\nMessage-ID: <vmail-audio-88192@telecom.com>\nContent-Type: text/html; charset=\"utf-8\"\n\n<html><body><p>You have a new encrypted audio voicemail message.</p><p><a href=\"http://203.0.113.77/voicemail/listen.php\">Log in with your corporate credentials to listen</a></p></body></html>"
+    },
+    {
+      "id": "DEMO-SUSP-01",
+      "label": "SUSPICIOUS",
+      "description": "Email with softfail SPF, tracking redirector link, and vague content",
+      "raw_eml": "Received: from mail.vague-marketing.co (mail.vague-marketing.co [198.51.100.90]) by mx.recipient.com with ESMTPS id susp1;\nSat, 29 Aug 2026 11:00:00 +0000\nAuthentication-Results: mx.recipient.com; spf=softfail smtp.mailfrom=promo@vague-marketing.co; dkim=none; dmarc=none\nFrom: \"Market Insights\" <promo@vague-marketing.co>\nTo: <analyst@recipient.com>\nSubject: Important Update regarding your account preferences\nDate: Sat, 29 Aug 2026 11:00:00 +0000\nMessage-ID: <promo-update-8819@vague-marketing.co>\nContent-Type: text/html; charset=\"utf-8\"\n\n<html><body><p>We updated our terms of service.</p><a href=\"https://tinyurl.com/vagueTermsUpdate2026\">Review updated terms here</a></body></html>"
+    },
+    {
+      "id": "DEMO-SUSP-02",
+      "label": "SUSPICIOUS",
+      "description": "Macro-enabled attachment from unknown external contact",
+      "raw_eml": "Received: from mail.freelance-design.net (mail.freelance-design.net [192.0.2.77]) by mx.agency.com with ESMTP id susp2;\nFri, 28 Aug 2026 09:30:00 +0000\nAuthentication-Results: mx.agency.com; spf=none; dkim=none; dmarc=none\nFrom: \"Contractor Bob\" <bob@freelance-design.net>\nTo: <projects@agency.com>\nSubject: Revised Design Spec and Budget Calculator\nDate: Fri, 28 Aug 2026 09:30:00 +0000\nMessage-ID: <spec-budget-8819@freelance-design.net>\nContent-Type: multipart/mixed; boundary=\"====_NextPart_Spec_001\"\n\n--====_NextPart_Spec_001\nContent-Type: text/plain; charset=\"utf-8\"\n\nAttached is the updated budget calculator spreadsheet with macros enabled.\n\n--====_NextPart_Spec_001\nContent-Type: application/vnd.ms-excel.sheet.macroEnabled.12; name=\"Budget_Calculator_Q3.xlsm\"\nContent-Disposition: attachment; filename=\"Budget_Calculator_Q3.xlsm\"\nContent-Transfer-Encoding: base64\n\nUEsDBBQAAAAIAAAAIQDqT2h1cQEAAJADAAAQAAAAd29yZC9kb2N1bWVudC54bWyUk01v0zAUhu9I\n/Ieqd1LStiupRVo6DdQ2DYl1j9s4cbG1sQ3p72fSpW5ICJ5s33v8eN5v4k8fD/vN0Z+W3Xo4b3vV\n--====_NextPart_Spec_001--"
+    },
+    {
+      "id": "DEMO-SUSP-03",
+      "label": "SUSPICIOUS",
+      "description": "Multi-hop relay with long transmission delay and unknown sender reputation",
+      "raw_eml": "Received: from relay-3.internal.local (relay-3.internal.local [10.1.2.3]) by mx.target.com with ESMTP id r3; Thu, 27 Aug 2026 15:00:00 +0000\nReceived: from relay-2.transit-net.org (relay-2.transit-net.org [198.51.100.80]) by relay-3.internal.local with ESMTP id r2; Thu, 27 Aug 2026 14:30:00 +0000\nReceived: from relay-1.origin-gateway.biz (relay-1.origin-gateway.biz [203.0.113.150]) by relay-2.transit-net.org with ESMTP id r1; Thu, 27 Aug 2026 10:00:00 +0000\nAuthentication-Results: mx.target.com; spf=none; dkim=none; dmarc=none\nFrom: \"Unverified Sender\" <info@origin-gateway.biz>\nTo: <user@target.com>\nSubject: Inquiry regarding business collaboration\nDate: Thu, 27 Aug 2026 10:00:00 +0000\nMessage-ID: <inquiry-collab-8819@origin-gateway.biz>\nContent-Type: text/plain; charset=\"utf-8\"\n\nHello, we would like to explore potential partnership opportunities with your enterprise."
+    }
+  ]
+}

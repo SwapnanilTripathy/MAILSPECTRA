@@ -1,0 +1,151 @@
+{
+  "training_timestamp": "2026-08-29T20:01:47.186888+00:00",
+  "dataset_name": "DeepTrace Demonstration Threat Corpus",
+  "dataset_type": "DEMONSTRATION_TRAINING_DATA",
+  "total_samples": 21,
+  "classes": [
+    "BUSINESS_EMAIL_COMPROMISE",
+    "CREDENTIAL_HARVESTING",
+    "FRAUD",
+    "IMPERSONATION",
+    "LEGITIMATE",
+    "PHISHING",
+    "SUSPICIOUS"
+  ],
+  "n_splits": 3,
+  "is_statistically_significant": false,
+  "limitations": [
+    "Trained on demonstration dataset intended for pipeline verification and baseline scoring.",
+    "Metrics reflect demonstration corpus distribution and should be benchmarked on enterprise datasets (e.g. Enron, Nazario) prior to mission-critical deployment."
+  ],
+  "cv_evaluation": {
+    "accuracy": 0.5714,
+    "f1_macro": 0.5463,
+    "f1_weighted": 0.5463,
+    "precision_macro": 0.6003,
+    "recall_macro": 0.5714,
+    "confusion_matrix": [
+      [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        1,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        2,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0
+      ]
+    ],
+    "classification_report": {
+      "BUSINESS_EMAIL_COMPROMISE": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 3.0
+      },
+      "CREDENTIAL_HARVESTING": {
+        "precision": 0.5,
+        "recall": 0.3333333333333333,
+        "f1-score": 0.4,
+        "support": 3.0
+      },
+      "FRAUD": {
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1-score": 0.8571428571428571,
+        "support": 3.0
+      },
+      "IMPERSONATION": {
+        "precision": 0.6666666666666666,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.6666666666666666,
+        "support": 3.0
+      },
+      "LEGITIMATE": {
+        "precision": 0.2857142857142857,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.4,
+        "support": 3.0
+      },
+      "PHISHING": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1-score": 0.5,
+        "support": 3.0
+      },
+      "SUSPICIOUS": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 3.0
+      },
+      "accuracy": 0.5714285714285714,
+      "macro avg": {
+        "precision": 0.6003401360544218,
+        "recall": 0.5714285714285714,
+        "f1-score": 0.5462585034013605,
+        "support": 21.0
+      },
+      "weighted avg": {
+        "precision": 0.6003401360544218,
+        "recall": 0.5714285714285714,
+        "f1-score": 0.5462585034013605,
+        "support": 21.0
+      }
+    }
+  },
+  "training_accuracy": 1.0
+}

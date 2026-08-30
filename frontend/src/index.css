@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0B0F19] text-slate-200 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0F19;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Leaflet Map Dark Theme Overrides */
+.leaflet-container {
+  background-color: #0B0F19 !important;
+  font-family: inherit !important;
+}
+.leaflet-popup-content-wrapper {
+  background: #111827 !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+.leaflet-popup-tip {
+  background: #111827 !important;
+  border: 1px solid #334155 !important;
+}
+
+/* React Flow Dark Styling */
+.react-flow__background {
+  background-color: #0B0F19 !important;
+}
+.react-flow__controls {
+  background: #111827 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 6px !important;
+}
+.react-flow__controls-button {
+  background: #111827 !important;
+  border-bottom: 1px solid #1e293b !important;
+  color: #94a3b8 !important;
+  fill: #94a3b8 !important;
+}
+.react-flow__controls-button:hover {
+  background: #1e293b !important;
+  color: #38bdf8 !important;
+  fill: #38bdf8 !important;
+}
+.react-flow__edge-path {
+  stroke: #475569 !important;
+  stroke-width: 1.5 !important;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #06b6d4 !important;
+  stroke-width: 2.5 !important;
+}

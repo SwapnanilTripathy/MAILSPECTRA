@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  deeptrace:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: deeptrace-soc-platform
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - HOST=0.0.0.0
+      - PORT=8000
+      - INTELLIGENCE_MODE=offline
+      - DNS_TIMEOUT_SECONDS=3.0
+      - HTTP_INTEL_TIMEOUT_SECONDS=5.0
+      - CACHE_TTL_HOURS=24
+      - MAX_UPLOAD_SIZE_MB=25
+    volumes:
+      - deeptrace_data:/app/data
+      - deeptrace_reports:/app/reports
+      - ./deeptrace.db:/app/deeptrace.db
+
+volumes:
+  deeptrace_data:
+  deeptrace_reports:
