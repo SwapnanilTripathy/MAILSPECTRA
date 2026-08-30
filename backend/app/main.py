@@ -1,7 +1,9 @@
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.v1.router import api_router
 from backend.app.core.config import settings
@@ -55,22 +57,61 @@ def create_application() -> FastAPI:
     # Mount API Router
     app.include_router(api_router, prefix=settings.API_V1_STR)
 
-    @app.get("/", summary="Root Platform Information")
-    async def root():
-        return JSONResponse(
-            content={
-                "platform": settings.PROJECT_NAME,
-                "team": settings.TEAM_NAME,
-                "problem_statement": settings.PROBLEM_STATEMENT,
-                "status": "operational",
-                "version": settings.VERSION,
-                "documentation": "/docs",
-                "health_check": f"{settings.API_V1_STR}/health",
-                "analyze_endpoint": f"{settings.API_V1_STR}/analyze/email",
-            }
-        )
+    # Check for compiled frontend distribution
+    frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+    assets_dir = os.path.join(frontend_dist, "assets")
+
+    if os.path.isdir(frontend_dist):
+        if os.path.isdir(assets_dir):
+            app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+        @app.get("/", summary="Root Platform Information")
+        async def root(request: Request):
+            accept_header = request.headers.get("accept", "")
+            if "text/html" in accept_header and os.path.exists(os.path.join(frontend_dist, "index.html")):
+                return FileResponse(os.path.join(frontend_dist, "index.html"))
+            return JSONResponse(
+                content={
+                    "platform": settings.PROJECT_NAME,
+                    "team": settings.TEAM_NAME,
+                    "problem_statement": settings.PROBLEM_STATEMENT,
+                    "status": "operational",
+                    "version": settings.VERSION,
+                    "documentation": "/docs",
+                    "health_check": f"{settings.API_V1_STR}/health",
+                    "analyze_endpoint": f"{settings.API_V1_STR}/analyze/email",
+                }
+            )
+
+        @app.get("/{full_path:path}", summary="Serve Frontend SPA")
+        async def serve_spa(full_path: str):
+            if full_path.startswith("api/") or full_path == "docs" or full_path == "redoc" or full_path == "openapi.json":
+                return JSONResponse(status_code=404, content={"detail": "Endpoint not found"})
+            target = os.path.join(frontend_dist, full_path)
+            if full_path and os.path.exists(target) and os.path.isfile(target):
+                return FileResponse(target)
+            index_path = os.path.join(frontend_dist, "index.html")
+            if os.path.exists(index_path):
+                return FileResponse(index_path)
+            return JSONResponse(status_code=404, content={"detail": "Not found"})
+    else:
+        @app.get("/", summary="Root Platform Information")
+        async def root():
+            return JSONResponse(
+                content={
+                    "platform": settings.PROJECT_NAME,
+                    "team": settings.TEAM_NAME,
+                    "problem_statement": settings.PROBLEM_STATEMENT,
+                    "status": "operational",
+                    "version": settings.VERSION,
+                    "documentation": "/docs",
+                    "health_check": f"{settings.API_V1_STR}/health",
+                    "analyze_endpoint": f"{settings.API_V1_STR}/analyze/email",
+                }
+            )
 
     return app
 
 
 app = create_application()
+

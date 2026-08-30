@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: deeptrace-soc-platform
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: INTELLIGENCE_MODE
+        value: offline
+      - key: CACHE_TTL_HOURS
+        value: 24
+      - key: MAX_UPLOAD_SIZE_MB
+        value: 25
+      - key: SECRET_KEY
+        generateValue: true
