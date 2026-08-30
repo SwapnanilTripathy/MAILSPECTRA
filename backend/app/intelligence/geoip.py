@@ -173,6 +173,31 @@ class LiveIPInfoProvider(BaseGeoIPProvider):
                 source=EvidenceSource.GEOIP.value,
             )
 
+        # Check curated development fixtures first
+        if clean_ip in OFFLINE_FIXTURES:
+            f = OFFLINE_FIXTURES[clean_ip]
+            return GeoLocationInfo(
+                ip=clean_ip,
+                defanged_ip=defanged,
+                version=classification.get("version", 4),
+                is_private=False,
+                is_public=True,
+                country=f.get("country"),
+                country_code=f.get("country_code"),
+                region=f.get("region"),
+                city=f.get("city"),
+                latitude=f.get("latitude"),
+                longitude=f.get("longitude"),
+                isp=f.get("isp"),
+                asn=f.get("asn"),
+                organization=f.get("organization"),
+                hosting_provider=f.get("hosting_provider"),
+                proxy_or_vpn=f.get("proxy_or_vpn"),
+                confidence=f.get("confidence", 0.85),
+                status="SUCCESS",
+                source=EvidenceSource.GEOIP.value,
+            )
+
         # Query external API
         url = f"https://ipinfo.io/{clean_ip}/json" if self.token else f"http://ip-api.com/json/{clean_ip}"
         headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
@@ -186,26 +211,28 @@ class LiveIPInfoProvider(BaseGeoIPProvider):
                     lat = float(loc[0]) if len(loc) == 2 else data.get("lat")
                     lon = float(loc[1]) if len(loc) == 2 else data.get("lon")
 
-                    return GeoLocationInfo(
-                        ip=clean_ip,
-                        defanged_ip=defanged,
-                        version=classification.get("version", 4),
-                        is_private=False,
-                        is_public=True,
-                        country=data.get("country"),
-                        country_code=data.get("countryCode") or data.get("country"),
-                        region=data.get("region") or data.get("regionName"),
-                        city=data.get("city"),
-                        latitude=lat,
-                        longitude=lon,
-                        isp=data.get("isp") or data.get("org"),
-                        asn=data.get("as") or data.get("org", "").split()[0],
-                        organization=data.get("org"),
-                        hosting_provider=data.get("hosting"),
-                        confidence=0.85,
-                        status="SUCCESS",
-                        source=EvidenceSource.GEOIP.value,
-                    )
+                    # Check if valid location data was returned
+                    if lat is not None and lon is not None and (lat != 0 or lon != 0 or data.get("country")):
+                        return GeoLocationInfo(
+                            ip=clean_ip,
+                            defanged_ip=defanged,
+                            version=classification.get("version", 4),
+                            is_private=False,
+                            is_public=True,
+                            country=data.get("country") or "Unknown Country",
+                            country_code=data.get("countryCode") or data.get("country"),
+                            region=data.get("region") or data.get("regionName"),
+                            city=data.get("city"),
+                            latitude=lat,
+                            longitude=lon,
+                            isp=data.get("isp") or data.get("org"),
+                            asn=data.get("as") or (data.get("org", "").split()[0] if data.get("org") else None),
+                            organization=data.get("org") or data.get("isp"),
+                            hosting_provider=data.get("hosting"),
+                            confidence=0.85,
+                            status="SUCCESS",
+                            source=EvidenceSource.GEOIP.value,
+                        )
                 else:
                     logger.warning(f"Live GeoIP returned HTTP {resp.status_code} for {clean_ip}")
         except Exception as e:

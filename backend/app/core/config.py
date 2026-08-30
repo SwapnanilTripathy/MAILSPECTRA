@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 25
 
     # Optional Intelligence APIs & Provider Settings
-    INTELLIGENCE_MODE: str = "offline"  # "offline" or "live"
+    INTELLIGENCE_MODE: str = "live"  # "offline" or "live"
     DNS_TIMEOUT_SECONDS: float = 3.0
     HTTP_INTEL_TIMEOUT_SECONDS: float = 5.0
     CACHE_TTL_HOURS: int = 24

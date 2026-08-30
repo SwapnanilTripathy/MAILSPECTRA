@@ -44,7 +44,7 @@ ENV PYTHONUNBUFFERED=1 \
     APP_ENV=production \
     HOST=0.0.0.0 \
     PORT=8000 \
-    INTELLIGENCE_MODE=offline
+    INTELLIGENCE_MODE=live
 
 EXPOSE 8000
 
