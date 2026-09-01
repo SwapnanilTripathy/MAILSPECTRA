@@ -10,10 +10,11 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
   if (hops.length === 0) {
     return (
       <div className="p-8 rounded-xl bg-[#111827] border border-slate-800 text-center text-slate-400 font-mono text-sm">
-        No Received header relay hops detected or parsed in this email artifact.
+        Relay path unavailable — no usable Received headers were present in the supplied artifact.
       </div>
     );
   }
+
 
   return (
     <div className="space-y-6">

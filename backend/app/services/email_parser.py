@@ -254,11 +254,15 @@ class EmailForensicParser:
         if dkim_result == "none" and dkim_sig_headers:
             dkim_result = "present_unverified"
 
+        has_auth_evidence = bool(auth_headers or received_spf_headers or dkim_sig_headers)
+        availability_status = "AVAILABLE" if has_auth_evidence else "Not available in supplied evidence"
+
         return AuthenticationSummary(
             spf_result=spf_result,
             dkim_result=dkim_result,
             dmarc_result=dmarc_result,
             arc_result=arc_result,
+            availability_status=availability_status,
             auth_results_entries=auth_entries,
             raw_authentication_results=[self._decode_header_str(str(h)) for h in auth_headers],
             raw_received_spf=[self._decode_header_str(str(h)) for h in received_spf_headers],
@@ -268,11 +272,16 @@ class EmailForensicParser:
     def extract_relay_chain(self) -> RelayChainSummary:
         """Reconstruct hop-by-hop relay transmission path from Received headers."""
         if not self.msg:
-            return RelayChainSummary()
+            return RelayChainSummary(
+                relay_availability_status="Relay path unavailable — no usable Received headers were present in the supplied artifact."
+            )
 
         raw_received = self.msg.get_all("Received", [])
         if not raw_received:
-            return RelayChainSummary()
+            return RelayChainSummary(
+                relay_availability_status="Relay path unavailable — no usable Received headers were present in the supplied artifact."
+            )
+
 
         # Received headers are recorded top-to-bottom (newest first).
         # Chronological transmission sequence is bottom-to-top.

@@ -67,8 +67,9 @@ export default function ReportsPage() {
             Forensic Report Repository & Evidence Vault
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Court-grade PDF forensic intelligence reports with cryptographic SHA-256 integrity verification.
+            Evidence-preserving PDF forensic intelligence reports with cryptographic SHA-256 integrity verification.
           </p>
+
         </div>
 
         <button

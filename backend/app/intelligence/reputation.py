@@ -1,4 +1,5 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, List, Optional
 import httpx
@@ -48,59 +49,68 @@ OFFLINE_REPUTATION_FIXTURES = {
 }
 
 
-class ThreatReputationService:
-    """Manages multi-provider threat intelligence and blacklist reputation lookups."""
+class BaseThreatIntelProvider(ABC):
+    """Abstract interface for threat reputation intelligence providers."""
 
-    def __init__(self, mode: Optional[str] = None):
-        self.mode = mode or settings.INTELLIGENCE_MODE.lower()
-        self.vt_key = settings.VIRUSTOTAL_API_KEY
-        self.abuse_key = settings.ABUSEIPDB_API_KEY
-        self.timeout = settings.HTTP_INTEL_TIMEOUT_SECONDS
+    @abstractmethod
+    async def query_indicator(self, indicator: str, indicator_type: str) -> ThreatReputationInfo:
+        pass
+
+
+class OfflineThreatIntelProvider(BaseThreatIntelProvider):
+    """Deterministic offline intelligence provider returning curated knowledge-base records."""
 
     async def query_indicator(self, indicator: str, indicator_type: str) -> ThreatReputationInfo:
-        """Query reputation for an IP, domain, URL, or hash with safe fallbacks."""
         clean_ind = indicator.strip()
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        # 1. Offline Mode Lookups
-        if self.mode == "offline" or (not self.vt_key and not self.abuse_key):
-            if clean_ind in OFFLINE_REPUTATION_FIXTURES:
-                f = OFFLINE_REPUTATION_FIXTURES[clean_ind]
-                return ThreatReputationInfo(
-                    indicator=clean_ind,
-                    indicator_type=indicator_type,
-                    provider="DeepTrace Offline Threat Database (Fixture)",
-                    reputation_score=f["score"],
-                    malicious_votes=f["malicious"],
-                    suspicious_votes=f["suspicious"],
-                    total_engines=f["total"],
-                    blacklist_hits=f["blacklist"],
-                    verdict=f["verdict"],
-                    status="AVAILABLE",
-                    last_checked=now_iso,
-                    source=EvidenceSource.OFFLINE_FIXTURE.value,
-                )
-
-            # Clean / unlisted offline indicator
+        if clean_ind in OFFLINE_REPUTATION_FIXTURES:
+            f = OFFLINE_REPUTATION_FIXTURES[clean_ind]
             return ThreatReputationInfo(
                 indicator=clean_ind,
                 indicator_type=indicator_type,
-                provider="DeepTrace Intelligence Aggregator",
-                reputation_score=0.0,
-                malicious_votes=0,
-                suspicious_votes=0,
-                total_engines=0,
-                blacklist_hits=[],
-                verdict="CLEAN",
-                status="AVAILABLE" if self.mode == "offline" else "UNAVAILABLE",
+                provider="DeepTrace Offline Threat Database (Fixture)",
+                reputation_score=f["score"],
+                malicious_votes=f["malicious"],
+                suspicious_votes=f["suspicious"],
+                total_engines=f["total"],
+                blacklist_hits=f["blacklist"],
+                verdict=f["verdict"],
+                status="AVAILABLE",
                 last_checked=now_iso,
                 source=EvidenceSource.OFFLINE_FIXTURE.value,
             )
 
-        # 2. Live AbuseIPDB Query for IPs
-        if indicator_type == "IP" and self.abuse_key:
+        return ThreatReputationInfo(
+            indicator=clean_ind,
+            indicator_type=indicator_type,
+            provider="DeepTrace Intelligence Aggregator",
+            reputation_score=0.0,
+            malicious_votes=0,
+            suspicious_votes=0,
+            total_engines=0,
+            blacklist_hits=[],
+            verdict="CLEAN",
+            status="AVAILABLE",
+            last_checked=now_iso,
+            source=EvidenceSource.OFFLINE_FIXTURE.value,
+        )
+
+
+class LiveAbuseIPDBProvider(BaseThreatIntelProvider):
+    """Live provider querying AbuseIPDB REST API with safe timeouts and fallbacks."""
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or settings.ABUSEIPDB_API_KEY
+        self.timeout = settings.HTTP_INTEL_TIMEOUT_SECONDS
+
+    async def query_indicator(self, indicator: str, indicator_type: str) -> ThreatReputationInfo:
+        clean_ind = indicator.strip()
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        if indicator_type == "IP" and self.api_key:
             try:
-                headers = {"Key": self.abuse_key, "Accept": "application/json"}
+                headers = {"Key": self.api_key, "Accept": "application/json"}
                 url = f"https://api.abuseipdb.com/api/v2/check?ipAddress={clean_ind}&maxAgeInDays=90"
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     resp = await client.get(url, headers=headers)
@@ -121,19 +131,40 @@ class ThreatReputationService:
                             last_checked=now_iso,
                             source=EvidenceSource.THREAT_INTEL.value,
                         )
+                    else:
+                        logger.warning(f"AbuseIPDB returned status {resp.status_code} for {clean_ind}")
             except Exception as e:
-                logger.warning(f"AbuseIPDB query exception for {clean_ind}: {e}")
+                logger.warning(f"AbuseIPDB live lookup exception for {clean_ind}: {e}")
 
-        # Default fallback
-        return ThreatReputationInfo(
-            indicator=clean_ind,
-            indicator_type=indicator_type,
-            provider="Threat intelligence unavailable",
-            reputation_score=0.0,
-            status="UNAVAILABLE",
-            last_checked=now_iso,
-            source=EvidenceSource.THREAT_INTEL.value,
-        )
+        # Fallback to offline provider
+        return await OfflineThreatIntelProvider().query_indicator(clean_ind, indicator_type)
+
+
+class ThreatIntelAdapter:
+    """Adapter selecting active threat intelligence provider based on runtime settings."""
+
+    @staticmethod
+    def get_provider(mode: Optional[str] = None) -> BaseThreatIntelProvider:
+        active_mode = (mode or settings.INTELLIGENCE_MODE).lower()
+        if active_mode == "live" and settings.ABUSEIPDB_API_KEY:
+            return LiveAbuseIPDBProvider()
+        return OfflineThreatIntelProvider()
+
+
+class ThreatReputationService:
+    """Manages multi-provider threat intelligence and reputation enrichment across observables."""
+
+    def __init__(self, provider: Optional[BaseThreatIntelProvider] = None, mode: Optional[str] = None):
+        self.mode = mode or settings.INTELLIGENCE_MODE.lower()
+        self.provider = provider or ThreatIntelAdapter.get_provider(self.mode)
+
+    async def query_indicator(self, indicator: str, indicator_type: str) -> ThreatReputationInfo:
+        """Query reputation for an IP, domain, URL, or hash with guaranteed non-blocking fallback."""
+        try:
+            return await self.provider.query_indicator(indicator, indicator_type)
+        except Exception as e:
+            logger.warning(f"Threat reputation provider error for {indicator} ({e}); falling back to offline.")
+            return await OfflineThreatIntelProvider().query_indicator(indicator, indicator_type)
 
     async def enrich_observables(self, analysis: EmailAnalysisResponse) -> Dict[str, ThreatReputationInfo]:
         """Query threat intelligence for key observables in email."""

@@ -15,7 +15,8 @@ from backend.app.utils.crypto import calculate_hashes
 
 
 class ForensicReportGenerator:
-    """Generates professional, court-grade PDF forensic investigation reports with cryptographic integrity validation."""
+    """Generates professional, evidence-preserving PDF forensic investigation reports with cryptographic integrity validation."""
+
 
     @classmethod
     def generate_case_pdf(

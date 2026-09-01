@@ -87,7 +87,16 @@ class ThreatAnalysisPipeline:
             structured_features=structured_features,
         )
 
-        # 6. Feature Summary
+        # 6. NLP & Content Intelligence Analysis
+        from backend.app.analyzers.content_analyzer import ContentIntelligenceAnalyzer
+        content_intelligence = ContentIntelligenceAnalyzer.analyze(
+            metadata=base_analysis.metadata,
+            body=base_analysis.body,
+            urls=base_analysis.urls,
+            attachments=base_analysis.attachments,
+        )
+
+        # 7. Feature Summary
         feature_summary = FeatureExtractionSummary(
             total_features_extracted=len(structured_features),
             text_feature_count=len(text_repr.split()),
@@ -104,7 +113,7 @@ class ThreatAnalysisPipeline:
             "Attribution support provides technical correlation hypotheses and does not constitute definitive legal attribution."
         ]
 
-        # 7. Update Legacy & Modern Response Fields
+        # 8. Update Legacy & Modern Response Fields
         legacy_indicators = [
             LegacyThreatIndicator(
                 category=ind.category,
@@ -128,15 +137,22 @@ class ThreatAnalysisPipeline:
             explanation=shap_result.explanation_summary,
         )
 
-        # Attach Phase 2 AI & Explainability outputs
+        # 8. Alert Evaluation & Real-Time Alert Object Generation
+        from backend.app.services.alert_service import AlertService
+        alert_eval = AlertService.evaluate_analysis(base_analysis)
+        base_analysis.security_alert = alert_eval.alert
+
+        # Attach Phase 2 AI, Explainability & Content outputs
         base_analysis.ai_inference = prediction_result
         base_analysis.risk_assessment = risk_result
         base_analysis.shap_explanation = shap_result
+        base_analysis.content_intelligence = content_intelligence
         base_analysis.feature_summary = feature_summary
         base_analysis.observed_evidence = risk_result.indicators
         base_analysis.limitations = limitations
 
-        # 8. Phase 3: Infrastructure Intelligence & Origin Assessment
+
+        # 9. Phase 3: Infrastructure Intelligence & Origin Assessment
         try:
             intel = await self.infra_service.gather_intelligence(base_analysis)
             base_analysis.infrastructure_intelligence = intel

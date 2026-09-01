@@ -18,8 +18,9 @@ from backend.app.services.report_generator import ForensicReportGenerator
 router = APIRouter()
 
 
-@router.post("/generate/{case_id}", summary="Generate court-grade PDF forensic report")
+@router.post("/generate/{case_id}", summary="Generate evidence-preserving PDF forensic report")
 async def generate_case_report(case_id: str, db: AsyncSession = Depends(get_db)):
+
     """Generates PDF forensic report, computes SHA-256 cryptographic hash, and updates case record."""
     stmt = (
         select(CaseRecord)

@@ -1,6 +1,5 @@
-import os
 from typing import Optional
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +7,7 @@ from backend.app.core.config import settings
 from backend.app.core.logging import logger
 from backend.app.database.session import get_db
 from backend.app.schemas.analysis import EmailAnalysisResponse
+from backend.app.services.privacy_service import PrivacyService
 from backend.app.services.threat_pipeline import pipeline
 
 router = APIRouter()
@@ -16,6 +16,7 @@ router = APIRouter()
 class RawEmailAnalyzeRequest(BaseModel):
     raw_content: str = Field(..., description="Raw RFC 822 / MIME .eml email string")
     filename: Optional[str] = "raw_input.eml"
+    mask_pii: bool = False
 
 
 @router.post(
@@ -26,6 +27,7 @@ class RawEmailAnalyzeRequest(BaseModel):
 )
 async def analyze_email_file(
     file: UploadFile = File(..., description="The .eml email artifact file to analyze"),
+    mask_pii: bool = Query(False, description="Optionally mask email addresses and IP addresses in presentation view"),
     db: AsyncSession = Depends(get_db),
 ) -> EmailAnalysisResponse:
     # Validate extension / file
@@ -59,6 +61,8 @@ async def analyze_email_file(
     logger.info(f"Analyzing uploaded email artifact: '{filename}' ({len(content)} bytes)")
     try:
         analysis_result = await pipeline.analyze_bytes_async(raw_bytes=content, filename=filename, db_session=db)
+        if mask_pii or settings.PRIVACY_MASKING_ENABLED:
+            analysis_result = PrivacyService.apply_to_response(analysis_result)
         pred_cls = analysis_result.ai_inference.predicted_class if analysis_result.ai_inference else "UNKNOWN"
         risk_sc = analysis_result.risk_assessment.risk_score if analysis_result.risk_assessment else 0.0
         logger.info(f"Analysis completed: Case ID {analysis_result.case_id} | AI Class: {pred_cls} | Risk: {risk_sc}/100")
@@ -91,12 +95,16 @@ async def analyze_raw_email(
     logger.info(f"Analyzing raw email payload ({len(raw_bytes)} bytes)")
 
     try:
-        return await pipeline.analyze_bytes_async(raw_bytes=raw_bytes, filename=payload.filename, db_session=db)
+        res = await pipeline.analyze_bytes_async(raw_bytes=raw_bytes, filename=payload.filename, db_session=db)
+        if payload.mask_pii or settings.PRIVACY_MASKING_ENABLED:
+            res = PrivacyService.apply_to_response(res)
+        return res
     except Exception as e:
         logger.error(f"Error during raw email parsing: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Forensic & AI analysis error: {str(e)}",
         )
+
 
 

@@ -81,6 +81,12 @@ class EmailAnalysisResponse(BaseModel):
     observed_evidence: List[SecurityIndicator] = Field(default_factory=list)
     limitations: List[str] = Field(default_factory=list)
 
+    # NLP & Content Intelligence Signals
+    content_intelligence: Optional[Any] = None
+
+    # Real-Time Security Alerting
+    security_alert: Optional[Any] = None
+
     # Phase 3 Forensic Intelligence, Threat Graph & Campaign Correlation Extensions
     infrastructure_intelligence: Optional[InfrastructureIntelligence] = None
     geolocation: Optional[Dict[str, GeoLocationInfo]] = None
@@ -89,4 +95,5 @@ class EmailAnalysisResponse(BaseModel):
     campaign_correlations: List[CampaignCorrelationMatch] = Field(default_factory=list)
     active_campaign: Optional[CampaignEntity] = None
     attribution_support: Optional[AttributionSupportResult] = None
+
 

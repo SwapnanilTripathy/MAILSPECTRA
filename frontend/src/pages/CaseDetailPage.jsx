@@ -176,8 +176,9 @@ export default function CaseDetailPage() {
                 Cryptographic Evidence Chain of Custody (SHA-256)
               </h3>
               <p className="text-xs text-slate-400 mt-0.5 font-sans">
-                Immutable cryptographic fingerprint guaranteeing evidence non-repudiation for court proceedings.
+                Cryptographic fingerprint guaranteeing evidence integrity verification and tamper detection.
               </p>
+
             </div>
           </div>
 

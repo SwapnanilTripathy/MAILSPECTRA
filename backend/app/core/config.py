@@ -40,10 +40,18 @@ class Settings(BaseSettings):
     HTTP_INTEL_TIMEOUT_SECONDS: float = 5.0
     CACHE_TTL_HOURS: int = 24
 
+    # Alerting & Thresholds
+    ALERT_THRESHOLD_SCORE: float = 60.0  # Threshold for generating high alerts
+    CRITICAL_ALERT_SCORE: float = 80.0   # Threshold for critical alerts
+    DEFAULT_DATA_RETENTION_DAYS: int = 90
+    PRIVACY_MASKING_ENABLED: bool = False
+
     VIRUSTOTAL_API_KEY: str = ""
     ABUSEIPDB_API_KEY: str = ""
     IPINFO_TOKEN: str = ""
     SHODAN_API_KEY: str = ""
+
+
 
 
     model_config = SettingsConfigDict(

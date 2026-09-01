@@ -17,6 +17,9 @@ import {
   Radio,
   FileDown,
   FolderPlus,
+  MessageSquare,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import api from '../api/client';
 import VerdictBanner from '../components/investigation/VerdictBanner';
@@ -28,6 +31,7 @@ import ThreatGraphView from '../components/investigation/ThreatGraphView';
 import ShapExplainerView from '../components/investigation/ShapExplainerView';
 import ObservablesView from '../components/investigation/ObservablesView';
 import CampaignAttributionView from '../components/investigation/CampaignAttributionView';
+import ContentIntelligenceView from '../components/investigation/ContentIntelligenceView';
 
 export default function InvestigatePage() {
   const location = useLocation();
@@ -36,6 +40,7 @@ export default function InvestigatePage() {
   const [loading, setLoading] = useState(false);
   const [rawText, setRawText] = useState('');
   const [inputMode, setInputMode] = useState('file'); // 'file' | 'raw'
+  const [maskPii, setMaskPii] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
@@ -52,7 +57,7 @@ export default function InvestigatePage() {
     setLoading(true);
     setAlertMessage(null);
     try {
-      const res = await api.analyzeEmailFile(file);
+      const res = await api.analyzeEmailFile(file, maskPii);
       setAnalysis(res);
       setActiveTab('summary');
     } catch (err) {
@@ -67,7 +72,7 @@ export default function InvestigatePage() {
     setLoading(true);
     setAlertMessage(null);
     try {
-      const res = await api.analyzeRawEmail(rawText, 'raw_investigation.eml');
+      const res = await api.analyzeRawEmail(rawText, 'raw_investigation.eml', maskPii);
       setAnalysis(res);
       setActiveTab('summary');
     } catch (err) {
@@ -76,6 +81,7 @@ export default function InvestigatePage() {
       setLoading(false);
     }
   };
+
 
   const loadSample = async (sampleType) => {
     setLoading(true);
@@ -175,6 +181,7 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
 
   const tabs = [
     { id: 'summary', label: 'Executive Summary & Headers', icon: FileText },
+    { id: 'nlp', label: 'NLP Content Signals', icon: MessageSquare },
     { id: 'relay', label: 'Relay Path & Transit', icon: Radio },
     { id: 'geo', label: 'GeoIP & Cartography', icon: Globe2 },
     { id: 'dns', label: 'Safe DNS & RDAP', icon: Database },
@@ -216,8 +223,19 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
             </p>
           </div>
 
-          {/* Quick Demo Pre-loaders */}
-          <div className="flex items-center gap-2">
+          {/* Quick Demo Pre-loaders & Privacy Toggle */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setMaskPii(!maskPii)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-mono transition ${
+                maskPii ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+              }`}
+              title="Toggle PII Masking in presentation view"
+            >
+              {maskPii ? <EyeOff className="w-3.5 h-3.5 text-indigo-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+              <span>PII Masking: {maskPii ? 'ON' : 'OFF'}</span>
+            </button>
+
             <span className="text-xs font-mono text-slate-400 mr-1">Quick Demos:</span>
             <button
               onClick={() => loadSample('phishing')}
@@ -262,6 +280,7 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
             Paste RFC 822 Raw MIME
           </button>
         </div>
+
 
         {inputMode === 'file' ? (
           <label className="border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer bg-slate-900/40 hover:bg-slate-900/60 transition group">
@@ -347,18 +366,28 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
             {activeTab === 'summary' && (
               <div className="space-y-6">
                 <HeadersForensicsView
-                  metadata={analysis.email_metadata}
-                  authentication={analysis.authentication_results}
+                  metadata={analysis.email_metadata || analysis.metadata}
+                  authentication={analysis.authentication_results || analysis.authentication}
+                />
+              </div>
+            )}
+
+            {activeTab === 'nlp' && (
+              <div className="space-y-6">
+                <ContentIntelligenceView
+                  contentIntelligence={analysis.content_intelligence}
+                  bodyContent={analysis.body}
                 />
               </div>
             )}
 
             {activeTab === 'relay' && (
               <RelayHopsView
-                relayPath={analysis.relay_path}
+                relayPath={analysis.relay_path || analysis.relay_chain}
                 originAssessment={analysis.origin_assessment}
               />
             )}
+
 
             {activeTab === 'geo' && (
               <GeoIntelligenceView

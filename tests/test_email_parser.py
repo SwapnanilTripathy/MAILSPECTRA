@@ -178,3 +178,73 @@ def test_html_form_and_img_urls():
     assert "http://phish-login.com/submit.php" in extracted_urls
     assert "https://legit-cdn.org/styles.css" in extracted_urls
 
+
+def test_email_without_received_headers():
+    raw = (
+        b"From: user@direct.com\n"
+        b"To: receiver@direct.com\n"
+        b"Subject: Direct Draft without Received Headers\n"
+        b"\n"
+        b"Direct local submission."
+    )
+    parser = EmailForensicParser(raw_bytes=raw, filename="no_received.eml")
+    result = parser.parse()
+
+    assert result.relay_chain.total_hops == 0
+    assert result.relay_chain.origin_ip is None
+    assert "Relay path unavailable" in result.relay_chain.relay_availability_status
+
+
+def test_email_without_authentication_headers():
+    raw = (
+        b"From: unverified@old-server.org\n"
+        b"To: target@corp.com\n"
+        b"Subject: Internal Note\n"
+        b"\n"
+        b"No auth headers recorded on legacy gateway."
+    )
+    parser = EmailForensicParser(raw_bytes=raw, filename="no_auth.eml")
+    result = parser.parse()
+
+    assert result.authentication.spf_result == "none"
+    assert result.authentication.dkim_result == "none"
+    assert result.authentication.dmarc_result == "none"
+    assert result.authentication.availability_status == "Not available in supplied evidence"
+
+
+def test_malformed_email_resilience():
+    # Truncated MIME multipart with broken boundary
+    raw = (
+        b"Content-Type: multipart/mixed; boundary=\"BROKEN_BOUNDARY\"\n"
+        b"Subject: Corrupted Packet\n"
+        b"\n"
+        b"--BROKEN_BOUNDARY\n"
+        b"Content-Type: text/plain\n"
+        b"\n"
+        b"Incomplete payload that ends abruptly\n"
+    )
+    parser = EmailForensicParser(raw_bytes=raw, filename="corrupted.eml")
+    result = parser.parse()
+
+    assert result.success is True
+    assert result.body.has_plain_text is True
+
+
+def test_large_email_within_limit():
+    large_body = "A" * (200 * 1024)  # 200KB text
+    raw = (
+        f"From: large@benchmark.com\n"
+        f"To: test@benchmark.com\n"
+        f"Subject: Large Valid Email Benchmark\n"
+        f"\n"
+        f"{large_body}"
+    ).encode("utf-8")
+
+    parser = EmailForensicParser(raw_bytes=raw, filename="large_email.eml")
+    result = parser.parse()
+
+    assert result.success is True
+    assert result.file_size_bytes == len(raw)
+    assert len(result.body.text_plain) == len(large_body)
+
+

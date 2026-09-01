@@ -55,9 +55,10 @@ class IPIntelligenceService:
             return OriginAssessmentResult(
                 earliest_reliable_ip=None,
                 confidence=0.0,
-                evidentiary_basis=["No Received headers were present in the email artifact."],
+                evidentiary_basis=["Relay path unavailable — no usable Received headers were present in the supplied artifact."],
                 limitations=["Transmission path cannot be reconstructed without Received headers."],
             )
+
 
         # Received headers in RelayChainSummary are sorted in chronological order (hop 1 = earliest MTA)
         first_hop = hops[0]

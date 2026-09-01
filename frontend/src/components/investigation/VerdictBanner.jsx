@@ -94,6 +94,24 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
         </div>
       </div>
 
+      {/* Automated Security Alert Notification */}
+      {analysis.security_alert && analysis.security_alert.requires_immediate_action && (
+        <div className="mt-4 p-3 rounded-xl bg-red-950/40 border border-red-500/40 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+          <div className="text-xs font-mono">
+            <span className="font-bold text-red-300 uppercase">
+              HIGH-PRIORITY SECURITY ALERT DISPATCHED ({analysis.security_alert.alert_id}):
+            </span>
+            <span className="text-slate-300 ml-1.5">{analysis.security_alert.title}</span>
+            {analysis.security_alert.recommended_actions && analysis.security_alert.recommended_actions.length > 0 && (
+              <div className="text-[11px] text-amber-300/90 mt-1">
+                Recommended Action: {analysis.security_alert.recommended_actions[0]}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Observed Indicators Pills */}
       {indicators.length > 0 && (
         <div className="mt-5 pt-4 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
@@ -119,3 +137,4 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
     </div>
   );
 }
+

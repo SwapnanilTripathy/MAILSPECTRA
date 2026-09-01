@@ -29,6 +29,7 @@ class AuthenticationSummary(BaseModel):
     dkim_result: str = "none"
     dmarc_result: str = "none"
     arc_result: str = "none"
+    availability_status: str = "AVAILABLE"  # "AVAILABLE" or "Not available in supplied evidence"
     auth_results_entries: List[AuthResultEntry] = Field(default_factory=list)
     raw_authentication_results: List[str] = Field(default_factory=list)
     raw_received_spf: List[str] = Field(default_factory=list)
@@ -61,7 +62,9 @@ class RelayChainSummary(BaseModel):
     origin_host: Optional[str] = None
     final_destination_host: Optional[str] = None
     total_transmission_delay_seconds: Optional[float] = None
+    relay_availability_status: str = "AVAILABLE"
     hops: List[RelayHop] = Field(default_factory=list)
+
 
 
 class ExtractedURL(BaseModel):
@@ -114,12 +117,12 @@ class MIMEStructurePart(BaseModel):
 
 
 class EmailMetadata(BaseModel):
-    evidence_hashes: EvidenceHashes
+    evidence_hashes: EvidenceHashes = Field(default_factory=lambda: EvidenceHashes(md5="", sha1="", sha256=""))
     message_id: Optional[str] = None
     subject: str = ""
     date_raw: Optional[str] = None
     date_iso: Optional[str] = None
-    from_sender: AddressEntity
+    from_sender: AddressEntity = Field(default_factory=AddressEntity)
     to_recipients: List[AddressEntity] = Field(default_factory=list)
     cc_recipients: List[AddressEntity] = Field(default_factory=list)
     bcc_recipients: List[AddressEntity] = Field(default_factory=list)
@@ -127,5 +130,6 @@ class EmailMetadata(BaseModel):
     return_path: Optional[str] = None
     x_mailer: Optional[str] = None
     user_agent: Optional[str] = None
+
     content_type_header: Optional[str] = None
     all_headers: Dict[str, Any] = Field(default_factory=dict)

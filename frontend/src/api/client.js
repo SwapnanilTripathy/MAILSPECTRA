@@ -35,15 +35,20 @@ export const api = {
   logout: () => apiClient.post('/auth/logout'),
 
   // Email Analysis
-  analyzeEmailFile: (file) => {
+  analyzeEmailFile: (file, maskPii = false) => {
     const formData = new FormData();
     formData.append('file', file);
     return apiClient.post('/analyze/email', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      params: maskPii ? { mask_pii: true } : {},
     });
   },
-  analyzeRawEmail: (raw_content, filename = 'raw_input.eml') =>
-    apiClient.post('/analyze/raw', { raw_content, filename }),
+  analyzeRawEmail: (raw_content, filename = 'raw_input.eml', maskPii = false) =>
+    apiClient.post('/analyze/raw', { raw_content, filename, mask_pii: maskPii }),
+
+  // Real-Time Threat Alerts
+  getAlerts: (limit = 20) => apiClient.get('/alerts', { params: { limit } }),
+  getAlertConfig: () => apiClient.get('/alerts/config'),
 
   // Dashboard Metrics
   getDashboardStats: () => apiClient.get('/dashboard/stats'),
@@ -71,5 +76,6 @@ export const api = {
   getSystemSettings: () => apiClient.get('/system/settings'),
   getHealth: () => apiClient.get('/health'),
 };
+
 
 export default api;
