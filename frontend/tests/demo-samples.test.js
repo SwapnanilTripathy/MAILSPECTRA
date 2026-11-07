@@ -25,6 +25,19 @@ function extractHostnames(raw) {
   return [...new Set(matches)];
 }
 
+test('hostname extraction detects non-reserved domains in all supported contexts', () => {
+  const raw = [
+    'From: Sender <sender@outside.example.org>',
+    'Received: from relay.example.test by mx.example.test',
+    'Open https://links.example.net/path',
+  ].join('\n');
+
+  assert.deepEqual(
+    new Set(extractHostnames(raw)),
+    new Set(['outside.example.org', 'relay.example.test', 'mx.example.test', 'links.example.net']),
+  );
+});
+
 test('Quick Demo mapping contains the three documented scenarios', () => {
   assert.deepEqual(Object.keys(DEMO_SAMPLE_FILES).sort(), ['benign', 'phishing', 'spoofed']);
   assert.equal(new Set(Object.values(DEMO_SAMPLE_FILES)).size, 3);
