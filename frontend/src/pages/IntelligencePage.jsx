@@ -15,6 +15,7 @@ import {
 import DefangedIndicator from '../components/common/DefangedIndicator';
 
 export default function IntelligencePage() {
+  const [provider, setProvider] = useState('auto');
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [queryType, setQueryType] = useState('DOMAIN'); // 'DOMAIN' | 'IP' | 'HASH'
@@ -50,8 +51,8 @@ export default function IntelligencePage() {
     if (!query.trim()) return;
     setCalculating(true); setError(''); setResult(null);
     try {
-      const data = await api.lookupIndicator(query, queryType);
-      setResult({ indicator: data.indicator, type: data.indicator_type, entropy: data.lexical_entropy.toFixed(2), status: data.status, reputation: data.verdict, timestamp: data.last_checked, provider: data.provider, source: data.source, cache: data.cache_hit });
+      const data = await api.lookupIndicator(query, queryType, provider);
+      setResult({ indicator: data.indicator, type: data.indicator_type, entropy: data.lexical_entropy.toFixed(2), status: data.status, reputation: data.verdict, timestamp: data.last_checked, provider: data.provider, source: data.source, cache: data.cache_hit, context: data.context, limitations: data.limitations });
     } catch (error) { setError(error.message); }
     finally { setCalculating(false); }
   };
@@ -73,7 +74,7 @@ export default function IntelligencePage() {
       {/* Query Search Bar */}
       <div className="p-6 rounded-2xl bg-[#111827] border border-slate-800 shadow-xl space-y-4">
         <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-          {['DOMAIN', 'IP', 'HASH'].map((type) => (
+          {['DOMAIN', 'IP', 'URL', 'HASH'].map((type) => (
             <button
               key={type}
               onClick={() => setQueryType(type)}
@@ -88,6 +89,11 @@ export default function IntelligencePage() {
           ))}
         </div>
 
+        <label className="block text-sm text-slate-300 mb-3">Provider
+          <select value={provider} onChange={event => setProvider(event.target.value)} className="ml-3 bg-slate-900 border border-slate-700 rounded p-2">
+            <option value="auto">Automatic</option><option value="abuseipdb">AbuseIPDB (IP reputation)</option><option value="virustotal">VirusTotal (existing reports)</option><option value="shodan">Shodan (IP infrastructure)</option>
+          </select>
+        </label>
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -100,7 +106,7 @@ export default function IntelligencePage() {
                   ? 'e.g. login-secure-portal.com or micr0s0ft.net'
                   : queryType === 'IP'
                     ? 'e.g. 203.0.113.88 or 198.51.100.45'
-                    : 'e.g. 5d41402abc4b2a76b9719d911017c592'
+                    : queryType === 'URL' ? 'https://example.org/path' : 'e.g. 5d41402abc4b2a76b9719d911017c592'
               }
               className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500"
             />
@@ -143,6 +149,8 @@ export default function IntelligencePage() {
                 </span>
                 <span className="font-bold text-slate-300">
                   {result.reputation} — {result.status} ({result.provider}; {result.source}{result.cache ? "; cached" : ""})
+                  {result.context?.ports && <span className="block">Observed ports: {result.context.ports.join(", ") || "None reported"}</span>}
+                  {(result.limitations || []).map((note, index) => <span className="block font-normal mt-2" key={index}>{note}</span>)}
                 </span>
               </div>
               <div>
@@ -178,6 +186,11 @@ export default function IntelligencePage() {
           Measures character unpredictability. Entropy alone does not establish DGA activity or maliciousness.
         </p>
 
+        <label className="block text-sm text-slate-300 mb-3">Provider
+          <select value={provider} onChange={event => setProvider(event.target.value)} className="ml-3 bg-slate-900 border border-slate-700 rounded p-2">
+            <option value="auto">Automatic</option><option value="abuseipdb">AbuseIPDB (IP reputation)</option><option value="virustotal">VirusTotal (existing reports)</option><option value="shodan">Shodan (IP infrastructure)</option>
+          </select>
+        </label>
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <input
             type="text"

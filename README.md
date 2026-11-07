@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:344fef811069e466b40c3bb96238bd04697aa4f81ba432c02bb185da6584cb63 -->
+
 <!-- coderabbit-ai-generated-section:v1:31725439d3863ea5f7c6ff2446e16844e0fbca6dacc2811994f4975f828af768 -->
 
 # MAILSPECTRA
@@ -12,7 +14,7 @@ Implemented: authenticated admin/analyst/viewer accounts; RFC 5322 `.eml` and pa
 
 Experimental: the inherited 21-message demonstration model, uncalibrated probabilities, heuristic risk weights, infrastructure correlation and best-effort PII masking. The model is **not validated for operational detection**. Geolocation describes infrastructure, not a person's location. Authentication headers and relay claims in saved email can be forged. Read [the model card](docs/ML_MODEL_CARD.md) and [phase status](docs/PHASE_STATUS.md).
 
-Unsupported/planned: Outlook `.msg`, attachment execution, URL retrieval, tenant isolation, SSO/MFA, ARC verification, VirusTotal/Shodan adapters, guaranteed anonymization and an automatic legal-hold/retention engine. Supplied provider keys do not enable unimplemented adapters.
+Unsupported/planned: Outlook `.msg`, attachment execution, URL retrieval, tenant isolation, SSO/MFA, ARC verification, guaranteed anonymization and an automatic legal-hold/retention engine. VirusTotal and Shodan provide optional existing-report lookups in the IOC workbench; live accounts require separate validation.
 
 ## Stack and architecture
 

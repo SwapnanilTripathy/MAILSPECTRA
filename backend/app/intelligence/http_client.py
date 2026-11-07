@@ -4,9 +4,9 @@ from urllib.parse import urlparse, urljoin
 import httpx
 from backend.app.core.config import settings
 
-ALLOWED_HOSTS = {'ipinfo.io','api.abuseipdb.com','rdap.org','rdap.verisign.com','rdap.publicinterestregistry.org','rdap.nic.org','rdap.nic.xyz','rdap.namecheap.com'}
+ALLOWED_HOSTS = {'www.virustotal.com','api.shodan.io','ipinfo.io','api.abuseipdb.com','rdap.org','rdap.verisign.com','rdap.publicinterestregistry.org','rdap.nic.org','rdap.nic.xyz','rdap.namecheap.com'}
 
-async def provider_json(url, headers=None):
+async def provider_json(url, headers=None, *, allow_redirects=True):
     async with httpx.AsyncClient(timeout=settings.HTTP_INTEL_TIMEOUT_SECONDS, follow_redirects=False) as client:
         for _ in range(3):
             parsed = urlparse(url)
@@ -14,6 +14,7 @@ async def provider_json(url, headers=None):
                 return 502, {}
             async with client.stream('GET', url, headers=headers) as response:
                 if response.status_code in {301,302,303,307,308}:
+                    if not allow_redirects: return 502, {}
                     url = urljoin(url,response.headers.get('location',''))
                     headers = None  # Never forward provider credentials across a redirect.
                     continue

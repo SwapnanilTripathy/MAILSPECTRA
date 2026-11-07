@@ -375,6 +375,7 @@ export type ThreatReputationInfo = {
   "looked_up_at"?: string;
   "cache_hit"?: boolean;
   "limitations"?: Array<string>;
+  "context"?: Record<string, unknown>;
   "indicator": string;
   "indicator_type": string;
   "provider"?: string;

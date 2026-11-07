@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:c678abb0770d7103660bf491a9b9b2ad3f8095eb64edfd5e5be55911bd63f5da -->
+
 # Specification phase status
 
 This records implementation of the owner's MAILSPECTRA coding specification. The owner authorized proceeding through all phases and pushing the work to `coderabbit/open-frontend-files/81a0d3ed`, then requested a push after each phase. Phases 1–8 were pushed together at bf22481 when that instruction arrived; Phase 9 is a separate final push. No changes were pushed to main.
@@ -35,3 +37,10 @@ This records implementation of the owner's MAILSPECTRA coding specification. The
 3. Confirm hosting plan, volume ownership/durability, TLS/CORS, backup/restore and retention/legal-hold policy. Review dependency license obligations for the intended use/distribution.
 
 Detailed commands, tested input hashes and intermediate failures are retained in the task's workspace validation record. That task-local record is not committed because it contains sandbox-specific paths. The baseline audit describes the pre-implementation revision and should not be mistaken for the final state.
+
+## Provider completion follow-up
+
+VirusTotal existing-report and Shodan IP-host adapters are now implemented in the IOC workbench, superseding the earlier unimplemented status above. Thirteen provider tests passed, including credential absence, special-use exclusion, rate limits, malformed responses, URL identifiers and infrastructure-only Shodan semantics. Live accounts remain unverified. Provider dropdown and URL lookup are available in the frontend.
+
+
+<!-- /coderabbit-ai-generated:v1 -->

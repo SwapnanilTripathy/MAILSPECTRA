@@ -15,6 +15,7 @@ router = APIRouter()
 class LookupRequest(BaseModel):
     indicator: str = Field(min_length=1,max_length=2048)
     indicator_type: Literal['IP','DOMAIN','URL','HASH']
+    provider: Literal['auto','abuseipdb','virustotal','shodan'] = 'auto'
 
     @model_validator(mode='after')
     def validate_indicator(self):
@@ -40,14 +41,22 @@ class LookupResponse(BaseModel):
     last_checked: str
     cache_hit: bool = False
     limitations: list[str] = Field(default_factory=list)
+    context: dict[str, Any] = Field(default_factory=dict)
     lexical_entropy: float
     external_lookup_enabled: bool
 
 @router.post('/lookup', response_model=LookupResponse)
 async def lookup(payload: LookupRequest):
-    key = hashlib.sha256(f'{settings.INTELLIGENCE_MODE}:{payload.indicator_type}:{payload.indicator}'.encode()).hexdigest()
+    key = hashlib.sha256(f'{settings.INTELLIGENCE_MODE}:{payload.provider}:{bool(settings.VIRUSTOTAL_API_KEY)}:{bool(settings.SHODAN_API_KEY)}:{bool(settings.ABUSEIPDB_API_KEY)}:{payload.indicator_type}:{payload.indicator}'.encode()).hexdigest()
     async def operation():
-        result = await ThreatReputationService().query_indicator(payload.indicator,payload.indicator_type)
+        service = ThreatReputationService()
+        if settings.INTELLIGENCE_MODE == 'live':
+            from backend.app.intelligence.additional_providers import VirusTotalProvider, ShodanProvider
+            from backend.app.intelligence.reputation import LiveAbuseIPDBProvider
+            name = payload.provider
+            if name == 'auto': name = 'abuseipdb' if payload.indicator_type == 'IP' else 'virustotal'
+            service = {'abuseipdb':LiveAbuseIPDBProvider,'virustotal':VirusTotalProvider,'shodan':ShodanProvider}[name]()
+        result = await service.query_indicator(payload.indicator,payload.indicator_type)
         return result.model_dump()
     result = await cached_lookup(key,'reputation',operation)
     return {**result,'lexical_entropy':calculate_entropy(payload.indicator),'external_lookup_enabled':settings.INTELLIGENCE_MODE=='live'}

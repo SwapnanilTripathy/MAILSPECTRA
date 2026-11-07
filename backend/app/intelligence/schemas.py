@@ -98,6 +98,7 @@ class DomainIntelligenceResult(BaseModel):
 
 
 class ThreatReputationInfo(ProviderMetadata):
+    context: Dict[str, Any] = Field(default_factory=dict)
     indicator: str
     indicator_type: str  # IP, DOMAIN, URL, HASH
     provider: str = "DeepTrace Intelligence Aggregator"

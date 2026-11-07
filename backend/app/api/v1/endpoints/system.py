@@ -56,8 +56,8 @@ async def get_system_settings():
         "http_timeout_seconds": settings.HTTP_INTEL_TIMEOUT_SECONDS,
         "cache_ttl_hours": settings.CACHE_TTL_HOURS,
         "max_upload_size_mb": settings.MAX_UPLOAD_SIZE_MB,
-        "virustotal_status": "NOT_IMPLEMENTED",
-        "shodan_status": "NOT_IMPLEMENTED",
+        "virustotal_status": "CONFIGURED_NOT_CHECKED" if settings.VIRUSTOTAL_API_KEY else "UNCONFIGURED",
+        "shodan_status": "CONFIGURED_NOT_CHECKED" if settings.SHODAN_API_KEY else "UNCONFIGURED",
         "has_abuseipdb_key": bool(settings.ABUSEIPDB_API_KEY),
         "has_ipinfo_key": bool(settings.IPINFO_TOKEN),
     }
