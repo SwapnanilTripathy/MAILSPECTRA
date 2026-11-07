@@ -92,8 +92,8 @@ export default function InvestigatePage() {
     }
   };
 
+  /** Load and analyze the canonical bundled synthetic email for a Quick Demo. */
   const loadSample = async (sampleType) => {
-    /** Load and analyze the canonical bundled synthetic email for a Quick Demo. */
     const sampleFilename = DEMO_SAMPLE_FILES[sampleType];
     if (!sampleFilename) {
       setAlertMessage({ type: 'error', text: 'Unknown demonstration sample.' });
