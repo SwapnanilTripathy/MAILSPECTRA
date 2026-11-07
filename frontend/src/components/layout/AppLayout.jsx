@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePrivacy } from '../../context/PrivacyContext';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   ShieldAlert,
@@ -33,6 +34,7 @@ export default function AppLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { masked, setMasked } = usePrivacy();
   const [systemMode, setSystemMode] = useState('UNKNOWN');
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -79,6 +81,7 @@ export default function AppLayout() {
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
+      <button className="fixed bottom-3 right-3 z-50 rounded border border-slate-500 bg-slate-900 px-3 py-2 text-xs text-white" aria-pressed={masked} onClick={() => setMasked(!masked)}>Privacy masking: {masked ? 'On' : 'Off'}</button>
       <aside className="app-sidebar hidden lg:flex w-[248px] shrink-0 flex-col">
         <div className="brand-lockup">
           <div className="brand-mark">
@@ -86,7 +89,7 @@ export default function AppLayout() {
           </div>
           <div>
             <div className="brand-name">
-              DEEP<span>TRACE</span>
+              MAIL<span>SPECTRA</span>
             </div>
             <div className="brand-caption">THREAT INTELLIGENCE</div>
           </div>

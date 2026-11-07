@@ -1,4 +1,5 @@
 import React from 'react';
+import { PrivacyProvider } from './context/PrivacyContext';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AppLayout from './components/layout/AppLayout';
@@ -24,7 +25,7 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <AuthProvider>
+    <AuthProvider><PrivacyProvider>
       <BrowserRouter>
         <Routes>
           {/* Public Auth Route */}
@@ -53,6 +54,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
-    </AuthProvider>
+    </PrivacyProvider></AuthProvider>
   );
 }

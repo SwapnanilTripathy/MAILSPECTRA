@@ -1,3 +1,4 @@
+import { useMasked } from '../context/PrivacyContext';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -20,7 +21,8 @@ import DefangedIndicator from '../components/common/DefangedIndicator';
 
 export default function CasesPage() {
   const navigate = useNavigate();
-  const [cases, setCases] = useState([]);
+  const [rawcases, setCases] = useState([]);
+  const cases = useMasked(rawcases);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');

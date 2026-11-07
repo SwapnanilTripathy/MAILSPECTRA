@@ -144,7 +144,7 @@ export default function SettingsPage() {
           <span>Zero Third-Party Raw Body Transmission Guarantee</span>
         </div>
         <p className="text-xs text-slate-300 leading-relaxed font-sans">
-          DeepTrace operates under strict evidentiary privacy guarantees. Full
+          MAILSPECTRA provides best-effort presentation masking. Review exports before sharing. Full
           email bodies and sensitive internal communication are{' '}
           <strong>never</strong> transmitted to third-party APIs. Only
           sanitized, discrete indicators (IP, domain name) are checked against

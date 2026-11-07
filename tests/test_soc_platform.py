@@ -89,7 +89,7 @@ async def test_5_report_generation_and_integrity_verification(auth_headers):
         assert verify_resp.status_code == 200
         verify_data = verify_resp.json()
         assert verify_data["integrity_verified"] is True
-        assert verify_data["status"] == "VERIFIED_INTEACT"
+        assert verify_data["status"] == "VERIFIED_INTACT"
 
 
 @pytest.mark.asyncio

@@ -53,6 +53,7 @@ export const api = {
 
   // Real-Time Threat Alerts
   getAlerts: (limit = 20) => apiClient.get('/alerts', { params: { limit } }),
+  updateAlert: (id, status) => apiClient.patch(`/alerts/${id}`, { status }),
   getAlertConfig: () => apiClient.get('/alerts/config'),
 
   // Dashboard Metrics
@@ -71,10 +72,11 @@ export const api = {
   getCampaignDetail: (campaignId) => apiClient.get(`/campaigns/${campaignId}`),
 
   // Reports
-  generateReport: (caseId) => apiClient.post(`/reports/generate/${caseId}`),
+  generateReport: (caseId, maskPii = sessionStorage.getItem("mailspectra_mask") === "true") => apiClient.post(`/reports/generate/${caseId}`, null, { params: { mask_pii: maskPii } }),
   verifyReport: (caseId) => apiClient.get(`/reports/${caseId}/verify`),
   listReports: () => apiClient.get('/reports'),
   downloadReport: async (caseId) => {
+    if (sessionStorage.getItem("mailspectra_mask") === "true") await api.generateReport(caseId, true);
     const blob = await apiClient.get(`/reports/${caseId}/download`, { responseType: 'blob' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a'); link.href = url; link.download = `${caseId}.pdf`; link.click();

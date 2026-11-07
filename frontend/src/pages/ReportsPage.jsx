@@ -1,3 +1,4 @@
+import { useMasked } from '../context/PrivacyContext';
 import React, { useState, useEffect } from 'react';
 import {
   FileText,
@@ -14,7 +15,8 @@ import api from '../api/client';
 import SeverityBadge from '../components/common/SeverityBadge';
 
 export default function ReportsPage() {
-  const [cases, setCases] = useState([]);
+  const [rawcases, setCases] = useState([]);
+  const cases = useMasked(rawcases);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);

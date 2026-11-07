@@ -24,6 +24,8 @@ class SecurityAlert(BaseModel):
     recommended_actions: List[str] = Field(default_factory=list)
     requires_immediate_action: bool = False
     details: Dict[str, Any] = Field(default_factory=dict)
+    status: str = "OPEN"
+    assigned_to: Optional[str] = None
 
 
 class AlertEvaluationResult(BaseModel):
@@ -32,10 +34,6 @@ class AlertEvaluationResult(BaseModel):
     evaluation_timestamp: str
     configured_high_threshold: float
     configured_critical_threshold: float
-
-
-# In-memory recent alerts buffer for real-time dashboard notification feed
-_RECENT_ALERTS: List[SecurityAlert] = []
 
 
 class AlertService:
@@ -122,12 +120,6 @@ class AlertService:
             },
         )
 
-        # Buffer recent high/critical alerts
-        if severity in ["CRITICAL", "HIGH", "MEDIUM"]:
-            _RECENT_ALERTS.insert(0, alert)
-            if len(_RECENT_ALERTS) > 50:
-                _RECENT_ALERTS.pop()
-
         logger.info(f"Generated {severity} alert {alert_id} for case {analysis.case_id} (Score: {score})")
 
         return AlertEvaluationResult(
@@ -138,6 +130,3 @@ class AlertService:
             configured_critical_threshold=crit_thresh,
         )
 
-    @classmethod
-    def get_recent_alerts(cls, limit: int = 20) -> List[SecurityAlert]:
-        return _RECENT_ALERTS[:limit]

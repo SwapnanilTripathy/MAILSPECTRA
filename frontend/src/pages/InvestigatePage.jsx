@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 import { maskAnalysis } from '../utils/privacy';
+import { usePrivacy } from '../context/PrivacyContext';
 import VerdictBanner from '../components/investigation/VerdictBanner';
 import HeadersForensicsView from '../components/investigation/HeadersForensicsView';
 import RelayHopsView from '../components/investigation/RelayHopsView';
@@ -43,7 +44,7 @@ export default function InvestigatePage() {
   const [loading, setLoading] = useState(false);
   const [rawText, setRawText] = useState('');
   const [inputMode, setInputMode] = useState('file'); // 'file' | 'raw'
-  const [maskPii, setMaskPii] = useState(false);
+  const { masked: maskPii, setMasked: setMaskPii } = usePrivacy();
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
@@ -218,7 +219,7 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
     try {
       // First ensure case is saved so report generator has records
       if (!(await handleSaveCase())) return;
-      const reportRes = await api.generateReport(analysis.case_id);
+      const reportRes = await api.generateReport(analysis.case_id, maskPii);
       await api.downloadReport(analysis.case_id);
       setAlertMessage({
         type: 'success',
@@ -249,6 +250,7 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
     ];
 
   const tabs = [
+    { id: 'evidence', label: 'Evidence Manifest', icon: FileText },
     { id: 'summary', label: 'Executive Summary & Headers', icon: FileText },
     { id: 'nlp', label: 'NLP Content Signals', icon: MessageSquare },
     { id: 'relay', label: 'Relay Path & Transit', icon: Radio },
@@ -484,6 +486,7 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
 
           {/* Tab Panes */}
           <div className="pt-2">
+            {activeTab === 'evidence' && <section className="space-y-3"><h2 className="text-xl">Evidence manifest</h2><p>Original bytes and derived analysis are stored separately. Hash verification compares the current artifact with its stored digest.</p><pre className="whitespace-pre-wrap break-all text-xs">{JSON.stringify(displayAnalysis.evidence_manifest || { status: 'Unavailable for this legacy case' }, null, 2)}</pre></section>}
             {activeTab === 'summary' && (
               <div className="space-y-6">
                 <HeadersForensicsView

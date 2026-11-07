@@ -1,3 +1,5 @@
+import AlertFeed from '../components/common/AlertFeed';
+import { useMasked } from '../context/PrivacyContext';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -41,7 +43,8 @@ const COLORS = [
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [recentCases, setRecentCases] = useState(null);
+  const [rawrecentCases, setRecentCases] = useState(null);
+  const recentCases = useMasked(rawrecentCases);
   const [distribution, setDistribution] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -85,6 +88,7 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard space-y-6 max-w-7xl mx-auto">
+      <AlertFeed />
       <section className="overview-hero">
         <div className="overview-copy">
           <div className="eyebrow">

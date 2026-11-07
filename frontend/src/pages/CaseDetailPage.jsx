@@ -1,3 +1,4 @@
+import { useMasked } from '../context/PrivacyContext';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -23,7 +24,9 @@ import DefangedIndicator from '../components/common/DefangedIndicator';
 export default function CaseDetailPage() {
   const { caseId } = useParams();
   const navigate = useNavigate();
-  const [caseData, setCaseData] = useState(null);
+  const [rawcaseData, setCaseData] = useState(null);
+  const caseData = useMasked(rawcaseData);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [integrityStatus, setIntegrityStatus] = useState(null);
   const [verifying, setVerifying] = useState(false);
@@ -39,7 +42,7 @@ export default function CaseDetailPage() {
       const res = await api.getCaseDetail(caseId);
       setCaseData(res);
     } catch (err) {
-      console.error('Failed to fetch case:', err);
+      setLoadError(err.message);
     } finally {
       setLoading(false);
     }
@@ -83,7 +86,7 @@ export default function CaseDetailPage() {
     return (
       <div className="p-12 rounded-xl bg-[#111827] border border-slate-800 text-center text-slate-400 font-mono text-sm space-y-4">
         <AlertTriangle className="w-8 h-8 mx-auto text-amber-400" />
-        <p>Case '{caseId}' not found in the forensic registry.</p>
+        <p role="alert">{loadError || 'Case unavailable'}</p>
         <button
           onClick={() => navigate('/cases')}
           className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono"
@@ -109,7 +112,7 @@ export default function CaseDetailPage() {
         <div className="flex items-center gap-3">
           {caseData.full_analysis && Object.keys(caseData.full_analysis).length > 0 && (
             <button
-              onClick={() => navigate('/investigate', { state: { initialAnalysis: caseData.full_analysis } })}
+              onClick={() => navigate('/investigate', { state: { initialAnalysis: rawcaseData.full_analysis } })}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 text-xs font-semibold transition"
             >
               <Search className="w-4 h-4" />

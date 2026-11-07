@@ -3,7 +3,7 @@ import hashlib
 import json
 import os
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.responses import FileResponse
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 @router.post("/generate/{case_id}", summary="Generate evidence-preserving PDF forensic report")
-async def generate_case_report(case_id: str, db: AsyncSession = Depends(get_db)):
+async def generate_case_report(case_id: str, request: Request, mask_pii: bool = Query(False), db: AsyncSession = Depends(get_db)):
 
     """Generates PDF forensic report, computes SHA-256 cryptographic hash, and updates case record."""
     stmt = (
@@ -54,6 +54,10 @@ async def generate_case_report(case_id: str, db: AsyncSession = Depends(get_db))
     except Exception:
         pass
 
+    case_dict["timeline"] = [{"action":row.event_type,"timestamp":row.event_timestamp.isoformat(),"description":row.description} for row in case_rec.timeline_events]
+    if mask_pii:
+        from backend.app.services.privacy_service import PrivacyService
+        case_dict = PrivacyService.redact_analysis(case_dict)
     # Generate PDF
     try:
         report_meta = ForensicReportGenerator.generate_case_pdf(case_dict)
@@ -61,7 +65,7 @@ async def generate_case_report(case_id: str, db: AsyncSession = Depends(get_db))
         logger.error(f"Failed to generate PDF report: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Report generation error: {str(e)}",
+            detail="Report generation failed",
         )
 
     # Update CaseRecord with report details
@@ -85,12 +89,16 @@ async def generate_case_report(case_id: str, db: AsyncSession = Depends(get_db))
         AuditLogRecord(
             case_id=case_id,
             action="REPORT_GENERATED",
-            actor="SOC Analyst",
+            actor=request.state.user.username,
             details=f"Generated forensic report '{report_meta['filename']}'",
         )
     )
 
     await db.commit()
+    manifest = {"generated_by":"MAILSPECTRA", "case_id":case_id, "report_sha256":report_meta["sha256"], "original_sha256":case_rec.sha256, "generated_at":report_meta["generated_at"], "privacy_redaction_applied":mask_pii, "evidence_manifest":case_dict.get("evidence_manifest",{})}
+    with open(report_meta["filepath"] + ".manifest.json", "w") as stream:
+        json.dump(manifest,stream,indent=2)
+    os.chmod(report_meta["filepath"] + ".manifest.json", 0o600)
 
     return {
         "status": "SUCCESS",
@@ -104,7 +112,7 @@ async def generate_case_report(case_id: str, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/{case_id}/download", summary="Download generated PDF report")
-async def download_case_report(case_id: str, db: AsyncSession = Depends(get_db)):
+async def download_case_report(case_id: str, request: Request, db: AsyncSession = Depends(get_db)):
     stmt = select(CaseRecord).where(CaseRecord.case_id == case_id)
     case_rec = (await db.execute(stmt)).scalar_one_or_none()
 
@@ -114,6 +122,8 @@ async def download_case_report(case_id: str, db: AsyncSession = Depends(get_db))
             detail="Forensic report not generated yet or file missing. Please click 'Generate Report' first.",
         )
 
+    db.add(AuditLogRecord(case_id=case_id, action="REPORT_DOWNLOADED", actor=request.state.user.username, details="Authenticated PDF download"))
+    await db.commit()
     filename = os.path.basename(case_rec.report_path)
     return FileResponse(
         path=case_rec.report_path,
@@ -123,7 +133,7 @@ async def download_case_report(case_id: str, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/{case_id}/verify", summary="Verify forensic report cryptographic SHA-256 integrity")
-async def verify_report_integrity(case_id: str, db: AsyncSession = Depends(get_db)):
+async def verify_report_integrity(case_id: str, request: Request, db: AsyncSession = Depends(get_db)):
     stmt = select(CaseRecord).where(CaseRecord.case_id == case_id)
     case_rec = (await db.execute(stmt)).scalar_one_or_none()
 
@@ -138,13 +148,15 @@ async def verify_report_integrity(case_id: str, db: AsyncSession = Depends(get_d
         actual_hash = hashlib.sha256(f.read()).hexdigest()
 
     is_valid = actual_hash == case_rec.report_sha256
+    db.add(AuditLogRecord(case_id=case_id,action="REPORT_VERIFIED",actor=request.state.user.username,details="MATCH" if is_valid else "MISMATCH"))
+    await db.commit()
 
     return {
         "case_id": case_id,
         "stored_hash": case_rec.report_sha256,
         "calculated_hash": actual_hash,
         "integrity_verified": is_valid,
-        "status": "VERIFIED_INTEACT" if is_valid else "INTEGRITY_COMPROMISED",
+        "status": "VERIFIED_INTACT" if is_valid else "INTEGRITY_COMPROMISED",
         "verified_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -171,3 +183,14 @@ async def list_reports(db: AsyncSession = Depends(get_db)):
             for c in cases
         ],
     }
+
+
+@router.get("/{case_id}/manifest")
+async def report_manifest(case_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    case = await db.get(CaseRecord,case_id)
+    if not case or not case.report_path: raise HTTPException(404,"Report unavailable")
+    path = case.report_path + ".manifest.json"
+    if not os.path.isfile(path): raise HTTPException(404,"Manifest unavailable for this legacy report")
+    db.add(AuditLogRecord(case_id=case_id,action="MANIFEST_EXPORTED",actor=request.state.user.username,details="Report manifest download"))
+    await db.commit()
+    return FileResponse(path,media_type="application/json",filename="mailspectra-manifest.json")

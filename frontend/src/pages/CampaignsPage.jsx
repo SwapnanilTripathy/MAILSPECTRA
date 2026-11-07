@@ -1,3 +1,4 @@
+import { useMasked } from '../context/PrivacyContext';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -19,7 +20,8 @@ export default function CampaignsPage() {
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
-  const [campaignDetail, setCampaignDetail] = useState(null);
+  const [rawcampaignDetail, setCampaignDetail] = useState(null);
+  const campaignDetail = useMasked(rawcampaignDetail);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [detailLoading, setDetailLoading] = useState(false);
