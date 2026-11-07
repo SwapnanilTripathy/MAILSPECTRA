@@ -82,6 +82,8 @@ export const api = {
   },
   getReportDownloadUrl: (caseId) => `${baseURL}/reports/${caseId}/download`,
 
+  lookupIndicator: (indicator, indicator_type) => apiClient.post("/intelligence/lookup", { indicator, indicator_type }),
+
   // System & Health
   getSystemStatus: () => apiClient.get('/system/status'),
   getSystemSettings: () => apiClient.get('/system/settings'),

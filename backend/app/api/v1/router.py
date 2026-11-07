@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from backend.app.core.security import authorize
 from backend.app.api.v1.endpoints import (
+    intelligence,
     alerts,
     analyze,
     auth,
@@ -25,4 +26,5 @@ private_router.include_router(reports.router, prefix="/reports", tags=["Forensic
 private_router.include_router(system.router, prefix="/system", tags=["System & Settings"])
 
 
+private_router.include_router(intelligence.router, prefix="/intelligence", tags=["Indicator intelligence"])
 api_router.include_router(private_router)

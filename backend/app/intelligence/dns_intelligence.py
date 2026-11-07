@@ -72,16 +72,16 @@ class DNSIntelligenceService:
             f = OFFLINE_DNS_FIXTURES[domain]
             for ip in f.get("A", []):
                 a_records.append(ip)
-                records.append(DNSRecordEntry(domain=domain, record_type="A", value=ip, ttl=300, timestamp=now_iso))
+                records.append(DNSRecordEntry(domain=domain, record_type="A", value=ip, ttl=300, timestamp=now_iso, source="OFFLINE_FIXTURE", status="FIXTURE"))
             for mx in f.get("MX", []):
                 mx_hosts.append(mx.split()[-1].rstrip("."))
-                records.append(DNSRecordEntry(domain=domain, record_type="MX", value=mx, ttl=300, timestamp=now_iso))
+                records.append(DNSRecordEntry(domain=domain, record_type="MX", value=mx, ttl=300, timestamp=now_iso, source="OFFLINE_FIXTURE", status="FIXTURE"))
             for ns in f.get("NS", []):
                 nameservers.append(ns.rstrip("."))
-                records.append(DNSRecordEntry(domain=domain, record_type="NS", value=ns, ttl=300, timestamp=now_iso))
+                records.append(DNSRecordEntry(domain=domain, record_type="NS", value=ns, ttl=300, timestamp=now_iso, source="OFFLINE_FIXTURE", status="FIXTURE"))
             for txt in f.get("TXT", []):
                 txt_records.append(txt)
-                records.append(DNSRecordEntry(domain=domain, record_type="TXT", value=txt, ttl=300, timestamp=now_iso))
+                records.append(DNSRecordEntry(domain=domain, record_type="TXT", value=txt, ttl=300, timestamp=now_iso, source="OFFLINE_FIXTURE", status="FIXTURE"))
 
             return DNSIntelligenceResult(
                 domain=domain,
@@ -91,7 +91,8 @@ class DNSIntelligenceService:
                 nameservers=nameservers,
                 txt_records=txt_records,
                 has_valid_mx=bool(mx_hosts),
-                status="SUCCESS",
+                status="FIXTURE",
+                source="OFFLINE_FIXTURE",
             )
 
         # Generic offline default
@@ -99,7 +100,8 @@ class DNSIntelligenceService:
             domain=domain,
             records=[],
             has_valid_mx=False,
-            status="SUCCESS",
+            status="UNAVAILABLE",
+            source="OFFLINE_FIXTURE",
         )
 
     async def _resolve_live(self, domain: str) -> DNSIntelligenceResult:
@@ -114,15 +116,22 @@ class DNSIntelligenceService:
         resolver.timeout = self.timeout
         resolver.lifetime = self.timeout
 
+        errors = []
         # Query A records
         try:
             answers = await resolver.resolve(domain, "A")
             for rdata in answers:
                 val = str(rdata)
                 a_records.append(val)
-                records.append(DNSRecordEntry(domain=domain, record_type="A", value=val, ttl=answers.ttl, timestamp=now_iso))
-        except Exception:
+                records.append(DNSRecordEntry(domain=domain, record_type="A", value=val, ttl=answers.rrset.ttl, timestamp=now_iso))
+        except dns.resolver.NXDOMAIN:
+            errors.append("NXDOMAIN")
+        except dns.exception.Timeout:
+            errors.append("TIMEOUT")
+        except dns.resolver.NoAnswer:
             pass
+        except Exception:
+            errors.append("ERROR")
 
         # Query MX records
         try:
@@ -131,9 +140,15 @@ class DNSIntelligenceService:
                 val = str(rdata.exchange).rstrip(".")
                 prio = int(rdata.preference)
                 mx_hosts.append(val)
-                records.append(DNSRecordEntry(domain=domain, record_type="MX", value=f"{prio} {val}", priority=prio, ttl=answers.ttl, timestamp=now_iso))
-        except Exception:
+                records.append(DNSRecordEntry(domain=domain, record_type="MX", value=f"{prio} {val}", priority=prio, ttl=answers.rrset.ttl, timestamp=now_iso))
+        except dns.resolver.NXDOMAIN:
+            errors.append("NXDOMAIN")
+        except dns.exception.Timeout:
+            errors.append("TIMEOUT")
+        except dns.resolver.NoAnswer:
             pass
+        except Exception:
+            errors.append("ERROR")
 
         # Query NS records
         try:
@@ -141,9 +156,15 @@ class DNSIntelligenceService:
             for rdata in answers:
                 val = str(rdata.target).rstrip(".")
                 nameservers.append(val)
-                records.append(DNSRecordEntry(domain=domain, record_type="NS", value=val, ttl=answers.ttl, timestamp=now_iso))
-        except Exception:
+                records.append(DNSRecordEntry(domain=domain, record_type="NS", value=val, ttl=answers.rrset.ttl, timestamp=now_iso))
+        except dns.resolver.NXDOMAIN:
+            errors.append("NXDOMAIN")
+        except dns.exception.Timeout:
+            errors.append("TIMEOUT")
+        except dns.resolver.NoAnswer:
             pass
+        except Exception:
+            errors.append("ERROR")
 
         # Query TXT records
         try:
@@ -151,12 +172,18 @@ class DNSIntelligenceService:
             for rdata in answers:
                 val = str(rdata).strip('"')
                 txt_records.append(val)
-                records.append(DNSRecordEntry(domain=domain, record_type="TXT", value=val, ttl=answers.ttl, timestamp=now_iso))
-        except Exception:
+                records.append(DNSRecordEntry(domain=domain, record_type="TXT", value=val, ttl=answers.rrset.ttl, timestamp=now_iso))
+        except dns.resolver.NXDOMAIN:
+            errors.append("NXDOMAIN")
+        except dns.exception.Timeout:
+            errors.append("TIMEOUT")
+        except dns.resolver.NoAnswer:
             pass
+        except Exception:
+            errors.append("ERROR")
 
         has_mx = bool(mx_hosts)
-        status = "SUCCESS" if records else "NO_RECORDS"
+        status = "PARTIAL" if records and errors else "SUCCESS" if records else errors[0] if errors else "NO_RECORDS"
 
         return DNSIntelligenceResult(
             domain=domain,

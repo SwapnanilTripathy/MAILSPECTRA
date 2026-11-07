@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../api/client';
 import {
   Globe2,
   Search,
@@ -14,6 +15,7 @@ import {
 import DefangedIndicator from '../components/common/DefangedIndicator';
 
 export default function IntelligencePage() {
+  const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [queryType, setQueryType] = useState('DOMAIN'); // 'DOMAIN' | 'IP' | 'HASH'
   const [result, setResult] = useState(null);
@@ -44,23 +46,14 @@ export default function IntelligencePage() {
     setCalculatedEntropy(val);
   };
 
-  const handleQuery = () => {
+  const handleQuery = async () => {
     if (!query.trim()) return;
-    setCalculating(true);
-
-    setTimeout(() => {
-      const entropy = calculateShannonEntropy(query);
-      setResult({
-        indicator: query,
-        type: queryType,
-        entropy: entropy.toFixed(2),
-        is_dga: entropy > 3.8,
-        status: 'LEXICAL_ONLY',
-        reputation: 'Not checked',
-        timestamp: new Date().toISOString(),
-      });
-      setCalculating(false);
-    }, 400);
+    setCalculating(true); setError(''); setResult(null);
+    try {
+      const data = await api.lookupIndicator(query, queryType);
+      setResult({ indicator: data.indicator, type: data.indicator_type, entropy: data.lexical_entropy.toFixed(2), status: data.status, reputation: data.verdict, timestamp: data.last_checked, provider: data.provider, source: data.source, cache: data.cache_hit });
+    } catch (error) { setError(error.message); }
+    finally { setCalculating(false); }
   };
 
   return (
@@ -72,11 +65,11 @@ export default function IntelligencePage() {
           Threat Intelligence & IOC Workbench
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Calculate lexical entropy for an indicator. This tool does not perform
-          a reputation lookup.
+          Query configured backend providers. Live mode may disclose the indicator to a provider; offline results are fixtures or unavailable. URLs are never fetched.
         </p>
       </div>
 
+      {error && <p role="alert" className="text-red-300">{error}</p>}
       {/* Query Search Bar */}
       <div className="p-6 rounded-2xl bg-[#111827] border border-slate-800 shadow-xl space-y-4">
         <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
@@ -149,7 +142,7 @@ export default function IntelligencePage() {
                   REPUTATION LOOKUP
                 </span>
                 <span className="font-bold text-slate-300">
-                  {result.reputation}
+                  {result.reputation} — {result.status} ({result.provider}; {result.source}{result.cache ? "; cached" : ""})
                 </span>
               </div>
               <div>
@@ -178,13 +171,11 @@ export default function IntelligencePage() {
         <div className="flex items-center gap-2">
           <Cpu className="w-5 h-5 text-cyan-400" />
           <h3 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
-            DGA Domain Shannon Entropy Interactive Calculator
+            Local Shannon Entropy Calculator
           </h3>
         </div>
         <p className="text-xs text-slate-400">
-          Evaluates character unpredictability (bits per symbol) to detect
-          Domain Generation Algorithms (DGA) and algorithmic randomness used by
-          malware C2 channels.
+          Measures character unpredictability. Entropy alone does not establish DGA activity or maliciousness.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">

@@ -203,7 +203,7 @@ class ThreatAnalysisPipeline:
 
         # 9. Phase 3: Infrastructure Intelligence & Origin Assessment
         try:
-            intel = await self.infra_service.gather_intelligence(base_analysis)
+            intel = await asyncio.wait_for(self.infra_service.gather_intelligence(base_analysis), timeout=30)
             base_analysis.infrastructure_intelligence = intel
             base_analysis.geolocation = intel.ip_intelligence
             base_analysis.origin_assessment = intel.origin_assessment

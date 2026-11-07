@@ -27,11 +27,11 @@ def pipeline_instance():
 async def test_1_public_ip_intelligence():
     provider = OfflineGeoIPProvider()
     res = await provider.lookup("198.51.100.25")
-    assert res.is_public is True
+    assert res.is_public is False  # Documentation prefix, even in a fixture
     assert res.is_private is False
     assert res.country == "United States"
     assert res.asn == "AS15169"
-    assert res.status == "SUCCESS"
+    assert res.status == "FIXTURE"
     assert res.confidence > 0.5
 
 
@@ -61,7 +61,7 @@ async def test_3_missing_invalid_ip_handling():
 async def test_4_dns_success():
     dns_svc = DNSIntelligenceService(mode="offline")
     res = await dns_svc.resolve_domain("legitcorp.com")
-    assert res.status == "SUCCESS"
+    assert res.status == "FIXTURE"
     assert "198.51.100.25" in res.a_records
     assert any("mail-out.legitcorp.com" in mx for mx in res.mx_hosts)
     assert res.has_valid_mx is True
@@ -72,7 +72,7 @@ async def test_4_dns_success():
 async def test_5_dns_unknown_domain():
     dns_svc = DNSIntelligenceService(mode="offline")
     res = await dns_svc.resolve_domain("non-existent-random-domain-12345.xyz")
-    assert res.status == "SUCCESS"  # Handled cleanly without exception
+    assert res.status == "UNAVAILABLE"  # Offline absence is not a successful lookup
     assert res.has_valid_mx is False
 
 

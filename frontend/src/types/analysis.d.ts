@@ -83,6 +83,10 @@ export type CampaignEntity = {
   "threat_summary"?: string;
 };
 export type DNSIntelligenceResult = {
+  "looked_up_at"?: string;
+  "cache_hit"?: boolean;
+  "limitations"?: Array<string>;
+  "source"?: string;
   "domain": string;
   "records"?: Array<DNSRecordEntry>;
   "a_records"?: Array<string>;
@@ -183,6 +187,9 @@ export type FeatureExtractionSummary = {
   "key_extracted_signals"?: Record<string, unknown>;
 };
 export type GeoLocationInfo = {
+  "looked_up_at"?: string;
+  "cache_hit"?: boolean;
+  "limitations"?: Array<string>;
   "ip": string;
   "defanged_ip": string;
   "version"?: number;
@@ -247,6 +254,9 @@ export type OriginAssessmentResult = {
   "limitations"?: Array<string>;
 };
 export type RDAPDomainInfo = {
+  "looked_up_at"?: string;
+  "cache_hit"?: boolean;
+  "limitations"?: Array<string>;
   "domain": string;
   "registrar"?: string | null;
   "creation_date"?: string | null;
@@ -356,6 +366,9 @@ export type ThreatIndicator = {
   "observed_value"?: unknown;
 };
 export type ThreatReputationInfo = {
+  "looked_up_at"?: string;
+  "cache_hit"?: boolean;
+  "limitations"?: Array<string>;
   "indicator": string;
   "indicator_type": string;
   "provider"?: string;
