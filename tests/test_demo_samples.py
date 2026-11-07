@@ -12,10 +12,26 @@ DEMO_FILES = (
     "credential_harvest.eml",
     "executive_payment_request.eml",
 )
-HOSTNAME_PATTERN = re.compile(
-    r"\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\b",
+EMAIL_HOST_PATTERN = re.compile(r"@([a-z0-9.-]+\.[a-z]{2,63})", re.IGNORECASE)
+URL_HOST_PATTERN = re.compile(
+    r"https?://([a-z0-9.-]+\.[a-z]{2,63})(?=[:/?#\s]|$)",
     re.IGNORECASE,
 )
+RECEIVED_HOST_PATTERN = re.compile(
+    r"\b(?:from|by)\s+([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9-]+)*\.[a-z]{2,63})\b",
+    re.IGNORECASE,
+)
+
+
+def extract_hostnames(raw: str) -> set[str]:
+    """Extract hostnames from email addresses, URLs, and Received relay fields."""
+    hosts = (
+        EMAIL_HOST_PATTERN.findall(raw)
+        + URL_HOST_PATTERN.findall(raw)
+        + RECEIVED_HOST_PATTERN.findall(raw)
+    )
+    return {hostname.lower() for hostname in hosts}
+
 DOCUMENTATION_NETWORKS = (
     IPv4Network("192.0.2.0/24"),
     IPv4Network("198.51.100.0/24"),
@@ -41,7 +57,7 @@ def test_demo_emails_use_only_reserved_test_domains_and_documentation_ips():
     """Require every hostname and IPv4 literal to use reserved demonstration ranges."""
     for filename in DEMO_FILES:
         raw = (DEMO_DIRECTORY / filename).read_text(encoding="utf-8")
-        hostnames = set(HOSTNAME_PATTERN.findall(raw))
+        hostnames = set(extract_hostnames(raw))
         assert hostnames, f"{filename} should contain at least one hostname"
         for hostname in hostnames:
             assert hostname.lower().endswith(".test"), (
