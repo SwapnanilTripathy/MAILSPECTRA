@@ -1,22 +1,32 @@
 services:
   - type: web
-    name: deeptrace-soc-platform
-    env: docker
+    name: mailspectra
+    runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free
+    plan: starter
     region: oregon
-    branch: main
-    autoDeploy: true
+    autoDeploy: false
+    healthCheckPath: /api/v1/ready
+    # Explicit deployment migration; back up the persistent disk before upgrades.
+    dockerCommand: sh -c 'python -m alembic upgrade head && python backend/run.py'
+    disk:
+      name: evidence
+      mountPath: /app/storage
+      sizeGB: 10
     envVars:
       - key: APP_ENV
         value: production
-      - key: HOST
-        value: 0.0.0.0
+      - key: DEBUG
+        value: "false"
       - key: INTELLIGENCE_MODE
-        value: live
-      - key: CACHE_TTL_HOURS
-        value: 24
-      - key: MAX_UPLOAD_SIZE_MB
-        value: 25
+        value: offline
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:////app/storage/mailspectra.db
+      - key: UPLOAD_DIR
+        value: /app/storage/uploads
+      - key: REPORTS_DIR
+        value: /app/storage/reports
+      - key: CORS_ORIGINS
+        sync: false
       - key: SECRET_KEY
         generateValue: true

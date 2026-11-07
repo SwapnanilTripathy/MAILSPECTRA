@@ -48,7 +48,7 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
 
         {/* Evidentiary Basis */}
         <div className="mt-5 p-4 rounded-lg bg-slate-900/80 border border-slate-800">
-          <h5 className="text-xs font-mono font-semibold text-slate-300 uppercase">Technical Evidentiary Basis</h5>
+          <h3 className="text-xs font-mono font-semibold text-slate-300 uppercase">Technical Evidentiary Basis</h3>
           <p className="mt-2 text-xs text-slate-300 leading-relaxed font-sans">
             {attributionSupport?.technical_justification ||
               attributionSupport?.evidentiary_basis ||
@@ -71,9 +71,9 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
           <div className="px-5 py-4 border-b border-slate-800 bg-cyan-950/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Network className="w-4 h-4 text-cyan-400" />
-              <h4 className="text-xs font-mono uppercase tracking-wider text-white">
+              <h3 className="text-xs font-mono uppercase tracking-wider text-white">
                 Active Threat Campaign Cluster: {activeCampaign.name || activeCampaign.campaign_id}
-              </h4>
+              </h3>
             </div>
             <span className="px-2.5 py-0.5 rounded text-xs font-bold font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
               {activeCampaign.primary_threat_type || 'PHISHING'}
@@ -83,19 +83,19 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
           <div className="p-5 space-y-4 font-mono text-xs">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <span className="text-slate-500 block text-[10px]">CAMPAIGN ID</span>
+                <span className="text-slate-400 block text-[10px]">CAMPAIGN ID</span>
                 <span className="text-slate-200 font-semibold">{activeCampaign.campaign_id}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px]">MEMBER CASES</span>
+                <span className="text-slate-400 block text-[10px]">MEMBER CASES</span>
                 <span className="text-cyan-400 font-bold">{activeCampaign.member_count || (activeCampaign.member_case_ids || []).length} Cases</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px]">FIRST OBSERVED</span>
+                <span className="text-slate-400 block text-[10px]">FIRST OBSERVED</span>
                 <span className="text-slate-300">{activeCampaign.first_seen ? activeCampaign.first_seen.substring(0, 10) : 'N/A'}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px]">LAST OBSERVED</span>
+                <span className="text-slate-400 block text-[10px]">LAST OBSERVED</span>
                 <span className="text-slate-300">{activeCampaign.last_seen ? activeCampaign.last_seen.substring(0, 10) : 'N/A'}</span>
               </div>
             </div>
@@ -108,15 +108,15 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-500 text-[10px] block">SHARED IPS</span>
+                    <span className="text-slate-400 text-[10px] block">SHARED IPS</span>
                     <span className="text-white font-bold">{(activeCampaign.shared_infrastructure.ips || []).length}</span>
                   </div>
                   <div className="p-3 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-500 text-[10px] block">SHARED DOMAINS</span>
+                    <span className="text-slate-400 text-[10px] block">SHARED DOMAINS</span>
                     <span className="text-white font-bold">{(activeCampaign.shared_infrastructure.domains || []).length}</span>
                   </div>
                   <div className="p-3 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-500 text-[10px] block">SHARED URL TARGETS</span>
+                    <span className="text-slate-400 text-[10px] block">SHARED URL TARGETS</span>
                     <span className="text-white font-bold">{(activeCampaign.shared_infrastructure.urls || []).length}</span>
                   </div>
                 </div>
@@ -131,14 +131,14 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
         <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-cyan-400" />
-            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">
               Cross-Case Database Infrastructure Correlations ({correlations.length})
-            </h4>
+            </h3>
           </div>
         </div>
 
         {correlations.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 font-mono text-xs">
+          <div className="p-8 text-center text-slate-400 font-mono text-xs">
             No cross-case infrastructure matches found in the historical threat database for this email.
           </div>
         ) : (

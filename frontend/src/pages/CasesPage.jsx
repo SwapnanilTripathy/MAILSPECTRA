@@ -113,7 +113,7 @@ export default function CasesPage() {
 
         <button
           onClick={() => navigate('/investigate')}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg shadow-cyan-600/20 transition self-start sm:self-auto"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-cyan-700 hover:bg-cyan-800 text-white font-semibold text-xs shadow-lg shadow-cyan-600/20 transition self-start sm:self-auto"
         >
           <PlusCircle className="w-4 h-4" />
           <span>New Investigation</span>
@@ -127,7 +127,7 @@ export default function CasesPage() {
           className="flex-1 w-full flex items-center gap-2"
         >
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               value={search}
@@ -146,7 +146,7 @@ export default function CasesPage() {
 
         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
           {/* Status Filter */}
-          <select
+          <select aria-label="Filter by status"
             value={statusFilter}
             onChange={(e) => {
               setOffset(0);
@@ -162,7 +162,7 @@ export default function CasesPage() {
           </select>
 
           {/* Classification Filter */}
-          <select
+          <select aria-label="Filter by classification"
             value={classificationFilter}
             onChange={(e) => {
               setOffset(0);
@@ -172,6 +172,8 @@ export default function CasesPage() {
           >
             <option value="">All Threat Classes</option>
             <option value="PHISHING">PHISHING</option>
+            <option value="CREDENTIAL_HARVESTING">CREDENTIAL HARVESTING</option>
+            <option value="UNKNOWN">UNKNOWN</option>
             <option value="BUSINESS_EMAIL_COMPROMISE">BEC</option>
             <option value="IMPERSONATION">IMPERSONATION</option>
             <option value="FRAUD">FRAUD</option>
@@ -196,7 +198,7 @@ export default function CasesPage() {
             </button>
           </div>
         ) : cases.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 font-mono text-xs space-y-2">
+          <div className="p-12 text-center text-slate-400 font-mono text-xs space-y-2">
             <FolderGit2 className="w-8 h-8 mx-auto text-slate-600" />
             <p>No investigation cases found matching the specified filters.</p>
           </div>
@@ -382,7 +384,7 @@ export default function CasesPage() {
               <button
                 onClick={handleUpdateStatus}
                 disabled={updatingStatus}
-                className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-lg shadow-cyan-600/20 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-semibold shadow-lg shadow-cyan-600/20 disabled:opacity-50"
               >
                 {updatingStatus ? 'Updating...' : 'Save Lifecycle Status'}
               </button>

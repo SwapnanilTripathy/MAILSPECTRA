@@ -129,4 +129,3 @@ class AlertService:
             configured_high_threshold=high_thresh,
             configured_critical_threshold=crit_thresh,
         )
-

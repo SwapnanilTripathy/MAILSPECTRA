@@ -78,12 +78,12 @@ export default function ObservablesView({ observables, attachments }) {
         <div className="rounded-xl bg-[#111827] border border-slate-800 overflow-hidden shadow-md">
           <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/40 flex items-center gap-2">
             <Paperclip className="w-4 h-4 text-cyan-400" />
-            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">
               Extracted Email Attachments & Cryptographic Hashes
-            </h4>
+            </h3>
           </div>
           {(!attachments || attachments.length === 0) ? (
-            <div className="p-8 text-center text-slate-500 font-mono text-xs">
+            <div className="p-8 text-center text-slate-400 font-mono text-xs">
               No binary attachments contained in this email.
             </div>
           ) : (

@@ -62,7 +62,7 @@ async def generate_case_report(case_id: str, request: Request, mask_pii: bool = 
     try:
         report_meta = ForensicReportGenerator.generate_case_pdf(case_dict)
     except Exception as e:
-        logger.error(f"Failed to generate PDF report: {e}", exc_info=True)
+        logger.error("Report generation failed: %s", type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Report generation failed",
@@ -94,11 +94,18 @@ async def generate_case_report(case_id: str, request: Request, mask_pii: bool = 
         )
     )
 
-    await db.commit()
     manifest = {"generated_by":"MAILSPECTRA", "case_id":case_id, "report_sha256":report_meta["sha256"], "original_sha256":case_rec.sha256, "generated_at":report_meta["generated_at"], "privacy_redaction_applied":mask_pii, "evidence_manifest":case_dict.get("evidence_manifest",{})}
-    with open(report_meta["filepath"] + ".manifest.json", "w") as stream:
-        json.dump(manifest,stream,indent=2)
-    os.chmod(report_meta["filepath"] + ".manifest.json", 0o600)
+    manifest_path = report_meta["filepath"] + ".manifest.json"
+    try:
+        with open(manifest_path, "x", opener=lambda path, flags: os.open(path, flags, 0o600)) as stream:
+            json.dump(manifest, stream, indent=2)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        for path in (manifest_path, report_meta["filepath"]):
+            if os.path.exists(path):
+                os.unlink(path)
+        raise HTTPException(500, "Report persistence failed")
 
     return {
         "status": "SUCCESS",

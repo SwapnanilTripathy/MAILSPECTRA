@@ -1,4 +1,7 @@
 import os
+import uuid
+import time
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,7 +32,7 @@ def create_application() -> FastAPI:
     app = FastAPI(
         title=f"{settings.PROJECT_NAME} - Forensic Email Threat Intelligence Platform",
         description=(
-            "**DEEPTRACE** is an AI-powered email threat analysis, infrastructure geolocation, "
+            "**MAILSPECTRA** is an email threat analysis and infrastructure investigation workbench, "
             "and digital forensics intelligence platform built for SIH26106 by Team DEEP thinkers."
         ),
         version=settings.VERSION,
@@ -38,6 +41,29 @@ def create_application() -> FastAPI:
         openapi_url=f"{settings.API_V1_STR}/openapi.json",
         lifespan=lifespan,
     )
+
+    @app.middleware("http")
+    async def request_context(request: Request, call_next):
+        request_id = uuid.uuid4().hex
+        started = time.monotonic()
+        length = request.headers.get("content-length")
+        if length and (not length.isdigit() or int(length) > (settings.MAX_UPLOAD_SIZE_MB+1)*1024*1024):
+            return JSONResponse(status_code=413, content={"detail":"Request body exceeds limit", "code":"PAYLOAD_TOO_LARGE", "request_id":request_id})
+        try:
+            response = await call_next(request)
+        except Exception:
+            logger.error("request_failed request_id=%s",request_id)
+            response = JSONResponse(status_code=500,content={"detail":"Internal operation failed", "code":"INTERNAL_ERROR", "request_id":request_id})
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["X-Frame-Options"] = "DENY"
+        if request.url.path.startswith(settings.API_V1_STR): response.headers["Cache-Control"] = "no-store"
+        logger.info("request_completed request_id=%s method=%s status=%s duration_ms=%d",request_id,request.method,response.status_code,(time.monotonic()-started)*1000)
+        return response
+
+    from backend.app.core.request_limits import RequestBodyLimit
+    app.add_middleware(RequestBodyLimit, max_bytes=(settings.MAX_UPLOAD_SIZE_MB + 1) * 1024 * 1024)
 
     # Configure CORS
     app.add_middleware(
@@ -81,7 +107,9 @@ def create_application() -> FastAPI:
         async def serve_spa(full_path: str):
             if full_path.startswith("api/") or full_path == "docs" or full_path == "redoc" or full_path == "openapi.json":
                 return JSONResponse(status_code=404, content={"detail": "Endpoint not found"})
-            target = os.path.join(frontend_dist, full_path)
+            target = str((Path(frontend_dist) / full_path).resolve())
+            if not Path(target).is_relative_to(Path(frontend_dist).resolve()):
+                return JSONResponse(status_code=404,content={"detail":"Not found"})
             if full_path and os.path.exists(target) and os.path.isfile(target):
                 return FileResponse(target)
             index_path = os.path.join(frontend_dist, "index.html")

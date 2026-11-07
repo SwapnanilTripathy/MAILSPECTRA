@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "DEEPTRACE"
+    PROJECT_NAME: str = "MAILSPECTRA"
     PROJECT_DESCRIPTION: str = "AI-Powered Email Threat Detection, GeoLocation and Forensic Intelligence Platform"
     TEAM_NAME: str = "DEEP thinkers"
     PROBLEM_STATEMENT: str = "SIH26106"
@@ -75,13 +75,19 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def secure_configuration(self):
         if self.APP_ENV == "production":
-            if len(self.SECRET_KEY) < 32 or len(set(self.SECRET_KEY)) < 16:
+            if len(self.SECRET_KEY) < 32 or len(set(self.SECRET_KEY)) < 16 or "change-in-production" in self.SECRET_KEY:
                 raise ValueError("Production requires a random SECRET_KEY of at least 32 characters")
             if self.DEBUG or "*" in self.CORS_ORIGINS:
                 raise ValueError("Production requires DEBUG=false and explicit CORS origins")
         elif not self.SECRET_KEY:
             # Development sessions intentionally expire on restart without a configured key.
             self.SECRET_KEY = secrets.token_urlsafe(48)
+        if not 40 < self.ALERT_THRESHOLD_SCORE < self.CRITICAL_ALERT_SCORE <= 100:
+            raise ValueError("Require 40 < high threshold < critical threshold <= 100")
+        if not 1 <= self.MAX_UPLOAD_SIZE_MB <= 100:
+            raise ValueError("MAX_UPLOAD_SIZE_MB must be between 1 and 100")
+        if self.DATABASE_URL.startswith("postgresql://"):
+            self.DATABASE_URL = self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
         return self
 
     @field_validator("CORS_ORIGINS", mode="before")

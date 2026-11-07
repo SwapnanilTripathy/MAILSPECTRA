@@ -34,15 +34,15 @@ export default function ContentIntelligenceView({ contentIntelligence, bodyConte
 
         <div className="flex items-center gap-4 text-xs font-mono">
           <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-center">
-            <span className="text-[10px] text-slate-500 block uppercase">SIGNALS DETECTED</span>
+            <span className="text-[10px] text-slate-400 block uppercase">SIGNALS DETECTED</span>
             <span className="text-sm font-bold text-cyan-400">{contentIntelligence.total_signals_detected || 0}</span>
           </div>
           <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-center">
-            <span className="text-[10px] text-slate-500 block uppercase">HIGHEST SEVERITY</span>
+            <span className="text-[10px] text-slate-400 block uppercase">HIGHEST SEVERITY</span>
             <SeverityBadge severity={contentIntelligence.highest_severity || 'INFORMATIONAL'} size="sm" />
           </div>
           <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-center">
-            <span className="text-[10px] text-slate-500 block uppercase">RISK IMPACT</span>
+            <span className="text-[10px] text-slate-400 block uppercase">RISK IMPACT</span>
             <span className="text-sm font-bold text-amber-400">+{contentIntelligence.risk_score_contribution || 0} pts</span>
           </div>
         </div>
@@ -57,11 +57,11 @@ export default function ContentIntelligenceView({ contentIntelligence, bodyConte
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4 text-amber-400" />
               <span>Extracted Explainable Content Signals ({signals.length})</span>
-            </h4>
-            <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500">
+            </h3>
+            <div className="flex items-center gap-1 text-[11px] font-mono text-slate-400">
               <span>Categories:</span>
               <span className="text-slate-300">{categories.join(', ')}</span>
             </div>
@@ -79,7 +79,7 @@ export default function ContentIntelligenceView({ contentIntelligence, bodyConte
                       <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/20">
                         {sig.category}
                       </span>
-                      <h5 className="text-sm font-bold text-white font-mono mt-1.5">{sig.label}</h5>
+                      <h4 className="text-sm font-bold text-white font-mono mt-1.5">{sig.label}</h4>
                     </div>
                     <SeverityBadge severity={sig.severity} size="sm" />
                   </div>
@@ -91,14 +91,14 @@ export default function ContentIntelligenceView({ contentIntelligence, bodyConte
 
                 {sig.evidence_snippet && (
                   <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300">
-                    <span className="text-[10px] text-slate-500 uppercase block mb-0.5">CONTEXT SNIPPET:</span>
+                    <span className="text-[10px] text-slate-400 uppercase block mb-0.5">CONTEXT SNIPPET:</span>
                     <span className="text-amber-300/90 italic">"{sig.evidence_snippet}"</span>
                   </div>
                 )}
 
                 {sig.matches && sig.matches.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1 pt-1">
-                    <span className="text-[10px] font-mono text-slate-500 mr-1">Matched cues:</span>
+                    <span className="text-[10px] font-mono text-slate-400 mr-1">Matched cues:</span>
                     {sig.matches.slice(0, 4).map((m, mIdx) => (
                       <span
                         key={mIdx}
@@ -123,7 +123,7 @@ export default function ContentIntelligenceView({ contentIntelligence, bodyConte
               <FileText className="w-4 h-4 text-cyan-400" />
               <span>Decoded Plain-Text Body Stream</span>
             </div>
-            <span className="text-xs font-mono text-slate-500">
+            <span className="text-xs font-mono text-slate-400">
               Length: {bodyContent.text_plain_length || bodyContent.text_plain?.length || 0} characters
             </span>
           </div>

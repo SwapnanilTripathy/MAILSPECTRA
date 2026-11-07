@@ -81,25 +81,25 @@ export default function SettingsPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
           <div>
-            <span className="text-slate-500 text-[10px] block">PLATFORM</span>
+            <span className="text-slate-400 text-[10px] block">PLATFORM</span>
             <span className="text-white font-bold">
               {systemStatus?.platform || 'DEEPTRACE'}
             </span>
           </div>
           <div>
-            <span className="text-slate-500 text-[10px] block">VERSION</span>
+            <span className="text-slate-400 text-[10px] block">VERSION</span>
             <span className="text-cyan-400">
               {systemStatus?.version || 'Unavailable'}
             </span>
           </div>
           <div>
-            <span className="text-slate-500 text-[10px] block">TEAM</span>
+            <span className="text-slate-400 text-[10px] block">TEAM</span>
             <span className="text-slate-200">
               {systemStatus?.team || 'DEEP thinkers'}
             </span>
           </div>
           <div>
-            <span className="text-slate-500 text-[10px] block">
+            <span className="text-slate-400 text-[10px] block">
               PROBLEM STATEMENT
             </span>
             <span className="text-cyan-400 font-bold">
@@ -111,10 +111,10 @@ export default function SettingsPage() {
 
       {/* Provider & Engine Status */}
       <div className="rounded-xl bg-[#111827] border border-slate-800 p-6 shadow-xl space-y-4">
-        <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300 flex items-center gap-2">
+        <h2 className="text-xs font-mono uppercase tracking-wider text-slate-300 flex items-center gap-2">
           <Cpu className="w-4 h-4 text-cyan-400" />
           Forensic & Machine Learning Subsystems
-        </h3>
+        </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
           {systemStatus?.providers &&

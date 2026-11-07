@@ -37,7 +37,7 @@ export default function LoginPage() {
           </div>
           <div>
             <div className="brand-name">
-              DEEP<span>TRACE</span>
+              MAIL<span>SPECTRA</span>
             </div>
             <div className="brand-caption">THREAT INTELLIGENCE</div>
           </div>
@@ -100,7 +100,7 @@ export default function LoginPage() {
 
       </div>
       <p className="login-footer">
-        DEEPTRACE <span> / </span> EMAIL FORENSICS & THREAT INTELLIGENCE
+        MAILSPECTRA <span> / </span> EMAIL FORENSICS & THREAT INTELLIGENCE
       </p>
     </div>
   );

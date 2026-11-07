@@ -57,9 +57,9 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
         <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
-            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">
               MTA Relay Path Reconstruction ({totalHops} Hops Traversed)
-            </h4>
+            </h3>
           </div>
           <span className="text-xs font-mono text-slate-400">Header order reversed; supplied evidence is untrusted</span>
         </div>
@@ -121,7 +121,7 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
 
                     {hop.delay_seconds !== undefined && hop.delay_seconds !== null && (
                       <div className="flex items-center gap-1.5 text-xs font-mono text-slate-400">
-                        <Clock className="w-3.5 h-3.5 text-slate-500" />
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>Transit Delay: <strong className="text-slate-200">{hop.delay_seconds}s</strong></span>
                       </div>
                     )}
@@ -138,7 +138,7 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
                         {hop.from_ip ? (
                           <DefangedIndicator value={hop.from_ip} type="IP" />
                         ) : (
-                          <span className="text-slate-500">Unspecified</span>
+                          <span className="text-slate-400">Unspecified</span>
                         )}
                       </div>
                     </div>

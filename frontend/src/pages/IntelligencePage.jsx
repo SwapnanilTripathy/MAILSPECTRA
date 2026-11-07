@@ -90,7 +90,7 @@ export default function IntelligencePage() {
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
               value={query}
@@ -108,7 +108,7 @@ export default function IntelligencePage() {
           <button
             onClick={handleQuery}
             disabled={calculating || !query.trim()}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg shadow-cyan-600/20 transition disabled:opacity-50"
+            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-800 text-white font-semibold text-xs shadow-lg shadow-cyan-600/20 transition disabled:opacity-50"
           >
             {calculating ? 'Analyzing...' : 'Run Query'}
           </button>
@@ -128,7 +128,7 @@ export default function IntelligencePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
               <div>
-                <span className="text-slate-500 text-[10px] block">
+                <span className="text-slate-400 text-[10px] block">
                   INDICATOR VALUE
                 </span>
                 <DefangedIndicator
@@ -138,7 +138,7 @@ export default function IntelligencePage() {
                 />
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">
+                <span className="text-slate-400 text-[10px] block">
                   REPUTATION LOOKUP
                 </span>
                 <span className="font-bold text-slate-300">
@@ -146,7 +146,7 @@ export default function IntelligencePage() {
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">
+                <span className="text-slate-400 text-[10px] block">
                   SHANNON ENTROPY SCORE
                 </span>
                 <span className="text-cyan-400 font-bold">
@@ -154,7 +154,7 @@ export default function IntelligencePage() {
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">
+                <span className="text-slate-400 text-[10px] block">
                   QUERY TIMESTAMP
                 </span>
                 <span className="text-slate-300">
@@ -170,9 +170,9 @@ export default function IntelligencePage() {
       <div className="rounded-2xl bg-[#111827] border border-slate-800 p-6 shadow-xl space-y-4">
         <div className="flex items-center gap-2">
           <Cpu className="w-5 h-5 text-cyan-400" />
-          <h3 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
+          <h2 className="text-sm font-bold font-mono text-white uppercase tracking-wider">
             Local Shannon Entropy Calculator
-          </h3>
+          </h2>
         </div>
         <p className="text-xs text-slate-400">
           Measures character unpredictability. Entropy alone does not establish DGA activity or maliciousness.

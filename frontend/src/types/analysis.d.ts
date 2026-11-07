@@ -71,6 +71,8 @@ export type CampaignCorrelationMatch = {
   "related_case_classification"?: string;
   "correlation_score"?: number;
   "shared_indicators"?: Array<string>;
+  "shared_values"?: Record<string, Array<string>>;
+  "score_definition"?: string;
   "evidence"?: Array<string>;
 };
 export type CampaignEntity = {
@@ -337,10 +339,14 @@ export type ThreatGraphData = {
   "total_edges"?: number;
   "connected_components_count"?: number;
   "density"?: number;
+  "metric_definition"?: string;
   "nodes"?: Array<ThreatGraphNode>;
   "edges"?: Array<ThreatGraphEdge>;
 };
 export type ThreatGraphEdge = {
+  "evidence_refs"?: Array<string>;
+  "provenance"?: string;
+  "source_type"?: string;
   "source": string;
   "target": string;
   "relationship": string;

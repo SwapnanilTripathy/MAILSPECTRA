@@ -2,7 +2,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 import pytest
 from httpx import ASGITransport, AsyncClient
-from jose import jwt
+import jwt
 from sqlalchemy import delete
 from backend.app.main import app
 from backend.app.core.config import settings, Settings
@@ -20,10 +20,10 @@ async def test_all_private_routes_reject_anonymous():
 @pytest.mark.asyncio
 async def test_invalid_expired_and_revoked_sessions(auth_headers):
     async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as client:
-        claims = jwt.get_unverified_claims(auth_headers['Authorization'].split()[1])
+        claims = jwt.decode(auth_headers['Authorization'].split()[1], options={'verify_signature':False})
         claims['exp'] = datetime.now(timezone.utc) - timedelta(seconds=1)
         expired = jwt.encode(claims, settings.SECRET_KEY, algorithm='HS256')
-        for token in ['demo-token', expired, jwt.encode(claims, 'wrong-secret', algorithm='HS256')]:
+        for token in ['demo-token', expired, jwt.encode(claims, 'wrong-secret-' * 4, algorithm='HS256')]:
             assert (await client.get('/api/v1/auth/me', headers={'Authorization': 'Bearer ' + token})).status_code == 401
         assert (await client.get('/api/v1/auth/me', headers=auth_headers)).status_code == 200
         assert (await client.post('/api/v1/auth/logout', headers=auth_headers)).status_code == 200

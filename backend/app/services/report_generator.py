@@ -34,6 +34,7 @@ class ForensicReportGenerator:
             if isinstance(value,list): return [safe(item) for item in value]
             if isinstance(value,dict): return {key:safe(item) for key,item in value.items()}
             return value
+        raw_case_data = case_data
         case_data = safe(case_data)
         reports_dir = output_dir or settings.REPORTS_DIR
         os.makedirs(reports_dir, exist_ok=True)
@@ -358,7 +359,7 @@ class ForensicReportGenerator:
         elements.append(Paragraph("8. Evidence manifest, verification and analysis details", section_heading))
         elements.append(Paragraph("MAILSPECTRA derives from DEEPTRACE / SIH26106; upstream attribution and license are retained. The PDF digest is supplied in the accompanying manifest because a file cannot contain its own final digest. Original artifact and PDF hashes serve different purposes.", body_style))
         for key in ("artifact", "evidence_manifest", "risk_assessment", "authentication", "ai_inference", "relay_chain", "urls", "ips", "attachments", "content_intelligence", "infrastructure_intelligence", "campaign_correlations", "timeline", "limitations"):
-            value = case_data.get(key)
+            value = raw_case_data.get(key)
             if value is None: continue
             elements.append(Paragraph(key.replace("_", " ").title(), body_bold))
             rendered = json.dumps(value,ensure_ascii=True,indent=2)
@@ -366,7 +367,7 @@ class ForensicReportGenerator:
             if len(rendered) > 16000: rendered = rendered[:16000] + "\n[Section truncated; consult persisted case evidence]"
             for line in rendered.splitlines():
                 for start in range(0,max(1,len(line)),100):
-                    elements.append(Paragraph(line[start:start+100] or " ",code_style))
+                    elements.append(Paragraph(escape(line[start:start+100]) or " ",code_style))
         elements.append(Paragraph("Model probabilities are uncalibrated demonstration results. Masking is best-effort presentation redaction, not guaranteed anonymization. Supplied authentication and relay headers may be forged.", disclaimer_style))
 
         # Build Document

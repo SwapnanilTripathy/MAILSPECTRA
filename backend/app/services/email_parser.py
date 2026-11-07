@@ -78,7 +78,7 @@ class EmailForensicParser:
         try:
             self.msg = email.message_from_bytes(self.raw_bytes, policy=policy.default)
         except Exception as e:
-            logger.warning(f"Default policy parsing failed ({e}), falling back to compat policy")
+            logger.warning("Default parsing policy failed: %s; using compatibility policy", type(e).__name__)
             self.msg = email.message_from_bytes(self.raw_bytes, policy=policy.compat32)
 
     def _decode_header_str(self, header_value: Any) -> str:
@@ -573,7 +573,7 @@ class EmailForensicParser:
                 for form in soup.find_all("form", action=True):
                     process_url(form["action"], "body_html")
             except Exception as e:
-                logger.warning(f"HTML parsing for URLs encountered error: {e}")
+                logger.warning("URL parsing failed: %s", type(e).__name__)
 
         # 2. Extract from plain text
         if body.has_plain_text:

@@ -208,7 +208,7 @@ class ThreatAnalysisPipeline:
             base_analysis.geolocation = intel.ip_intelligence
             base_analysis.origin_assessment = intel.origin_assessment
         except Exception as e:
-            logger.warning(f"Infrastructure intelligence gathering error: {e}")
+            logger.warning("Infrastructure enrichment failed: %s", type(e).__name__)
             intel = None
 
         # 9. Phase 3: Real NetworkX Threat Graph Construction
@@ -217,7 +217,7 @@ class ThreatAnalysisPipeline:
             graph_data = ThreatGraphBuilder.serialize_graph(G)
             base_analysis.threat_graph = graph_data
         except Exception as e:
-            logger.warning(f"Threat graph generation error: {e}")
+            logger.warning("Graph generation failed: %s", type(e).__name__)
 
         matches, campaign, attribution = await CorrelationPersistenceService.correlate_and_persist(
             analysis=base_analysis, intel=intel, session=db_session,

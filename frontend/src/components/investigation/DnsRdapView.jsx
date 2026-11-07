@@ -92,9 +92,9 @@ export default function DnsRdapView({ infrastructureIntel }) {
           <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-cyan-400" />
-              <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">
+              <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">
                 Safe DNS Record Resolution
-              </h4>
+              </h3>
             </div>
             <span className="text-[11px] font-mono text-emerald-400">{dnsRecords.status || 'Unavailable'}</span>
           </div>
@@ -104,7 +104,7 @@ export default function DnsRdapView({ infrastructureIntel }) {
             <div>
               <div className="text-slate-400 font-semibold mb-1 flex items-center justify-between">
                 <span>A (IPv4 Addresses):</span>
-                <span className="text-[10px] text-slate-500">{(dnsRecords.a_records || []).length} found</span>
+                <span className="text-[10px] text-slate-400">{(dnsRecords.a_records || []).length} found</span>
               </div>
               <div className="space-y-1">
                 {(dnsRecords.a_records && dnsRecords.a_records.length > 0) ? (
@@ -114,7 +114,7 @@ export default function DnsRdapView({ infrastructureIntel }) {
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-500 italic">No A records available</p>
+                  <p className="text-slate-400 italic">No A records available</p>
                 )}
               </div>
             </div>
@@ -123,7 +123,7 @@ export default function DnsRdapView({ infrastructureIntel }) {
             <div>
               <div className="text-slate-400 font-semibold mb-1 flex items-center justify-between">
                 <span>MX (Mail Exchanger):</span>
-                <span className="text-[10px] text-slate-500">{(dnsRecords.mx_hosts || []).length} found</span>
+                <span className="text-[10px] text-slate-400">{(dnsRecords.mx_hosts || []).length} found</span>
               </div>
               <div className="space-y-1">
                 {(dnsRecords.mx_hosts && dnsRecords.mx_hosts.length > 0) ? (
@@ -133,7 +133,7 @@ export default function DnsRdapView({ infrastructureIntel }) {
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-500 italic">No MX records resolved</p>
+                  <p className="text-slate-400 italic">No MX records resolved</p>
                 )}
               </div>
             </div>
@@ -142,7 +142,7 @@ export default function DnsRdapView({ infrastructureIntel }) {
             <div>
               <div className="text-slate-400 font-semibold mb-1 flex items-center justify-between">
                 <span>TXT Records:</span>
-                <span className="text-[10px] text-slate-500">{(dnsRecords.txt_records || []).length} found</span>
+                <span className="text-[10px] text-slate-400">{(dnsRecords.txt_records || []).length} found</span>
               </div>
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {(dnsRecords.txt_records && dnsRecords.txt_records.length > 0) ? (
@@ -152,7 +152,7 @@ export default function DnsRdapView({ infrastructureIntel }) {
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-500 italic">No TXT records resolved</p>
+                  <p className="text-slate-400 italic">No TXT records resolved</p>
                 )}
               </div>
             </div>
@@ -164,9 +164,9 @@ export default function DnsRdapView({ infrastructureIntel }) {
           <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileSearch className="w-4 h-4 text-cyan-400" />
-              <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">
+              <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">
                 RDAP Registration Metadata — {rdap.lookup_status || 'Unavailable'}
-              </h4>
+              </h3>
             </div>
             {rdap.privacy_protected && (
               <span className="flex items-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
@@ -179,25 +179,25 @@ export default function DnsRdapView({ infrastructureIntel }) {
           <div className="p-5 space-y-4 font-mono text-xs">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-slate-500 block text-[10px]">REGISTRAR</span>
+                <span className="text-slate-400 block text-[10px]">REGISTRAR</span>
                 <span className="text-slate-200 font-semibold">{rdap.registrar || 'Unavailable'}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px]">DOMAIN STATUS</span>
+                <span className="text-slate-400 block text-[10px]">DOMAIN STATUS</span>
                 <span className="text-slate-200 truncate block">{(rdap.domain_status || []).join(', ') || 'Unknown'}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px]">CREATION DATE</span>
+                <span className="text-slate-400 block text-[10px]">CREATION DATE</span>
                 <span className="text-emerald-400 font-semibold">{rdap.created_date || rdap.creation_date || 'N/A'}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px]">EXPIRATION DATE</span>
+                <span className="text-slate-400 block text-[10px]">EXPIRATION DATE</span>
                 <span className="text-slate-200">{rdap.expiration_date || rdap.expires_date || 'N/A'}</span>
               </div>
             </div>
 
             <div className="pt-3 border-t border-slate-800">
-              <span className="text-slate-500 block text-[10px] mb-1">NAMESERVERS</span>
+              <span className="text-slate-400 block text-[10px] mb-1">NAMESERVERS</span>
               <div className="flex flex-wrap gap-2">
                 {(rdap.nameservers && rdap.nameservers.length > 0) ? (
                   rdap.nameservers.map((ns, i) => (
@@ -206,7 +206,7 @@ export default function DnsRdapView({ infrastructureIntel }) {
                     </span>
                   ))
                 ) : (
-                  <span className="text-slate-500 italic">No nameservers returned in RDAP response</span>
+                  <span className="text-slate-400 italic">No nameservers returned in RDAP response</span>
                 )}
               </div>
             </div>

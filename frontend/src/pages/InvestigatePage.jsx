@@ -294,10 +294,10 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
       <div className="rounded-2xl bg-[#111827] border border-slate-800 p-6 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
+            <h1 className="text-lg font-bold text-white font-mono flex items-center gap-2">
               <Search className="w-5 h-5 text-cyan-400" />
               Forensic Artifact Ingestion
-            </h2>
+            </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               Upload raw .EML / .MSG or paste RFC 822 MIME headers for automated
               forensic deconstruction.
@@ -391,12 +391,12 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
             }}
             className="border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer bg-slate-900/40 hover:bg-slate-900/60 focus-within:ring-2 focus-within:ring-cyan-300 transition group"
           >
-            <UploadCloud className="w-10 h-10 text-slate-500 group-hover:text-cyan-400 transition" />
+            <UploadCloud className="w-10 h-10 text-slate-400 group-hover:text-cyan-400 transition" />
             <p className="mt-2 text-sm font-medium text-slate-300">
               Drag & Drop email artifact or{' '}
               <span className="text-cyan-400 underline">Browse Local File</span>
             </p>
-            <p className="mt-1 text-xs text-slate-500 font-mono">
+            <p className="mt-1 text-xs text-slate-400 font-mono">
               Supports RFC 5322 .eml; Outlook .msg is unsupported
             </p>
             <input
@@ -424,7 +424,7 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
               <button
                 onClick={handleRawAnalyze}
                 disabled={loading || !rawText.trim()}
-                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg shadow-cyan-600/20 transition disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-800 text-white font-semibold text-xs shadow-lg shadow-cyan-600/20 transition disabled:opacity-50"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>Execute Deep Forensic Pipeline</span>

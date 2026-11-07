@@ -137,9 +137,9 @@ class LiveAbuseIPDBProvider(BaseThreatIntelProvider):
                 elif code == 429:
                     return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="RATE_LIMITED", last_checked=now_iso)
                 else:
-                    logger.warning(f"AbuseIPDB returned status {code} for {clean_ind}")
+                    logger.warning("AbuseIPDB returned status %s", code)
             except Exception as e:
-                logger.warning(f"AbuseIPDB live lookup exception for {clean_ind}: {e}")
+                logger.warning("AbuseIPDB lookup failed: %s", type(e).__name__)
 
         return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="UNAVAILABLE", last_checked=now_iso, limitations=["Provider unavailable or indicator type unsupported"])
 
@@ -167,7 +167,7 @@ class ThreatReputationService:
         try:
             return await self.provider.query_indicator(indicator, indicator_type)
         except Exception as e:
-            logger.warning(f"Threat reputation provider error for {indicator} ({e}); falling back to offline.")
+            logger.warning("Threat reputation unavailable: %s", type(e).__name__)
             return ThreatReputationInfo(indicator=indicator, indicator_type=indicator_type, verdict="UNKNOWN", status="ERROR", last_checked=datetime.now(timezone.utc).isoformat())
 
     async def enrich_observables(self, analysis: EmailAnalysisResponse) -> Dict[str, ThreatReputationInfo]:

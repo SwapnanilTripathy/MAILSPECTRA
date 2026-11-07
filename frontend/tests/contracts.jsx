@@ -6,6 +6,7 @@ import DnsRdapView from '../src/components/investigation/DnsRdapView';
 import ThreatGraphView from '../src/components/investigation/ThreatGraphView';
 import CampaignAttributionView from '../src/components/investigation/CampaignAttributionView';
 import ObservablesView from '../src/components/investigation/ObservablesView';
+import VerdictBanner from '../src/components/investigation/VerdictBanner';
 import fixture from './fixtures/analysis.json';
 
 export function checkContracts() {
@@ -24,5 +25,9 @@ export function checkContracts() {
   assert.match(campaign, /0%/); // Must preserve a real zero, not invent an 80% fallback.
   const attachments = render(<ObservablesView observables={[]} attachments={fixture.attachments} />);
   assert.match(attachments, /Attachments \(1\)/);
-  console.log('5 frontend contract render checks passed');
+  const missing = render(<VerdictBanner analysis={{}} />);
+  assert.match(missing, /Unavailable/);
+  assert.match(missing, /UNKNOWN/);
+  assert.match(missing, /Model unavailable; rule fallback/);
+  console.log('6 frontend contract render checks passed');
 }

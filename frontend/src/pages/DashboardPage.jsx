@@ -228,6 +228,7 @@ export default function DashboardPage() {
                         (entry, index) => (
                           <Cell
                             key={`${entry.name}-${index}`}
+                            aria-label={`${entry.name}: ${entry.value} cases`}
                             fill={COLORS[index % COLORS.length]}
                           />
                         ),

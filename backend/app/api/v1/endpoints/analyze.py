@@ -49,7 +49,7 @@ async def analyze_email_file(
     try:
         content = await file.read(settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024 + 1)
     except Exception as e:
-        logger.error(f"Failed to read uploaded file: {e}")
+        logger.error("Upload read failed: %s", type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Could not read uploaded file",

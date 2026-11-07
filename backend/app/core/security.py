@@ -6,7 +6,8 @@ import secrets
 from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+import jwt
+from jwt import InvalidTokenError as JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.core.config import settings
 from backend.app.database.session import get_db
@@ -40,7 +41,7 @@ async def current_user(request: Request, credentials: HTTPAuthorizationCredentia
     if not credentials:
         raise unauthorized
     try:
-        claims = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=["HS256"], issuer=settings.TOKEN_ISSUER, audience="mailspectra-api", options={"require_exp": True, "require_sub": True, "require_iat": True})
+        claims = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=["HS256"], issuer=settings.TOKEN_ISSUER, audience="mailspectra-api", options={"require": ["exp", "sub", "iat", "jti", "iss", "aud"]})
         if claims.get("type") != "access" or not claims.get("jti"):
             raise unauthorized
         session = await db.get(SessionRecord, claims["jti"])

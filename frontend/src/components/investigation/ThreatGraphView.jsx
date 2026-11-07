@@ -331,14 +331,14 @@ export default function ThreatGraphView({ threatGraph }) {
           {selectedNode ? (
             <div className="mt-4 space-y-4 font-mono text-xs flex-1">
               <div>
-                <span className="text-[10px] uppercase text-slate-500 block">ENTITY TYPE</span>
+                <span className="text-[10px] uppercase text-slate-400 block">ENTITY TYPE</span>
                 <span className="inline-block mt-1 px-2.5 py-1 rounded text-xs font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
                   {selectedNode.node_type}
                 </span>
               </div>
 
               <div>
-                <span className="text-[10px] uppercase text-slate-500 block">IDENTIFIER / VALUE</span>
+                <span className="text-[10px] uppercase text-slate-400 block">IDENTIFIER / VALUE</span>
                 <div className="mt-1">
                   <DefangedIndicator value={selectedNode.id} className="text-white break-all" />
                 </div>
@@ -346,14 +346,14 @@ export default function ThreatGraphView({ threatGraph }) {
 
               {selectedNode.label && selectedNode.label !== selectedNode.id && (
                 <div>
-                  <span className="text-[10px] uppercase text-slate-500 block">DISPLAY LABEL</span>
+                  <span className="text-[10px] uppercase text-slate-400 block">DISPLAY LABEL</span>
                   <p className="text-slate-200 mt-1 font-sans">{selectedNode.label}</p>
                 </div>
               )}
 
               {/* Connected Relationships */}
               <div className="pt-3 border-t border-slate-800">
-                <span className="text-[10px] uppercase text-slate-500 block mb-2">ASSOCIATED RELATIONSHIPS</span>
+                <span className="text-[10px] uppercase text-slate-400 block mb-2">ASSOCIATED RELATIONSHIPS</span>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {edges
                     .filter((e) => e.source === selectedNode.id || e.target === selectedNode.id)
@@ -375,7 +375,7 @@ export default function ThreatGraphView({ threatGraph }) {
               </div>
             </div>
           ) : (
-            <div className="mt-8 flex flex-col items-center justify-center text-center text-slate-500 font-mono text-xs space-y-2 flex-1">
+            <div className="mt-8 flex flex-col items-center justify-center text-center text-slate-400 font-mono text-xs space-y-2 flex-1">
               <Network className="w-8 h-8 text-slate-600 animate-pulse" />
               <p>Click any graph node to inspect its technical attributes, associated infrastructure, and relationships.</p>
             </div>

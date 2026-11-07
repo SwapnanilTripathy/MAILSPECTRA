@@ -104,7 +104,7 @@ export default function ReportsPage() {
             </button>
           </div>
         ) : cases.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 font-mono text-xs space-y-2">
+          <div className="p-12 text-center text-slate-400 font-mono text-xs space-y-2">
             <FileText className="w-8 h-8 mx-auto text-slate-600" />
             <p>No investigation cases available to generate reports from.</p>
           </div>
@@ -158,7 +158,7 @@ export default function ReportsPage() {
                             </button>
                           </div>
                         ) : (
-                          <span className="text-slate-500 italic">
+                          <span className="text-slate-400 italic">
                             Not Generated Yet
                           </span>
                         )}
@@ -167,7 +167,7 @@ export default function ReportsPage() {
                         {hasReport ? (
                           <button
                             onClick={() => api.downloadReport(c.case_id).catch(error => alert(error.message))}
-                            className="inline-flex items-center gap-1 px-3 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-[11px] transition shadow-sm"
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded bg-cyan-700 hover:bg-cyan-800 text-white font-medium text-[11px] transition shadow-sm"
                           >
                             <FileDown className="w-3.5 h-3.5" />
                             <span>Download PDF</span>

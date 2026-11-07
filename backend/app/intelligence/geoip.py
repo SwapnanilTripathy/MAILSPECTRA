@@ -213,9 +213,9 @@ class LiveIPInfoProvider(BaseGeoIPProvider):
                         source=EvidenceSource.GEOIP.value,
                     )
             else:
-                logger.warning(f"Live GeoIP returned HTTP {code} for {clean_ip}")
+                logger.warning("GeoIP returned HTTP %s", code)
         except Exception as e:
-            logger.warning(f"Live GeoIP exception for {clean_ip}: {e}")
+            logger.warning("GeoIP failed: %s", type(e).__name__)
 
         return GeoLocationInfo(ip=clean_ip, defanged_ip=defanged, status="ERROR", limitations=["Live provider failed; no fixture substituted"])
 

@@ -136,5 +136,5 @@ class RDAPClientService:
             else:
                 return RDAPDomainInfo(domain=domain, lookup_status=f"HTTP_{code}", raw_rdap_url=url)
         except Exception as e:
-            logger.warning(f"Live RDAP query error for {domain}: {e}")
+            logger.warning("RDAP failed: %s", type(e).__name__)
             return RDAPDomainInfo(domain=domain, lookup_status="ERROR", raw_rdap_url=url)

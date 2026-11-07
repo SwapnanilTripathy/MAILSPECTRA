@@ -104,7 +104,7 @@ class ThreatPredictor:
             )
 
         except Exception as e:
-            logger.error(f"Prediction exception: {e}. Falling back to rule inference.", exc_info=True)
+            logger.error("Prediction failed: %s; using rule fallback", type(e).__name__)
             fallback = self._heuristic_fallback(analysis, structured_dict)
             return fallback, None
 

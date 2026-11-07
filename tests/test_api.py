@@ -9,7 +9,7 @@ async def test_root_endpoint(auth_headers):
         response = await client.get("/")
         assert response.status_code == 200
         data = response.json()
-        assert data["platform"] == "DEEPTRACE"
+        assert data["platform"] == "MAILSPECTRA"
         assert data["team"] == "DEEP thinkers"
         assert data["problem_statement"] == "SIH26106"
         assert data["status"] == "operational"
@@ -22,7 +22,7 @@ async def test_health_endpoint(auth_headers):
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["service"] == "DEEPTRACE"
+        assert data["service"] == "MAILSPECTRA"
         assert "timestamp" in data
 
 

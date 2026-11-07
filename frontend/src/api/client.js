@@ -73,6 +73,7 @@ export const api = {
 
   // Reports
   generateReport: (caseId, maskPii = sessionStorage.getItem("mailspectra_mask") === "true") => apiClient.post(`/reports/generate/${caseId}`, null, { params: { mask_pii: maskPii } }),
+  verifyEvidence: (caseId) => apiClient.get(`/cases/${caseId}/evidence/verify`),
   verifyReport: (caseId) => apiClient.get(`/reports/${caseId}/verify`),
   listReports: () => apiClient.get('/reports'),
   downloadReport: async (caseId) => {

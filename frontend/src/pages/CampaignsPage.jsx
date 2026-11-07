@@ -92,7 +92,7 @@ export default function CampaignsPage() {
           </button>
         </div>
       ) : campaigns.length === 0 ? (
-        <div className="p-12 rounded-xl bg-[#111827] border border-slate-800 text-center text-slate-500 font-mono text-xs space-y-2">
+        <div className="p-12 rounded-xl bg-[#111827] border border-slate-800 text-center text-slate-400 font-mono text-xs space-y-2">
           <Network className="w-8 h-8 mx-auto text-slate-600" />
           <p>
             No active cross-case campaign clusters discovered yet. Analyze
@@ -179,7 +179,7 @@ export default function CampaignsPage() {
 
                   <div className="mt-4 pt-4 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs font-mono">
                     <div>
-                      <span className="text-slate-500 text-[10px] block">
+                      <span className="text-slate-400 text-[10px] block">
                         PRIMARY THREAT
                       </span>
                       <span className="text-slate-200 font-semibold">
@@ -187,7 +187,7 @@ export default function CampaignsPage() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-500 text-[10px] block">
+                      <span className="text-slate-400 text-[10px] block">
                         FIRST SEEN
                       </span>
                       <span className="text-slate-300">
@@ -195,7 +195,7 @@ export default function CampaignsPage() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-slate-500 text-[10px] block">
+                      <span className="text-slate-400 text-[10px] block">
                         LAST SEEN
                       </span>
                       <span className="text-slate-300">
@@ -310,7 +310,7 @@ export default function CampaignsPage() {
                           <span className="font-bold text-slate-300">
                             {mc.risk_score}/100
                           </span>
-                          <ChevronRight className="w-4 h-4 text-slate-500" />
+                          <ChevronRight className="w-4 h-4 text-slate-400" />
                         </div>
                       </div>
                     ))}

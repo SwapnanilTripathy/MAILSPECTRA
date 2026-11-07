@@ -1,19 +1,19 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { PrivacyProvider } from './context/PrivacyContext';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AppLayout from './components/layout/AppLayout';
 
 // Pages
-import DashboardPage from './pages/DashboardPage';
-import InvestigatePage from './pages/InvestigatePage';
-import CasesPage from './pages/CasesPage';
-import CaseDetailPage from './pages/CaseDetailPage';
-import CampaignsPage from './pages/CampaignsPage';
-import IntelligencePage from './pages/IntelligencePage';
-import ReportsPage from './pages/ReportsPage';
-import SettingsPage from './pages/SettingsPage';
-import LoginPage from './pages/LoginPage';
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const InvestigatePage = lazy(() => import('./pages/InvestigatePage'));
+const CasesPage = lazy(() => import('./pages/CasesPage'));
+const CaseDetailPage = lazy(() => import('./pages/CaseDetailPage'));
+const CampaignsPage = lazy(() => import('./pages/CampaignsPage'));
+const IntelligencePage = lazy(() => import('./pages/IntelligencePage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -27,7 +27,7 @@ export default function App() {
   return (
     <AuthProvider><PrivacyProvider>
       <BrowserRouter>
-        <Routes>
+        <Suspense fallback={<p role="status" className="p-8">Loading workspace…</p>}><Routes>
           {/* Public Auth Route */}
           <Route path="/login" element={<LoginPage />} />
 
@@ -52,7 +52,7 @@ export default function App() {
 
           {/* Catch-all fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        </Routes></Suspense>
       </BrowserRouter>
     </PrivacyProvider></AuthProvider>
   );

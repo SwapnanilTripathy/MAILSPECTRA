@@ -1,25 +1,29 @@
+import json
 import logging
 import sys
+from datetime import datetime, timezone
 from backend.app.core.config import settings
 
 
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        return json.dumps({
+            'timestamp': datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
+            'level': record.levelname,
+            'logger': record.name,
+            'message': record.getMessage(),
+        })
+
+
 def setup_logging() -> logging.Logger:
-    log_format = "%(asctime)s | %(levelname)-8s | %(name)s:%(lineno)d | %(message)s"
-    date_format = "%Y-%m-%d %H:%M:%S"
-
-    level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
-
-    logging.basicConfig(
-        level=level,
-        format=log_format,
-        datefmt=date_format,
-        handlers=[
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-
-    logger = logging.getLogger("deeptrace")
-    logger.setLevel(level)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(JsonFormatter())
+    logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO), handlers=[handler])
+    # Provider URLs may contain indicator or credential query parameters.
+    logging.getLogger('httpx').setLevel(logging.WARNING)
+    logging.getLogger('httpcore').setLevel(logging.WARNING)
+    logger = logging.getLogger('mailspectra')
+    logger.setLevel(getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO))
     return logger
 
 
