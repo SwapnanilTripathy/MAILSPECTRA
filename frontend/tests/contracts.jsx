@@ -7,9 +7,13 @@ import ThreatGraphView from '../src/components/investigation/ThreatGraphView';
 import CampaignAttributionView from '../src/components/investigation/CampaignAttributionView';
 import ObservablesView from '../src/components/investigation/ObservablesView';
 import VerdictBanner from '../src/components/investigation/VerdictBanner';
+import IntelligencePage from '../src/pages/IntelligencePage';
 import fixture from './fixtures/analysis.json';
 
 export function checkContracts() {
+  const intelligence = render(<IntelligencePage />);
+  assert.match(intelligence, /not a maliciousness score or DGA classifier/);
+  assert.doesNotMatch(intelligence, /LIKELY ALGORITHMIC DGA|STANDARD LEXICAL DISTRIBUTION/);
   const relay = render(<RelayHopsView relayPath={fixture.relay_chain} />);
   assert.match(relay, /mx\.example\.test/);
   assert.match(relay, /2026-01-01T00:00:00/);

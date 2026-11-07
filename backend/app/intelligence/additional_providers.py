@@ -10,13 +10,25 @@ from backend.app.intelligence.schemas import ThreatReputationInfo
 
 
 def public_indicator(indicator, kind):
-    target = urlparse(indicator).hostname if kind == 'URL' else indicator
     if kind == 'HASH':
         return bool(re.fullmatch(r'(?:[a-fA-F0-9]{32}|[a-fA-F0-9]{40}|[a-fA-F0-9]{64})', indicator))
-    if not target: return False
-    try: return ipaddress.ip_address(target).is_global
-    except ValueError:
-        return kind != 'IP' and '.' in target and not target.lower().rstrip('.').endswith(('.localhost','.local','.test','.invalid','.internal'))
+    try:
+        if kind == 'URL':
+            parsed=urlparse(indicator)
+            if parsed.scheme not in {'http','https'} or parsed.username is not None or parsed.password is not None or parsed.port not in {None,80,443}: return False
+            target=parsed.hostname
+        else: target=indicator
+        if not target or any(c.isspace() for c in target): return False
+        try:
+            ip=ipaddress.ip_address(target)
+            return ip.is_global and not ip.is_multicast
+        except ValueError:
+            if kind == 'IP': return False
+        target=target.encode('idna').decode().lower().rstrip('.')
+        if target.endswith(('.localhost','.local','.test','.invalid','.internal','.onion','.example')): return False
+        return len(target)<=253 and bool(re.fullmatch(r'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?',target))
+    except (ValueError,UnicodeError):
+        return False
 
 
 def result(indicator, kind, provider, status='UNAVAILABLE', **kwargs):

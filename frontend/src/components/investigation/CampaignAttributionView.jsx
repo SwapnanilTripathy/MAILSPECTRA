@@ -151,8 +151,9 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
                     <span className="text-slate-400">• Match Score: <strong className="text-slate-200">{Math.round((corr.correlation_score ?? 0) * 100)}%</strong></span>
                   </div>
                   <p className="text-slate-300 font-sans text-xs">
-                    Linked via shared {corr.shared_type || 'infrastructure'}: <DefangedIndicator value={Object.values(corr.shared_values || {}).flat().join(', ')} />
+                    Linked via shared technical evidence: <DefangedIndicator value={Object.values(corr.shared_values || {}).flat().join(', ')} />
                   </p>
+                  <p className="text-xs text-slate-400">{corr.temporal_context?.elapsed_days != null ? `${corr.temporal_context.elapsed_days.toFixed(2)} days apart; ${corr.temporal_context.window_days}-day window. Temporal context adds no score.` : 'Temporal context unavailable for this record.'}</p>
                 </div>
                 <div className="text-slate-400 text-[11px] shrink-0">
                   Relationship: <span className="text-purple-400 font-bold">{corr.relationship || 'SHARED_INFRASTRUCTURE'}</span>

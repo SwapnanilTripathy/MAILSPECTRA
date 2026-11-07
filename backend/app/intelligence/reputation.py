@@ -109,6 +109,8 @@ class LiveAbuseIPDBProvider(BaseThreatIntelProvider):
         clean_ind = indicator.strip()
         now_iso = datetime.now(timezone.utc).isoformat()
 
+        if indicator_type != "IP":
+            return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="UNSUPPORTED", last_checked=now_iso, limitations=["AbuseIPDB supports IP lookups only"])
         if indicator_type == "IP" and not classify_ip(clean_ind).get("is_public"):
             return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="Local IP classification", verdict="UNKNOWN", status="SPECIAL_USE_IP", last_checked=now_iso)
         if indicator_type == "IP" and self.api_key:
@@ -116,10 +118,13 @@ class LiveAbuseIPDBProvider(BaseThreatIntelProvider):
                 headers = {"Key": self.api_key, "Accept": "application/json"}
                 url = f"https://api.abuseipdb.com/api/v2/check?ipAddress={clean_ind}&maxAgeInDays=90"
                 from backend.app.intelligence.http_client import provider_json
-                code, payload = await provider_json(url, headers)
+                code, payload = await provider_json(url, headers, allow_redirects=False)
                 if code == 200:
                     data = payload.get("data", {})
-                    score = float(data.get("abuseConfidenceScore", 0))
+                    score = data.get("abuseConfidenceScore")
+                    if type(score) not in (int,float) or not 0 <= score <= 100 or type(data.get("totalReports")) is not int or data["totalReports"] < 0:
+                        raise ValueError("Invalid provider statistics")
+                    score = float(score)
                     verdict = "MALICIOUS" if score >= 60 else ("SUSPICIOUS" if score >= 20 else "NO_KNOWN_MATCH")
                     return ThreatReputationInfo(
                         indicator=clean_ind,
@@ -137,9 +142,9 @@ class LiveAbuseIPDBProvider(BaseThreatIntelProvider):
                 elif code == 429:
                     return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="RATE_LIMITED", last_checked=now_iso)
                 else:
-                    logger.warning("AbuseIPDB returned status %s", code)
+                    return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="AUTH_ERROR" if code in (401,403) else "ERROR", last_checked=now_iso)
             except Exception as e:
-                logger.warning("AbuseIPDB lookup failed: %s", type(e).__name__)
+                return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="ERROR", last_checked=now_iso)
 
         return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="UNAVAILABLE", last_checked=now_iso, limitations=["Provider unavailable or indicator type unsupported"])
 

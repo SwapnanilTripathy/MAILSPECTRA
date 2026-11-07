@@ -65,7 +65,7 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
                 {analysis.ai_inference?.is_model_available && confidence != null ? `${Math.round(confidence * 100)}%` : 'N/A'}
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-2 font-mono">{analysis.ai_inference?.is_model_available ? 'Uncalibrated model' : 'Model unavailable; rule fallback'}</p>
+            <p className="text-[10px] text-slate-400 mt-2 font-mono">{analysis.ai_inference?.is_model_available ? 'Demonstration-only model; uncalibrated' : 'Model unavailable; rule fallback'}</p>
           </div>
         </div>
 

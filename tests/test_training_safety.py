@@ -44,3 +44,24 @@ def test_prediction_readiness_is_explicit():
     assert prediction.production_ready is False
     assert prediction.deployment_status=='DEMONSTRATION_ONLY'
     assert prediction.calibration_status=='UNCALIBRATED'
+
+
+def test_training_fold_and_holdout_isolation(tmp_path, monkeypatch):
+    from backend.app.ml.train_model import DEFAULT_DATASET_PATH, TfidfVectorizer
+    fitted=[]
+    original=TfidfVectorizer.fit_transform
+    def record(self, texts, *args, **kwargs):
+        texts=list(texts); fitted.append(set(texts))
+        return original(self,texts,*args,**kwargs)
+    monkeypatch.setattr(TfidfVectorizer,'fit_transform',record)
+    report=train_and_evaluate(DEFAULT_DATASET_PATH,tmp_path/'candidate')
+    from backend.app.ml.train_model import load_dataset
+    texts,_,_,_=load_dataset(DEFAULT_DATASET_PATH)
+    heldout={texts[i] for i in report['split']['holdout_indices']}
+    assert len(fitted)==3
+    assert all(not values & heldout for values in fitted)
+    assert not fitted[0] & fitted[1]
+    assert not report['production_ready']
+    assert report['deployment_status']=='DEMONSTRATION_ONLY'
+    groups=report['split']['group_ids']
+    assert not {groups[i] for i in report['split']['training_indices']} & {groups[i] for i in report['split']['holdout_indices']}

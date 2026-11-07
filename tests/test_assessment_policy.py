@@ -20,4 +20,8 @@ def test_normalized_components_and_fallback(phishing_eml_bytes):
     assert result.risk_score == pytest.approx(sum(result.evidence_breakdown.values()))
     assert all(0 <= value <= CAPS[key] for key,value in result.evidence_breakdown.items())
     analysis.threat_assessment.risk_score = result.risk_score
-    assert AlertService.evaluate_analysis(analysis).alert.severity == result.severity
+    evaluation = AlertService.evaluate_analysis(analysis)
+    if result.severity in {"MEDIUM", "HIGH", "CRITICAL"}:
+        assert evaluation.alert.severity == result.severity
+    else:
+        assert evaluation.alert is None and not evaluation.is_alert_generated

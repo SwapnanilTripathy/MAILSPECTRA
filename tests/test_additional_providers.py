@@ -45,3 +45,38 @@ async def test_shodan_ports_are_not_reputation(monkeypatch):
     monkeypatch.setattr('backend.app.intelligence.additional_providers.provider_json',response)
     r=await ShodanProvider('synthetic').query_indicator('8.8.8.8','IP')
     assert r.status=='AVAILABLE' and r.verdict=='UNKNOWN' and r.context['ports']==[53,443]
+
+@pytest.mark.parametrize('value,kind', [('https://u:p@example.com','URL'),('https://127.0.0.1','URL'),('https://example.com:8080','URL'),('https://[::1]','URL'),('a..com','DOMAIN'),('-bad.com','DOMAIN'),('a.local','DOMAIN'),('224.0.0.1','IP'),('https://example.com:bad','URL')])
+def test_reject_unsafe_provider_indicators(value,kind):
+    from backend.app.intelligence.additional_providers import public_indicator
+    assert not public_indicator(value,kind)
+
+
+def test_idn_provider_indicator():
+    from backend.app.intelligence.additional_providers import public_indicator
+    assert public_indicator('bücher.de','DOMAIN')
+
+@pytest.mark.asyncio
+async def test_abuse_malformed_does_not_mean_no_match(monkeypatch):
+    from backend.app.intelligence.reputation import LiveAbuseIPDBProvider
+    async def malformed(*args,**kwargs):return 200,{'data':{}}
+    monkeypatch.setattr('backend.app.intelligence.http_client.provider_json',malformed)
+    result=await LiveAbuseIPDBProvider('synthetic').query_indicator('8.8.8.8','IP')
+    assert result.status=='ERROR' and result.verdict=='UNKNOWN'
+    assert (await LiveAbuseIPDBProvider('synthetic').query_indicator('example.com','DOMAIN')).status=='UNSUPPORTED'
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('provider,clsname',[('virustotal','VirusTotalProvider'),('shodan','ShodanProvider')])
+async def test_selected_provider_invoked(monkeypatch,provider,clsname):
+    from backend.app.api.v1.endpoints.intelligence import lookup,LookupRequest
+    from backend.app.intelligence.additional_providers import result
+    from backend.app.core.config import settings
+    monkeypatch.setattr(settings,'INTELLIGENCE_MODE','live')
+    calls=[]
+    class Selected:
+        async def query_indicator(self,indicator,kind):
+            calls.append((indicator,kind));return result(indicator,kind,provider,status='UNAVAILABLE')
+    monkeypatch.setattr('backend.app.intelligence.additional_providers.'+clsname,Selected)
+    response=await lookup(LookupRequest(indicator='9.9.9.9',indicator_type='IP',provider=provider))
+    assert calls==[('9.9.9.9','IP')]
+    assert response['provider']==provider

@@ -43,7 +43,7 @@ export default function IntelligencePage() {
   };
 
   const handleEntropyCalc = () => {
-    const val = calculateShannonEntropy(entropyInput);
+    const val = entropyInput.trim() ? calculateShannonEntropy(entropyInput.trim()) : null;
     setCalculatedEntropy(val);
   };
 
@@ -183,7 +183,7 @@ export default function IntelligencePage() {
           </h2>
         </div>
         <p className="text-xs text-slate-400">
-          Measures character unpredictability. Entropy alone does not establish DGA activity or maliciousness.
+          Measures the exact trimmed input string, including URL punctuation if entered. This is a character-distribution statistic, not a maliciousness score or DGA classifier. No detection threshold is applied.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -191,6 +191,7 @@ export default function IntelligencePage() {
             type="text"
             value={entropyInput}
             onChange={(e) => setEntropyInput(e.target.value)}
+            aria-label="Exact string for entropy calculation"
             placeholder="Type any domain string e.g., 'asdkjhqw98y712398hkj.com' or 'google.com'..."
             className="w-full flex-1 p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-slate-200 focus:border-cyan-500"
           />
@@ -209,21 +210,19 @@ export default function IntelligencePage() {
                 COMPUTED SHANNON ENTROPY
               </span>
               <span
-                className={`text-xl font-bold ${calculatedEntropy > 3.8 ? 'text-red-400' : 'text-emerald-400'}`}
+                className="text-xl font-bold text-cyan-300"
               >
                 {calculatedEntropy.toFixed(3)} bits
               </span>
             </div>
             <div className="text-right">
               <span className="text-slate-400 block text-[10px]">
-                DGA THRESHOLD (&gt; 3.8)
+                DESCRIPTIVE STATISTIC ONLY
               </span>
               <span
-                className={`font-bold ${calculatedEntropy > 3.8 ? 'text-red-400' : 'text-emerald-400'}`}
+                className="font-bold text-slate-300"
               >
-                {calculatedEntropy > 3.8
-                  ? 'LIKELY ALGORITHMIC DGA'
-                  : 'STANDARD LEXICAL DISTRIBUTION'}
+                No safety or DGA verdict
               </span>
             </div>
           </div>

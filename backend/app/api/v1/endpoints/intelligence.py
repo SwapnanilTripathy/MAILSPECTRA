@@ -47,7 +47,9 @@ class LookupResponse(BaseModel):
 
 @router.post('/lookup', response_model=LookupResponse)
 async def lookup(payload: LookupRequest):
-    key = hashlib.sha256(f'{settings.INTELLIGENCE_MODE}:{payload.provider}:{bool(settings.VIRUSTOTAL_API_KEY)}:{bool(settings.SHODAN_API_KEY)}:{bool(settings.ABUSEIPDB_API_KEY)}:{payload.indicator_type}:{payload.indicator}'.encode()).hexdigest()
+    configuration = hashlib.sha256("|".join(key or '' for key in (settings.VIRUSTOTAL_API_KEY, settings.SHODAN_API_KEY, settings.ABUSEIPDB_API_KEY)).encode()).hexdigest()
+    key = hashlib.sha256(f'{settings.INTELLIGENCE_MODE}:{payload.provider}:{configuration}:{payload.indicator_type}:{payload.indicator}'.encode()).hexdigest()
+
     async def operation():
         service = ThreatReputationService()
         if settings.INTELLIGENCE_MODE == 'live':

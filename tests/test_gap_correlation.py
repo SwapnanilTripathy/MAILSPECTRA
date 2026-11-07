@@ -19,3 +19,27 @@ def test_hash_and_temporal_context(benign_eml_bytes):
     assert not CampaignCorrelator.correlate_case(a,[hist])[0]
     assert attachment_hashes(['bad','A'*64])=={'a'*64}
     assert utc_timestamp('2026-01-01T02:00:00+02:00')==utc_timestamp('2026-01-01T00:00:00Z')
+
+
+import pytest
+@pytest.mark.asyncio
+async def test_attachment_observables_idempotent():
+    from email.message import EmailMessage
+    from backend.app.services.threat_pipeline import pipeline
+    from backend.app.database.session import AsyncSessionLocal
+    from backend.app.models.entities import ObservableRecord
+    from sqlalchemy import select
+    import hashlib
+    case_ids=[]
+    digest=hashlib.sha256(b'synthetic shared attachment').hexdigest()
+    for subject in ('Synthetic hash case one','Synthetic hash case two'):
+        msg=EmailMessage();msg['From']='attachment@example.test';msg['Subject']=subject;msg.set_content('Synthetic body');msg.add_attachment(b'synthetic shared attachment',maintype='application',subtype='octet-stream',filename='shared.bin')
+        raw=msg.as_bytes()
+        result=await pipeline.analyze_bytes_async(raw,'synthetic.eml')
+        assert (await pipeline.analyze_bytes_async(raw,'duplicate.eml')).case_id==result.case_id
+        case_ids.append(result.case_id)
+        async with AsyncSessionLocal() as db:
+            rows=(await db.scalars(select(ObservableRecord).where(ObservableRecord.case_id==result.case_id,ObservableRecord.observable_type=='ATTACHMENT_SHA256'))).all()
+            assert len(rows)==1 and rows[0].value==digest
+    match=next(m for m in result.campaign_correlations if m.related_case_id==case_ids[0])
+    assert match.shared_values['attachment_hashes']==[digest]
