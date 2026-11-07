@@ -1,0 +1,44 @@
+Received: from relay.newsletter.example.test (relay.newsletter.example.test [192.0.2.25])
+        by mx.mailroom.example.test with ESMTPS id DEMO-BENIGN-001;
+        Sun, 08 Nov 2026 00:10:12 +0000
+Authentication-Results: mx.mailroom.example.test;
+        spf=pass smtp.mailfrom=bulletin@news.example.test;
+        dkim=pass header.d=news.example.test;
+        dmarc=pass header.from=news.example.test
+Return-Path: <bulletin@news.example.test>
+From: "Engineering Weekly" <bulletin@news.example.test>
+To: "Demo Analyst" <analyst@organization.example.test>
+Subject: November Engineering Digest - Synthetic Demo
+Date: Sun, 08 Nov 2026 00:10:05 +0000
+Message-ID: <demo-benign-20261108-001@news.example.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="MAILSPECTRA-BENIGN-DEMO"
+
+--MAILSPECTRA-BENIGN-DEMO
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Hello,
+
+This is a synthetic engineering newsletter for the MAILSPECTRA product demonstration.
+
+The monthly digest is available at:
+https://updates.example.test/digest/november
+
+No action is required. This message contains no real account, organization, or service details.
+
+Regards,
+Engineering Weekly Demo
+--MAILSPECTRA-BENIGN-DEMO
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+<html><body>
+<p>Hello,</p>
+<p>This is a synthetic engineering newsletter for the MAILSPECTRA product demonstration.</p>
+<p>The monthly digest is available at
+<a href="https://updates.example.test/digest/november">Engineering Digest</a>.</p>
+<p>No action is required.</p>
+<p>Regards,<br>Engineering Weekly Demo</p>
+</body></html>
+--MAILSPECTRA-BENIGN-DEMO--
