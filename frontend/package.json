@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/privacy.test.js && node tests/run-contracts.mjs && node tests/refresh.mjs"
+    "test": "node --test tests/privacy.test.js && node tests/run-contracts.mjs && node tests/refresh.mjs && node --test tests/demo-samples.test.js"
   },
   "dependencies": {
     "axios": "^1.7.4",
