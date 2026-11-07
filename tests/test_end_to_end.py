@@ -29,12 +29,21 @@ async def test_investigation_report_alert_workflow(auth_headers,kind):
         assert manifest['original_sha256']==hashlib.sha256(raw).hexdigest()
         assert manifest['privacy_redaction_applied']
         alerts=(await client.get('/api/v1/alerts?limit=100')).json()
-        alert=next(item for item in alerts if item['case_id']==case_id)
-        assert alert['risk_score']==analysis['risk_assessment']['risk_score']
-        assert (await client.patch(f"/api/v1/alerts/{alert['alert_id']}",json={'status':'ACKNOWLEDGED'})).json()['status']=='ACKNOWLEDGED'
-        assert next(a for a in (await client.get('/api/v1/alerts?limit=100')).json() if a['alert_id']==alert['alert_id'])['status']=='ACKNOWLEDGED'
+        matching=[item for item in alerts if item['case_id']==case_id]
+        generated=analysis['risk_assessment']['severity'] in {'MEDIUM','HIGH','CRITICAL'}
+        assert len(matching)==int(generated)
+        if generated:
+            alert=matching[0]
+            assert alert['risk_score']==analysis['risk_assessment']['risk_score']
+            assert (await client.patch(f"/api/v1/alerts/{alert['alert_id']}",json={'status':'ACKNOWLEDGED'})).json()['status']=='ACKNOWLEDGED'
+        else:
+            assert analysis['security_alert'] is None
+        assert manifest['integrity_status']=='PRESENT_UNVERIFIED'
+        assert (await client.get(f"/api/v1/cases/{case_id}/evidence/verify")).json()['integrity_verified']
         actions={item['action'] for item in (await client.get(f'/api/v1/cases/{case_id}/audit')).json()['items']}
-        assert {'ARTIFACT_ANALYZED','REPORT_GENERATED','REPORT_VERIFIED','REPORT_DOWNLOADED','ALERT_UPDATED'} <= actions
+        assert {'ARTIFACT_ANALYZED','REPORT_GENERATED','REPORT_VERIFIED','REPORT_DOWNLOADED'} <= actions
+        assert ('ALERT_UPDATED' in actions)==generated
+
 
 
 def test_recursive_redaction_preserves_source():

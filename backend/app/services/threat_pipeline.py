@@ -211,6 +211,8 @@ class ThreatAnalysisPipeline:
             logger.warning("Infrastructure enrichment failed: %s", type(e).__name__)
             intel = None
 
+        observations(base_analysis)
+
         # 9. Phase 3: Real NetworkX Threat Graph Construction
         try:
             G = ThreatGraphBuilder.build_case_graph(base_analysis, intel)

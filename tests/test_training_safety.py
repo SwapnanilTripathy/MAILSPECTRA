@@ -28,3 +28,19 @@ def test_saving_candidate_preserves_active_model_cache(tmp_path, monkeypatch):
     output = ModelLoader.save_model(candidate, tmp_path / 'candidate.joblib')
     assert output.exists()
     assert ModelLoader.load_model() is active
+
+
+def test_manifest_mismatch_rejected(tmp_path):
+    from backend.app.ml.train_model import load_dataset
+    (tmp_path/'dataset.json').write_text('{"samples":[]}')
+    (tmp_path/'manifest.json').write_text('{"sha256":"incorrect"}')
+    with pytest.raises(ValueError, match='checksum mismatch'):
+        load_dataset(tmp_path/'dataset.json')
+
+
+def test_prediction_readiness_is_explicit():
+    from backend.app.ml.schemas import MLPredictionResult
+    prediction=MLPredictionResult(predicted_class='LEGITIMATE',confidence=.99)
+    assert prediction.production_ready is False
+    assert prediction.deployment_status=='DEMONSTRATION_ONLY'
+    assert prediction.calibration_status=='UNCALIBRATED'

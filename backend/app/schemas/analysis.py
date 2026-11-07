@@ -1,3 +1,4 @@
+from backend.app.core.versions import PARSER_VERSION
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
@@ -63,7 +64,7 @@ class ArtifactMetadata(BaseModel):
     filename: str
     ingested_at: str
     actor: str
-    parser_version: str = "mailspectra-parser-1.1"
+    parser_version: str = PARSER_VERSION
 
 
 class EvidenceObservation(BaseModel):
@@ -73,8 +74,8 @@ class EvidenceObservation(BaseModel):
     source_artifact_id: str
     source_location: Dict[str, Any]
     observed_at: str
-    verification_status: str = "OBSERVED_UNTRUSTED"
-    parser_version: str = "mailspectra-parser-1.1"
+    verification_status: str = "OBSERVED_UNVERIFIED"
+    parser_version: str = PARSER_VERSION
 
 
 class EmailAnalysisResponse(BaseModel):

@@ -103,6 +103,7 @@ class ExtractedIP(BaseModel):
 
 
 class AttachmentMetadata(BaseModel):
+    mime_part_index: Optional[int] = None
     filename: str
     content_type: str
     size_bytes: int

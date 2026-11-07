@@ -61,6 +61,7 @@ class ThreatGraphData(BaseModel):
 
 
 class CampaignCorrelationMatch(BaseModel):
+    temporal_context: Dict[str, Any] = Field(default_factory=dict)
     related_case_id: str
     related_case_filename: str = ""
     related_case_subject: str = ""

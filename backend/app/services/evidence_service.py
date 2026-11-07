@@ -32,10 +32,27 @@ def observations(analysis):
     if not artifact:
         return
     items = []
-    for kind, values, field in [("URL", analysis.urls, "url"), ("IP", analysis.ips, "ip"), ("ATTACHMENT_SHA256", analysis.attachments, "sha256")]:
+    def add(kind, value, pointer, status="OBSERVED_UNVERIFIED", **location):
+        oid = hashlib.sha256(f"{artifact.artifact_id}:{kind}:{pointer}:{value}".encode()).hexdigest()[:24]
+        items.append(EvidenceObservation(observation_id="OBS-"+oid, observation_type=kind, value=str(value), source_artifact_id=artifact.artifact_id, source_location={"snapshot_pointer":pointer, "character_offsets":None, "offset_limitation":"Exact character offsets unavailable", **location}, observed_at=artifact.ingested_at, verification_status=status, parser_version=artifact.parser_version))
+    counts = {}
+    for index, header in enumerate(analysis.metadata.raw_headers):
+        name = header['name'].lower()
+        occurrence = counts.get(name, 0); counts[name] = occurrence + 1
+        add('HEADER', header['value'], f'/metadata/raw_headers/{index}', header_name=name, occurrence_index=occurrence, extraction_area='header')
+    for index, hop in enumerate(analysis.relay_chain.hops):
+        add('RELAY', hop.raw_header, f'/relay_chain/hops/{index}', extraction_area='Received header', header_name='received', occurrence_index=len(analysis.relay_chain.hops)-1-index)
+    for kind, values, field, collection in [("URL", analysis.urls, "url", "urls"), ("IP", analysis.ips, "ip", "ips"), ("ATTACHMENT_SHA256", analysis.attachments, "sha256", "attachments")]:
         for index, value in enumerate(values):
-            text = getattr(value, field)
-            oid = hashlib.sha256(f"{artifact.artifact_id}:{kind}:{index}:{text}".encode()).hexdigest()[:24]
-            items.append(EvidenceObservation(observation_id="OBS-"+oid, observation_type=kind, value=text, source_artifact_id=artifact.artifact_id, source_location={"kind":getattr(value,"source","ATTACHMENT"), "index":index, "locations":getattr(value,"source_locations",[])}, observed_at=artifact.ingested_at))
+            location = {"extraction_area":getattr(value,"source","MIME_ATTACHMENT"), "locations":getattr(value,"source_locations",[])}
+            if kind == 'ATTACHMENT_SHA256':
+                location.update(mime_part_index=value.mime_part_index, filename=value.filename)
+            add(kind, getattr(value,field), f'/{collection}/{index}', **location)
+    intel = analysis.infrastructure_intelligence
+    if intel:
+        for collection in ('ip_intelligence','domain_intelligence','reputation_intelligence'):
+            for key, value in getattr(intel,collection).items():
+                escaped = key.replace('~','~0').replace('/','~1')
+                add('ENRICHMENT', key, f'/infrastructure_intelligence/{collection}/{escaped}', 'PROVIDER_REPORTED' if intel.mode=='live' else 'NOT_APPLICABLE', origin='external_provider' if intel.mode=='live' else 'offline_fixture', provider_metadata=value.model_dump())
     analysis.observations = items
-    analysis.evidence_manifest = {"schema_version":"1.0", "artifact":artifact.model_dump(), "analysis_version":analysis.schema_version, "observation_ids":[i.observation_id for i in items], "limitations":["Hashes detect changes relative to stored digests; they do not establish an external chain of custody.", "Legacy cases may lack original artifacts."]}
+    analysis.evidence_manifest = {"schema_version":"1.1", "artifact":artifact.model_dump(), "hash_algorithm":"SHA-256", "parser_version":artifact.parser_version, "analysis_version":analysis.schema_version, "observation_ids":[i.observation_id for i in items], "observations":[i.model_dump() for i in items], "verification_status":"PRESENT_UNVERIFIED", "verification_method":"No independently stored manifest digest", "privacy_redaction_applied":False, "limitations":["Hashes detect changes relative to stored digests; they do not establish authenticity or an external chain of custody.", "Parsed observations remain unverified regardless of artifact digest integrity.", "Legacy cases may lack original artifacts."]}

@@ -15,6 +15,7 @@ export type ArtifactMetadata = {
   "parser_version"?: string;
 };
 export type AttachmentMetadata = {
+  "mime_part_index"?: number | null;
   "filename": string;
   "content_type": string;
   "size_bytes": number;
@@ -65,6 +66,7 @@ export type BodyContent = {
   "has_plain_text"?: boolean;
 };
 export type CampaignCorrelationMatch = {
+  "temporal_context"?: Record<string, unknown>;
   "related_case_id": string;
   "related_case_filename"?: string;
   "related_case_subject"?: string;
@@ -236,6 +238,9 @@ export type MIMEStructurePart = {
   "is_attachment"?: boolean;
 };
 export type MLPredictionResult = {
+  "deployment_status"?: string;
+  "calibration_status"?: string;
+  "production_ready"?: boolean;
   "predicted_class": string;
   "confidence": number;
   "probabilities"?: Record<string, number>;

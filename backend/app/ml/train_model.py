@@ -41,7 +41,12 @@ def load_dataset(dataset_path: Path) -> Tuple[List[str], List[Dict[str, float]],
     with open(dataset_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    meta = data.get("_metadata", {})
+    manifest_path = dataset_path.with_name("manifest.json")
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text())
+        if manifest.get("sha256") != hashlib.sha256(dataset_path.read_bytes()).hexdigest():
+            raise ValueError("Dataset manifest checksum mismatch")
+    meta = dict(data.get("_metadata", {}))
     samples = data.get("samples", [])
 
     texts: List[str] = []
@@ -63,6 +68,7 @@ def load_dataset(dataset_path: Path) -> Tuple[List[str], List[Dict[str, float]],
         structured_list.append(struct_feats)
         labels.append(label)
 
+    meta["group_labels"] = [{k: item[k] for k in ("group_id", "campaign_id", "thread_id", "sender_id") if item.get(k)} for item in samples]
     logger.info(f"Loaded {len(texts)} samples across {len(set(labels))} classes from dataset.")
     return texts, structured_list, labels, meta
 
@@ -88,6 +94,19 @@ def train_and_evaluate(
     # Exact duplicate normalized text remains in the same fold. Sender/thread grouping
     # requires independently curated group metadata, unavailable in the inherited corpus.
     groups = np.array([hashlib.sha256(" ".join(text.lower().split()).encode()).hexdigest() for text in texts])
+    # Union duplicate text and any supplied campaign/thread/sender group labels.
+    parents = list(range(len(groups)))
+    def root(i):
+        while parents[i] != i:
+            parents[i] = parents[parents[i]]; i = parents[i]
+        return i
+    seen = {}
+    for i, digest in enumerate(groups):
+        keys = [("text", str(digest))] + [(k, str(v)) for k,v in dataset_meta["group_labels"][i].items()]
+        for key in keys:
+            if key in seen: parents[root(i)] = root(seen[key])
+            else: seen[key] = i
+    groups = np.array([str(root(i)) for i in range(len(groups))])
     def matrices(train, test):
         vec, scale = clone(vectorizer), clone(scaler)
         train_text = vec.fit_transform([texts[i] for i in train])
@@ -114,7 +133,10 @@ def train_and_evaluate(
         "total_samples": n_samples,
         "classes": unique_classes,
         "n_splits": n_splits,
-        "is_statistically_significant": n_samples >= 200,
+        "is_statistically_significant": False,
+        "deployment_status": "DEMONSTRATION_ONLY",
+        "production_ready": False,
+        "per_class_support": {c:labels.count(c) for c in unique_classes},
         "limitations": [
             "Trained on demonstration dataset intended for pipeline verification and baseline scoring.",
             "Metrics reflect demonstration corpus distribution and should be benchmarked on enterprise datasets (e.g. Enron, Nazario) prior to mission-critical deployment."
@@ -144,7 +166,7 @@ def train_and_evaluate(
     probabilities = classifier.predict_proba(X_holdout)
     metrics_report["holdout_evaluation"]["multiclass_brier_score"] = float(np.mean(np.sum((probabilities - (y[holdout_idx,None] == classifier.classes_).astype(float))**2,axis=1)))
     metrics_report["holdout_evaluation"]["errors"] = [{"sample_index":int(i),"actual":str(actual),"predicted":str(pred)} for i,actual,pred in zip(holdout_idx,y[holdout_idx],holdout_predictions) if actual != pred]
-    metrics_report["split"] = {"training_indices":train_idx.tolist(), "holdout_indices":holdout_idx.tolist(), "grouping":"SHA256 of normalized text; sender/campaign group labels unavailable", "preprocessing":"Fit on each training fold only", "random_seeds":[42,43]}
+    metrics_report["split"] = {"training_indices":train_idx.tolist(), "holdout_indices":holdout_idx.tolist(), "grouping":"Union of normalized-text duplicates and supplied group/campaign/thread/sender IDs", "group_ids":groups.tolist(), "training_size":len(train_idx), "holdout_size":len(holdout_idx), "preprocessing":"Fit on each training fold only", "random_seeds":[42,43]}
     metrics_report["is_statistically_significant"] = False
     metrics_report["dataset_sha256"] = hashlib.sha256(dataset_path.read_bytes()).hexdigest()
     metrics_report["calibration_status"] = f"Uncalibrated; reliability has not been established on the {len(holdout_idx)}-sample holdout"

@@ -467,6 +467,7 @@ class EmailForensicParser:
 
                 attachments.append(
                     AttachmentMetadata(
+                        mime_part_index=part_idx - 1,
                         filename=att_name,
                         content_type=ctype,
                         size_bytes=len(payload_bytes),

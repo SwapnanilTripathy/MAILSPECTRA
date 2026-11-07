@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from backend.app.core.logging import logger
 from backend.app.database.session import AsyncSessionLocal
-from backend.app.graph.campaign_correlator import CampaignCorrelator
+from backend.app.graph.campaign_correlator import CampaignCorrelator, attachment_hashes, utc_timestamp
 from backend.app.graph.schemas import (
     AttributionSupportResult,
     CampaignCorrelationMatch,
@@ -43,13 +43,15 @@ class CorrelationPersistenceService:
             # 1. Fetch historical cases and their observables
             historical_cases: List[Dict[str, Any]] = []
             try:
-                stmt = select(CaseRecord).options(selectinload(CaseRecord.observables)).where(CaseRecord.created_at >= datetime.now(timezone.utc) - timedelta(days=settings.CORRELATION_WINDOW_DAYS)).order_by(CaseRecord.created_at.desc()).limit(500)
+                stmt = select(CaseRecord).options(selectinload(CaseRecord.observables)).where(CaseRecord.created_at >= utc_timestamp(analysis.analyzed_at) - timedelta(days=settings.CORRELATION_WINDOW_DAYS)).order_by(CaseRecord.created_at.desc()).limit(500)
                 result = await session.execute(stmt)
                 cases_orm = result.scalars().all()
 
                 for c in cases_orm:
                     case_dict: Dict[str, Any] = {
                         "case_id": c.case_id,
+                        "created_at":c.created_at.isoformat(),
+                        "attachment_hashes":[],
                         "filename": c.filename,
                         "subject": c.subject,
                         "from_address": c.from_address,
@@ -61,6 +63,8 @@ class CorrelationPersistenceService:
                         "urls": [],
                     }
                     for obs in c.observables:
+                        if obs.observable_type == "ATTACHMENT_SHA256":
+                            case_dict["attachment_hashes"].append(obs.value)
                         if obs.observable_type == "IP":
                             case_dict["ips"].append(obs.value)
                         elif obs.observable_type == "DOMAIN":
@@ -104,6 +108,9 @@ class CorrelationPersistenceService:
                     full_analysis_json=analysis.model_dump_json(),
                 )
                 session.add(case_rec)
+
+                for digest in attachment_hashes(a.sha256 for a in analysis.attachments):
+                    session.add(ObservableRecord(case_id=analysis.case_id, observable_type="ATTACHMENT_SHA256", value=digest, defanged_value=digest, source="MIME_ATTACHMENT"))
 
                 # Add IP observables
                 for ip_item in analysis.ips:

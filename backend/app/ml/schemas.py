@@ -62,6 +62,9 @@ class SHAPExplanation(BaseModel):
 
 
 class MLPredictionResult(BaseModel):
+    deployment_status: str = "DEMONSTRATION_ONLY"
+    calibration_status: str = "UNCALIBRATED"
+    production_ready: bool = False
     predicted_class: str
     confidence: float
     probabilities: Dict[str, float] = Field(default_factory=dict)

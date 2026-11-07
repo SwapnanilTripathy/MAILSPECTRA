@@ -94,7 +94,7 @@ async def generate_case_report(case_id: str, request: Request, mask_pii: bool = 
         )
     )
 
-    manifest = {"generated_by":"MAILSPECTRA", "case_id":case_id, "report_sha256":report_meta["sha256"], "original_sha256":case_rec.sha256, "generated_at":report_meta["generated_at"], "privacy_redaction_applied":mask_pii, "evidence_manifest":case_dict.get("evidence_manifest",{})}
+    manifest = {"schema_version":"1.1", "integrity_status":"PRESENT_UNVERIFIED", "integrity_limitation":"No independently stored manifest digest; PDF and original checks are separate", "generated_by":"MAILSPECTRA", "case_id":case_id, "report_sha256":report_meta["sha256"], "original_sha256":case_rec.sha256, "generated_at":report_meta["generated_at"], "privacy_redaction_applied":mask_pii, "evidence_manifest":case_dict.get("evidence_manifest",{})}
     manifest_path = report_meta["filepath"] + ".manifest.json"
     try:
         with open(manifest_path, "x", opener=lambda path, flags: os.open(path, flags, 0o600)) as stream:

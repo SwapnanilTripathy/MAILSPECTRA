@@ -1,5 +1,7 @@
 from __future__ import annotations
 import hashlib
+import re
+from datetime import datetime, timezone
 from backend.app.core.config import settings
 from backend.app.utils.network import classify_ip
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
@@ -16,6 +18,13 @@ if TYPE_CHECKING:
     from backend.app.schemas.analysis import EmailAnalysisResponse
 
 
+
+def attachment_hashes(values):
+    return {v.lower() for v in values if isinstance(v,str) and re.fullmatch(r'[0-9a-fA-F]{64}',v)}
+
+def utc_timestamp(value):
+    parsed = datetime.fromisoformat(str(value).replace('Z','+00:00'))
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
 
 class CampaignCorrelator:
     """Performs cross-case observable correlation, campaign clustering, and attribution support analysis."""
@@ -47,6 +56,7 @@ class CampaignCorrelator:
             if u.registered_domain:
                 curr_domains.add(u.registered_domain.lower())
 
+        curr_hashes = attachment_hashes(a.sha256 for a in analysis.attachments)
         curr_urls: Set[str] = {u.url for u in analysis.urls}
 
         curr_sender = analysis.metadata.from_sender.address.lower()
@@ -58,10 +68,23 @@ class CampaignCorrelator:
             if hist_id == current_case_id:
                 continue
 
+            temporal = {"window_days":settings.CORRELATION_WINDOW_DAYS, "current_analyzed_at":analysis.analyzed_at, "historical_created_at":hist.get('created_at'), "elapsed_days":None}
+            if hist.get('created_at'):
+                try:
+                    elapsed=(utc_timestamp(analysis.analyzed_at)-utc_timestamp(hist['created_at'])).total_seconds()/86400
+                except (ValueError,TypeError):
+                    continue
+                if elapsed < 0 or elapsed > settings.CORRELATION_WINDOW_DAYS: continue
+                temporal['elapsed_days']=elapsed
             shared_inds: List[str] = []
             evidence_lines: List[str] = []
             score = 0.0
 
+            common_hashes=curr_hashes & attachment_hashes(hist.get('attachment_hashes',[]))
+            if common_hashes:
+                shared_inds.append('SHARED_ATTACHMENT_SHA256')
+                evidence_lines.append('Identical attachment SHA-256: '+', '.join(sorted(common_hashes)))
+                score += 0.45  # Exact payload reuse, same heuristic weight as identical URL.
             # Compare IP overlap
             hist_ips = set(hist.get("ips", []))
             common_ips = curr_ips.intersection(hist_ips)
@@ -103,14 +126,15 @@ class CampaignCorrelator:
             if final_score >= settings.CORRELATION_MATCH_THRESHOLD and shared_inds:
                 matches.append(
                     CampaignCorrelationMatch(
+                        temporal_context=temporal,
                         related_case_id=hist_id,
                         related_case_filename=hist.get("filename", ""),
                         related_case_subject=hist.get("subject", ""),
                         related_case_classification=hist_class,
                         correlation_score=final_score,
                         shared_indicators=shared_inds,
-                        shared_values={"ips": sorted(common_ips), "domains":sorted(common_domains), "urls":sorted(common_urls), "senders":[curr_sender] if hist_sender == curr_sender else []},
-                        evidence=evidence_lines,
+                        shared_values={"attachment_hashes":sorted(common_hashes), "ips": sorted(common_ips), "domains":sorted(common_domains), "urls":sorted(common_urls), "senders":[curr_sender] if hist_sender == curr_sender else []},
+                        evidence=evidence_lines + ([f"Elapsed days: {temporal['elapsed_days']:.3f}; window: {settings.CORRELATION_WINDOW_DAYS} days (context only)"] if temporal["elapsed_days"] is not None else ["Historical timestamp unavailable"]),
                     )
                 )
 
@@ -129,6 +153,7 @@ class CampaignCorrelator:
             campaign_id = f"CAMPAIGN-{cid_hash}"
 
             shared_infra: Dict[str, List[str]] = {
+                "attachment_hashes":sorted({v for match in high_conf_matches for v in match.shared_values.get("attachment_hashes",[])}),
                 "ips": sorted({v for match in high_conf_matches for v in match.shared_values["ips"]}),
                 "domains": sorted({v for match in high_conf_matches for v in match.shared_values["domains"]}),
                 "urls": sorted({v for match in high_conf_matches for v in match.shared_values["urls"]}),
