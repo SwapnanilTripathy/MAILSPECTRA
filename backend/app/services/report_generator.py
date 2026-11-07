@@ -135,12 +135,22 @@ class ForensicReportGenerator:
         # ----------------------------------------------------
         elements.append(Paragraph("1. Executive Threat Summary & Verdict", section_heading))
 
-        classification = case_data.get("classification") or case_data.get("threat_assessment", {}).get("classification", "UNKNOWN")
-        risk_score = case_data.get("risk_score") or case_data.get("threat_assessment", {}).get("risk_score", 0.0)
-        confidence = case_data.get("confidence") or case_data.get("threat_assessment", {}).get("confidence", 1.0)
-        
-        # Color coding for severity
-        severity_label = severity_for_score(risk_score)
+        canonical = case_data.get("risk_assessment")
+        if canonical is not None:
+            classification = canonical.get("classification") or "UNKNOWN"
+            risk_score = canonical.get("risk_score")
+            confidence = canonical.get("model_confidence")
+            verdict_source = "Canonical assessment; uncalibrated decision support"
+        else:
+            legacy = case_data.get("threat_assessment") or {}
+            classification = legacy.get("classification") or case_data.get("classification") or "UNKNOWN"
+            risk_score = legacy.get("risk_score")
+            if risk_score is None:
+                risk_score = case_data.get("risk_score")
+            confidence = None
+            verdict_source = "LEGACY / PRELIMINARY UNVERIFIED; supplied authentication claims are not independent verification" if risk_score is not None else "Canonical assessment unavailable"
+        elements.append(Paragraph(verdict_source, body_style))
+        severity_label = severity_for_score(risk_score) if canonical is not None and risk_score is not None else "UNKNOWN"
         if severity_label == "CRITICAL":
             badge_bg = colors.HexColor("#fee2e2")
             badge_txt = colors.HexColor("#991b1b")
@@ -165,11 +175,11 @@ class ForensicReportGenerator:
             ],
             [
                 Paragraph("<b>Filename:</b>", body_style), Paragraph(str(case_data.get("filename", "email.eml")), body_style),
-                Paragraph("<b>Risk Score:</b>", body_style), Paragraph(f"<b>{risk_score}/100</b> ({severity_label})", body_style),
+                Paragraph("<b>Risk Score:</b>", body_style), Paragraph(f"<b>{risk_score if risk_score is not None else 'Unavailable'}/100</b> ({severity_label})", body_style),
             ],
             [
                 Paragraph("<b>Subject:</b>", body_style), Paragraph(str(case_data.get("subject") or case_data.get("metadata", {}).get("subject", "N/A")), body_style),
-                Paragraph("<b>Model Confidence:</b>", body_style), Paragraph(f"{round(confidence * 100, 1)}%", body_style),
+                Paragraph("<b>Model Confidence:</b>", body_style), Paragraph(f"{round(confidence * 100, 1)}%" if confidence is not None else "Unavailable", body_style),
             ],
             [
                 Paragraph("<b>From Sender:</b>", body_style), Paragraph(str(case_data.get("from_address") or case_data.get("metadata", {}).get("from_sender", {}).get("raw", "N/A")), body_style),

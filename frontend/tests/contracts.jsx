@@ -37,5 +37,12 @@ export function checkContracts() {
   assert.match(missing, /Unavailable/);
   assert.match(missing, /UNKNOWN/);
   assert.match(missing, /Model unavailable; rule fallback/);
-  console.log('8 frontend contract render checks passed');
+  const legacy = render(<VerdictBanner analysis={{authentication:{spf_result:'fail',dkim_result:'fail',dmarc_result:'fail',raw_authentication_results:['attacker.test; spf=fail; dkim=fail; dmarc=fail']},threat_assessment:{risk_score:80,classification:'PHISHING',confidence:1}}} />);
+  assert.match(legacy, /LEGACY \/ PRELIMINARY UNVERIFIED/);
+  const zero = render(<VerdictBanner analysis={{risk_assessment:{risk_score:0,classification:'LEGITIMATE',severity:'INFORMATIONAL',model_confidence:0},threat_assessment:{risk_score:80,classification:'PHISHING'}}} />);
+  assert.match(zero, /Canonical assessment/);
+  assert.match(zero, /LEGITIMATE/);
+  assert.doesNotMatch(zero, /PHISHING|LEGACY \/ PRELIMINARY/);
+  assert.match(zero, />0<\/span>/);
+  console.log('10 frontend contract render checks passed');
 }

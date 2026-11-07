@@ -5,10 +5,13 @@ import SeverityBadge from '../common/SeverityBadge';
 export default function VerdictBanner({ analysis, onSaveCase, onExportReport, isSaving = false, isExporting = false }) {
   if (!analysis) return null;
 
-  const threatClass = analysis.risk_assessment?.classification || analysis.ai_inference?.predicted_class || analysis.threat_assessment?.classification || 'UNKNOWN';
-  const riskScore = analysis.risk_assessment?.risk_score ?? analysis.threat_assessment?.risk_score ?? null;
-  const severity = analysis.risk_assessment?.severity || 'UNKNOWN';
-  const confidence = analysis.risk_assessment?.model_confidence ?? analysis.ai_inference?.confidence ?? analysis.threat_assessment?.confidence ?? null;
+  const canonical = analysis.risk_assessment;
+  const hasCanonical = canonical != null;
+  const threatClass = (hasCanonical ? canonical.classification : analysis.threat_assessment?.classification) || 'UNKNOWN';
+  const riskScore = hasCanonical ? (canonical.risk_score ?? null) : (analysis.threat_assessment?.risk_score ?? null);
+  const severity = hasCanonical ? (canonical.severity || 'UNKNOWN') : 'UNKNOWN';
+  const confidence = hasCanonical ? (canonical.model_confidence ?? null) : null;
+  const verdictSource = hasCanonical ? 'Canonical assessment; uncalibrated decision support' : riskScore != null ? 'LEGACY / PRELIMINARY UNVERIFIED — supplied header claims are not independent verification' : 'Canonical assessment unavailable';
   const indicators = analysis.observed_evidence || analysis.risk_assessment?.indicators || [];
 
   const isThreat = riskScore >= 40 || (threatClass !== 'LEGITIMATE' && threatClass !== 'BENIGN');
@@ -32,6 +35,7 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
             <h2 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-white mt-1">
               {threatClass.replace(/_/g, ' ')}
             </h2>
+            <p className="text-xs text-amber-300 mt-1" role="note">{verdictSource}</p>
             <p className="text-xs text-slate-400 mt-1 font-mono">
               Artifact: <span className="text-slate-200">{analysis.filename}</span> • Case Reference: <span className="text-cyan-400">{analysis.case_id}</span>
             </p>

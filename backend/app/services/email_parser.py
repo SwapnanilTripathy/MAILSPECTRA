@@ -658,7 +658,7 @@ class EmailForensicParser:
                 ThreatIndicator(
                     category="HEADER",
                     feature="SPF_FAIL",
-                    description="Sender Policy Framework (SPF) validation failed. The sending IP is not authorized by the domain's SPF record.",
+                    description="UNVERIFIED supplied header reports SPF failure; no independent sending-IP authorization has been established.",
                     severity="HIGH",
                     observed_value=auth.spf_result,
                 )
@@ -669,7 +669,7 @@ class EmailForensicParser:
                 ThreatIndicator(
                     category="HEADER",
                     feature="SPF_SOFTFAIL",
-                    description="SPF softfail detected. The domain administrator marked this sending server as questionable.",
+                    description="UNVERIFIED supplied header reports SPF softfail; this is an attacker-controlled claim.",
                     severity="MEDIUM",
                     observed_value=auth.spf_result,
                 )
@@ -681,7 +681,7 @@ class EmailForensicParser:
                 ThreatIndicator(
                     category="HEADER",
                     feature="DKIM_FAIL",
-                    description="DKIM cryptographic signature verification failed. The email may have been altered in transit.",
+                    description="UNVERIFIED supplied header reports DKIM failure; no independent cryptographic verification is implied.",
                     severity="HIGH",
                     observed_value=auth.dkim_result,
                 )
@@ -693,7 +693,7 @@ class EmailForensicParser:
                 ThreatIndicator(
                     category="HEADER",
                     feature="DMARC_FAIL",
-                    description="DMARC alignment policy failed. The domain owner's DMARC policy rejects or quarantees this message.",
+                    description="UNVERIFIED supplied header reports DMARC failure; independent alignment and policy verification are unavailable here.",
                     severity="CRITICAL",
                     observed_value=auth.dmarc_result,
                 )
@@ -800,7 +800,7 @@ class EmailForensicParser:
             classification = "BENIGN"
 
         explanation = (
-            f"Risk score of {final_score:.1f}/100 calculated from {len(indicators)} observable forensic indicators. "
+            f"LEGACY / PRELIMINARY UNVERIFIED assessment; submitted authentication claims are not independently verified. Risk score of {final_score:.1f}/100 calculated from {len(indicators)} observable forensic indicators. "
             f"Classification: {classification}."
         )
 
