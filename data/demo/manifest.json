@@ -1,0 +1,51 @@
+{
+  "name": "MAILSPECTRA Synthetic Email Demonstration Set",
+  "version": "1.0.0",
+  "purpose": "Local product demonstrations and analyst workflow walkthroughs only.",
+  "synthetic": true,
+  "created": "2026-11-08",
+  "safety": {
+    "domains": "All sample email domains use the reserved .test namespace.",
+    "ip_addresses": "IPv4 literals use RFC 5737 documentation ranges only.",
+    "attachments": "The only attachment is plain-text synthetic notes; no executable or macro-enabled files are included.",
+    "links": "All links use .test hostnames or RFC 5737 documentation IP addresses. Do not click or fetch message URLs.",
+    "credentials": "No real credentials, account details, or personal data are included.",
+    "authentication": "Authentication-Results and Received-SPF values are claims embedded in the synthetic message, not independently verified results."
+  },
+  "operating_guidance": {
+    "intelligence_mode": "Use INTELLIGENCE_MODE=offline for a deterministic demo.",
+    "model": "Displayed ML classification and risk are application outputs from a demonstration-only, uncalibrated model; no expected score or verdict is prescribed by this manifest.",
+    "handling": "Use a disposable local database and storage directories. Do not mix demonstration cases with real evidence."
+  },
+  "samples": [
+    {
+      "file": "frontend/public/demo-samples/benign_newsletter.eml",
+      "scenario": "Benign newsletter",
+      "investigation_cues": [
+        "Ordinary newsletter language",
+        "No urgent credential or payment request",
+        "Embedded authentication pass claims remain unverified claims in a saved message"
+      ]
+    },
+    {
+      "file": "frontend/public/demo-samples/credential_harvest.eml",
+      "scenario": "Credential-harvesting lure",
+      "investigation_cues": [
+        "Urgency and account-lock pressure",
+        "Sender and Reply-To domain mismatch",
+        "Documentation-range source and URL IP literals",
+        "Embedded authentication failure claims remain unverified claims in a saved message"
+      ]
+    },
+    {
+      "file": "frontend/public/demo-samples/executive_payment_request.eml",
+      "scenario": "Executive impersonation / payment diversion",
+      "investigation_cues": [
+        "Executive display-name claim",
+        "Sender and Reply-To mismatch",
+        "Urgent payment request",
+        "Plain-text synthetic attachment metadata"
+      ]
+    }
+  ]
+}
