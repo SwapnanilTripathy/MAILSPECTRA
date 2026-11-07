@@ -25,3 +25,4 @@ alembic>=1.13,<2
 dkimpy>=1.1,<2
 pyspf>=2.0,<3
 asyncpg>=0.29,<1
+authres>=1.2,<2

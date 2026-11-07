@@ -1,5 +1,9 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:c7cb7ae90d968c009d55c8eee41a15ccf6ca43a961ef501cd78e88c6db7727c8 -->
+
+<!-- coderabbit-ai-generated-section:v1:71edf5d73d0f176b988297450657df215860b1584f6fdb3e321eda266c90d50a -->
+
 <!-- coderabbit-ai-generated-section:v1:344fef811069e466b40c3bb96238bd04697aa4f81ba432c02bb185da6584cb63 -->
 
 <!-- coderabbit-ai-generated-section:v1:31725439d3863ea5f7c6ff2446e16844e0fbca6dacc2811994f4975f828af768 -->
@@ -14,11 +18,11 @@ Implemented: authenticated admin/analyst/viewer accounts; RFC 5322 `.eml` and pa
 
 Experimental: the inherited 21-message demonstration model, uncalibrated probabilities, heuristic risk weights, infrastructure correlation and best-effort PII masking. The model is **not validated for operational detection**. Geolocation describes infrastructure, not a person's location. Authentication headers and relay claims in saved email can be forged. Read [the model card](docs/ML_MODEL_CARD.md) and [phase status](docs/PHASE_STATUS.md).
 
-Unsupported/planned: Outlook `.msg`, attachment execution, URL retrieval, tenant isolation, SSO/MFA, ARC verification, guaranteed anonymization and an automatic legal-hold/retention engine. VirusTotal and Shodan provide optional existing-report lookups in the IOC workbench; live accounts require separate validation.
+Unsupported/planned: Outlook `.msg`, attachment execution, URL retrieval, tenant isolation, SSO/MFA, guaranteed anonymization and an automatic legal-hold/retention engine. VirusTotal and Shodan provide optional existing-report lookups in the IOC workbench; live accounts require separate validation.
 
 ## Stack and architecture
 
-Python 3.11, FastAPI, SQLAlchemy/Alembic, SQLite, scikit-learn 1.7.2, NetworkX, ReportLab; React 18, Vite 7, Node 24, Tailwind and Recharts. PostgreSQL connection syntax is supported but its deployment is not integration-tested. [Architecture](docs/ARCHITECTURE.md) · [Data dictionary](docs/DATA_DICTIONARY.md) · [API](docs/API.md).
+Python 3.11, FastAPI, SQLAlchemy/Alembic, SQLite, scikit-learn 1.7.2, NetworkX, ReportLab; React 18, Vite 7, Node 24, Tailwind and Recharts. PostgreSQL 17 migrations and 15 API/security/end-to-end checks pass locally; production hosting remains unverified. [Architecture](docs/ARCHITECTURE.md) · [Data dictionary](docs/DATA_DICTIONARY.md) · [API](docs/API.md).
 
 ## Local setup
 

@@ -47,6 +47,32 @@ def verify_dkim(raw, dnsfunc=None):
         return {'result':'permerror','domains':passed,'method':'dkimpy','reason':'Malformed signature or key'}
 
 
+def verify_arc(raw, dnsfunc=None):
+    """Cryptographic chain validity does not establish trust in the sealing operator."""
+    try:
+        verifier = dkim.ARC(raw, timeout=settings.DNS_TIMEOUT_SECONDS, minkey=1024)
+        seals = [v for k,v in verifier.headers if k.lower() == b'arc-seal']
+        if not seals:
+            has_arc = any(k.lower().startswith(b'arc-') for k,v in verifier.headers)
+            return {'result':'permerror' if has_arc else 'none', 'method':'dkimpy ARC', 'sets':0}
+        if len(seals)>10:
+            return {'result':'UNAVAILABLE','reason':'ARC chain exceeds ten-set verification budget'}
+        if dnsfunc is None:
+            def dnsfunc(name, timeout=3):
+                answers=dns.resolver.resolve(name.decode().rstrip('.'),'TXT',lifetime=min(timeout,settings.DNS_TIMEOUT_SECONDS))
+                values=[b''.join(answer.strings) for answer in answers]
+                if len(values)!=1 or len(values[0])>16384: raise ValueError('Invalid key response')
+                return values[0]
+        status, _, _ = verifier.verify(dnsfunc=dnsfunc)
+        if isinstance(status,bytes): status=status.decode('ascii')
+        return {'result':status if status in {'pass','fail','none'} else 'permerror', 'method':'dkimpy ARC', 'sets':len(seals),
+            'limitations':['Chain validity does not establish the trustworthiness of sealing operators or authenticate the original sender.', 'Current DNS keys may differ from delivery-time keys.']}
+    except (dns.exception.DNSException,OSError):
+        return {'result':'temperror','method':'dkimpy ARC','reason':'DNS unavailable'}
+    except Exception:
+        return {'result':'permerror','method':'dkimpy ARC','reason':'Malformed ARC chain or key'}
+
+
 def aligned(left, right, strict=False):
     left, right = left.lower().rstrip('.'), right.lower().rstrip('.')
     if strict: return left == right
@@ -78,10 +104,10 @@ async def verify_authentication(raw, from_domain):
     unavailable = {'result':'UNAVAILABLE', 'reason':'External DNS verification is disabled'}
     result = {key:dict(unavailable) for key in ('spf','dkim','dmarc','arc')}
     result['spf']['reason'] = 'Saved email lacks independently acquired SMTP peer/envelope context'
-    result['arc']['reason'] = 'ARC cryptographic validation is not implemented; header claims only'
     if not settings.VERIFY_AUTHENTICATION_DNS:
         return result
     result['dkim'] = await asyncio.to_thread(verify_dkim, raw)
+    result['arc'] = await asyncio.to_thread(verify_arc, raw)
     try:
         # Organizational-domain fallback follows the public suffix boundary.
         for domain in dict.fromkeys([from_domain, _TLD(from_domain).top_domain_under_public_suffix]):

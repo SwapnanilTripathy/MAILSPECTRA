@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:3491ef07f83855b054a6445daf69ca97cc05803eb0adba39c9ec60277aa1a7b5 -->
+
 <!-- coderabbit-ai-generated-section:v1:6dee5173e8f8451169cc6a582fb132d753c27caac5ffe51b4248e8c2a0bb6662 -->
 
 <!-- coderabbit-ai-generated-section:v1:c678abb0770d7103660bf491a9b9b2ad3f8095eb64edfd5e5be55911bd63f5da -->
@@ -49,6 +51,12 @@ VirusTotal existing-report and Shodan IP-host adapters are now implemented in th
 ## Storage and database verification follow-up
 
 Added a read-only evidence reconciliation command; five storage/evidence tests passed. PostgreSQL 17 explicit migrations and 15 API/security/end-to-end checks passed. The initial PostgreSQL run exposed test fixtures retaining connections across event loops; disposing the engine at fixture teardown fixed isolation. This supersedes the earlier PostgreSQL-unverified statement. Remote hosting recovery and retention policy remain open.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+## ARC and license follow-up
+
+Independent ARC verification now handles signed chains, tampered bodies and bounded chain work when DNS verification is enabled. It does not establish trust in sealing operators. This supersedes the earlier ARC-deferred statement. All 124 backend tests pass; pip-audit reports no known vulnerabilities. Live DNS remains unverified. Map wrappers react-leaflet and @react-leaflet/core were removed; Leaflet rendering and marker interaction passed in the shared cloud preview.
 
 
 <!-- /coderabbit-ai-generated:v1 -->
