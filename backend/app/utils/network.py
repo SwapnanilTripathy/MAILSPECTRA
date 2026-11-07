@@ -45,7 +45,7 @@ def classify_ip(ip_str: str) -> Dict[str, bool]:
         is_multi = ip_obj.is_multicast
         is_res = ip_obj.is_reserved
         is_link = ip_obj.is_link_local
-        is_public = not is_internal and not is_loop and not is_multi and not is_link
+        is_public = ip_obj.is_global and not is_multi and not is_res
 
         return {
             "is_valid": True,
@@ -56,7 +56,7 @@ def classify_ip(ip_str: str) -> Dict[str, bool]:
             "is_reserved": is_res,
             "is_link_local": is_link,
             "is_public": is_public,
-            "is_bogon": is_internal or is_loop or is_res or is_link,
+            "is_bogon": not is_public,
         }
     except ValueError:
         return {
@@ -84,7 +84,7 @@ def extract_ips_from_text(text: str) -> List[str]:
     valid_ips = []
     
     for candidate in ipv4_candidates + ipv6_candidates:
-        candidate_clean = candidate.strip("[].,;: ")
+        candidate_clean = candidate.strip("[].,; ")
         if candidate_clean and candidate_clean not in seen and is_valid_ip(candidate_clean):
             seen.add(candidate_clean)
             valid_ips.append(candidate_clean)

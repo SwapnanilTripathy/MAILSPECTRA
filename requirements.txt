@@ -23,3 +23,5 @@ reportlab>=4.0.0
 python-jose[cryptography]>=3.3.0
 passlib>=1.7.4
 alembic>=1.13,<2
+dkimpy>=1.1,<2
+pyspf>=2.0,<3

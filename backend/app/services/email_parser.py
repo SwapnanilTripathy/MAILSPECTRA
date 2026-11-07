@@ -11,6 +11,8 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 import tldextract
+from backend.app.core.config import settings
+_TLD = tldextract.TLDExtract(suffix_list_urls=())
 
 from backend.app.core.logging import logger
 from backend.app.schemas.analysis import (
@@ -180,8 +182,8 @@ class EmailForensicParser:
             date_raw=self._decode_header_str(date_raw),
             date_iso=date_iso,
             from_sender=self._parse_address_entity(self.msg.get("From")),
-            to_recipients=self._parse_address_list(self.msg.get("To")),
-            cc_recipients=self._parse_address_list(self.msg.get("Cc")),
+            to_recipients=self._parse_address_list(", ".join(self.msg.get_all("To", []))),
+            cc_recipients=self._parse_address_list(", ".join(self.msg.get_all("Cc", []))),
             bcc_recipients=self._parse_address_list(self.msg.get("Bcc")),
             reply_to=self._parse_address_list(self.msg.get("Reply-To")),
             return_path=return_path,
@@ -189,6 +191,7 @@ class EmailForensicParser:
             user_agent=self._decode_header_str(self.msg.get("User-Agent")),
             content_type_header=self.msg.get_content_type() if hasattr(self.msg, "get_content_type") else self.msg.get("Content-Type"),
             all_headers=all_headers_dict,
+            raw_headers=[{"name":k,"value":v} for k,v in self.msg.raw_items()],
         )
 
     def extract_authentication(self) -> AuthenticationSummary:
@@ -304,6 +307,7 @@ class EmailForensicParser:
             timestamp_raw = None
             timestamp_iso = None
             delay_sec = None
+            anomalies = []
 
             # Extract date (everything after last semicolon)
             if ";" in header_clean:
@@ -312,13 +316,18 @@ class EmailForensicParser:
                 timestamp_raw = date_part
                 try:
                     dt = parsedate_to_datetime(date_part)
+                    if dt.tzinfo is None:
+                        raise ValueError("Missing timezone")
                     timestamp_iso = dt.astimezone(timezone.utc).isoformat()
                     if prev_dt:
                         delay = (dt - prev_dt).total_seconds()
-                        delay_sec = max(0.0, delay)
+                        delay_sec = delay
+                        if delay < 0 or delay > 86400:
+                            anomalies.append("Timestamp sequence is negative or exceeds one day; supplied headers may be inaccurate")
                     prev_dt = dt
                 except Exception:
-                    pass
+                    anomalies.append("Unparseable timestamp or missing timezone")
+                    prev_dt = None
                 main_part = parts[0]
             else:
                 main_part = header_clean
@@ -361,6 +370,8 @@ class EmailForensicParser:
             hops.append(
                 RelayHop(
                     hop_index=idx,
+                    anomalies=anomalies,
+                    trust_status="CONFIGURED_RECEIVER_CLAIM" if by_host in settings.TRUSTED_RECEIVERS else "UNTRUSTED_SUPPLIED_HEADER",
                     from_host=from_host,
                     from_ip=from_ip,
                     defanged_from_ip=defang_ip(from_ip) if from_ip else None,
@@ -463,6 +474,8 @@ class EmailForensicParser:
                         sha1=hashes["sha1"],
                         sha256=hashes["sha256"],
                         extension=ext,
+                        signature_type="PE_EXECUTABLE" if payload_bytes.startswith(b"MZ") else "ZIP_CONTAINER" if payload_bytes.startswith(b"PK\x03\x04") else "PDF" if payload_bytes.startswith(b"%PDF") else "UNKNOWN",
+                        double_extension=len(att_name.split(".")) > 2,
                         is_suspicious_extension=is_suspicious,
                         content_disposition=cdisp or None,
                     )
@@ -507,7 +520,12 @@ class EmailForensicParser:
 
         def process_url(raw_url: str, source: str) -> None:
             clean_url = raw_url.strip(" <>\"'()[]")
-            if not clean_url or clean_url in seen_urls:
+            if not clean_url:
+                return
+            if clean_url in seen_urls:
+                for item in extracted:
+                    if item.url == clean_url and source not in item.source_locations:
+                        item.source_locations.append(source)
                 return
             if clean_url.startswith(("mailto:", "javascript:", "tel:", "#")):
                 return
@@ -517,8 +535,8 @@ class EmailForensicParser:
             seen_urls.add(clean_url)
 
             parsed = urlparse(clean_url)
-            host = parsed.netloc.split(":")[0].lower()
-            ext = tldextract.extract(clean_url)
+            host = (parsed.hostname or "").lower()
+            ext = _TLD(clean_url)
             reg_domain = ext.registered_domain
             tld = ext.suffix
             subdomain = ext.subdomain
@@ -540,6 +558,7 @@ class EmailForensicParser:
                     is_ip_host=is_ip,
                     is_shortener=is_short,
                     source=source,
+                    source_locations=[source],
                 )
             )
 
@@ -571,8 +590,13 @@ class EmailForensicParser:
         extracted: List[ExtractedIP] = []
 
         def add_ip(ip_str: str, source: str) -> None:
-            clean = ip_str.strip("[].,;: ")
-            if not clean or clean in seen_ips or not is_valid_ip(clean):
+            clean = ip_str.strip("[].,; ")
+            if not clean or not is_valid_ip(clean):
+                return
+            if clean in seen_ips:
+                for item in extracted:
+                    if item.ip == clean and source not in item.source_locations:
+                        item.source_locations.append(source)
                 return
             seen_ips.add(clean)
             classification = classify_ip(clean)
@@ -588,6 +612,7 @@ class EmailForensicParser:
                     is_multicast=classification.get("is_multicast", False),
                     is_bogon=classification.get("is_bogon", False),
                     source=source,
+                    source_locations=[source],
                 )
             )
 

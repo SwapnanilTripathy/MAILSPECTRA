@@ -23,6 +23,8 @@ export type AttachmentMetadata = {
   "sha256": string;
   "extension"?: string;
   "is_suspicious_extension"?: boolean;
+  "signature_type"?: string;
+  "double_extension"?: boolean;
   "content_disposition"?: string | null;
 };
 export type AttributionSupportResult = {
@@ -41,6 +43,9 @@ export type AuthResultEntry = {
   "details"?: string | null;
 };
 export type AuthenticationSummary = {
+  "reported_status"?: string;
+  "verified"?: Record<string, unknown>;
+  "limitations"?: Array<string>;
   "spf_result"?: string;
   "dkim_result"?: string;
   "dmarc_result"?: string;
@@ -126,6 +131,7 @@ export type EmailMetadata = {
   "x_mailer"?: string | null;
   "user_agent"?: string | null;
   "content_type_header"?: string | null;
+  "raw_headers"?: Array<Record<string, string>>;
   "all_headers"?: Record<string, unknown>;
 };
 export type EvidenceHashes = {
@@ -152,6 +158,7 @@ export type ExtractedIP = {
   "is_loopback"?: boolean;
   "is_multicast"?: boolean;
   "is_bogon"?: boolean;
+  "source_locations"?: Array<string>;
   "source"?: string;
 };
 export type ExtractedURL = {
@@ -166,6 +173,7 @@ export type ExtractedURL = {
   "path"?: string;
   "is_ip_host"?: boolean;
   "is_shortener"?: boolean;
+  "source_locations"?: Array<string>;
   "source"?: string;
 };
 export type FeatureExtractionSummary = {
@@ -259,6 +267,8 @@ export type RelayChainSummary = {
   "hops"?: Array<RelayHop>;
 };
 export type RelayHop = {
+  "anomalies"?: Array<string>;
+  "trust_status"?: string;
   "hop_index": number;
   "from_host"?: string | null;
   "from_ip"?: string | null;

@@ -25,6 +25,10 @@ class AuthResultEntry(BaseModel):
 
 
 class AuthenticationSummary(BaseModel):
+    reported_status: str = "UNTRUSTED_HEADER_CLAIMS"
+    verified: Dict[str, Any] = Field(default_factory=lambda: {key: {"result": "UNAVAILABLE", "reason": "Independent verification not performed"} for key in ("spf", "dkim", "dmarc", "arc")})
+    limitations: List[str] = Field(default_factory=lambda: ["Supplied headers can be forged. Header claims are not independent verification."])
+
     spf_result: str = "none"
     dkim_result: str = "none"
     dmarc_result: str = "none"
@@ -37,6 +41,8 @@ class AuthenticationSummary(BaseModel):
 
 
 class RelayHop(BaseModel):
+    anomalies: List[str] = Field(default_factory=list)
+    trust_status: str = "UNTRUSTED_SUPPLIED_HEADER"
     hop_index: int
     from_host: Optional[str] = None
     from_ip: Optional[str] = None
@@ -79,6 +85,7 @@ class ExtractedURL(BaseModel):
     path: str = ""
     is_ip_host: bool = False
     is_shortener: bool = False
+    source_locations: List[str] = Field(default_factory=list)
     source: str = "body"  # body_html, body_text, header
 
 
@@ -91,6 +98,7 @@ class ExtractedIP(BaseModel):
     is_loopback: bool = False
     is_multicast: bool = False
     is_bogon: bool = False
+    source_locations: List[str] = Field(default_factory=list)
     source: str = "relay"  # relay, header, body
 
 
@@ -103,6 +111,8 @@ class AttachmentMetadata(BaseModel):
     sha256: str
     extension: str = ""
     is_suspicious_extension: bool = False
+    signature_type: str = "UNKNOWN"
+    double_extension: bool = False
     content_disposition: Optional[str] = None
 
 
@@ -132,4 +142,5 @@ class EmailMetadata(BaseModel):
     user_agent: Optional[str] = None
 
     content_type_header: Optional[str] = None
+    raw_headers: List[Dict[str, str]] = Field(default_factory=list)
     all_headers: Dict[str, Any] = Field(default_factory=dict)

@@ -110,6 +110,8 @@ class ThreatAnalysisPipeline:
         base_analysis.artifact = artifact
         from backend.app.services.evidence_service import observations
         observations(base_analysis)
+        from backend.app.services.auth_verification import verify_authentication
+        base_analysis.authentication.verified = await verify_authentication(raw_bytes, base_analysis.metadata.from_sender.domain)
 
         # 2. Phase 2 Feature Extraction
         structured_features = FeatureExtractor.extract_structured_features(base_analysis)

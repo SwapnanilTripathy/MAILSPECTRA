@@ -38,6 +38,7 @@ export default function HeadersForensicsView({ metadata, authentication }) {
 
   return (
     <div className="space-y-6">
+      <p className="text-amber-300 text-sm" role="note">Authentication headers are reported, untrusted claims. Independent verification: {JSON.stringify(authentication?.verified || {})}</p>
       {/* Identity Anomalies Alert Box */}
       {anomalies.length > 0 && (
         <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300">

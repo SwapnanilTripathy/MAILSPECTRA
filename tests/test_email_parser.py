@@ -59,7 +59,7 @@ def test_benign_email_parsing(benign_eml_bytes):
 
     # Relay chain assertions
     assert result.relay_chain.total_hops >= 2
-    assert result.relay_chain.origin_ip == "198.51.100.25"
+    assert result.relay_chain.origin_ip == "10.0.1.50"  # No public hop in documentation-only fixture
     assert result.relay_chain.hops[0].is_origin_hop is True
 
     # Body assertions

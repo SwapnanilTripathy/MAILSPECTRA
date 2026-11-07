@@ -41,6 +41,8 @@ class Settings(BaseSettings):
 
     # Optional Intelligence APIs & Provider Settings
     INTELLIGENCE_MODE: str = "offline"  # "offline" or "live"
+    VERIFY_AUTHENTICATION_DNS: bool = False
+    TRUSTED_RECEIVERS: List[str] = []
     DNS_TIMEOUT_SECONDS: float = 3.0
     HTTP_INTEL_TIMEOUT_SECONDS: float = 5.0
     CACHE_TTL_HOURS: int = 24

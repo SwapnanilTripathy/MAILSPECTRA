@@ -395,11 +395,11 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
               <span className="text-cyan-400 underline">Browse Local File</span>
             </p>
             <p className="mt-1 text-xs text-slate-500 font-mono">
-              Supports RFC 822 .eml, .msg, .txt (up to 25MB)
+              Supports RFC 5322 .eml; Outlook .msg is unsupported
             </p>
             <input
               type="file"
-              accept=".eml,.msg,.txt"
+              accept=".eml"
               onChange={async (event) => {
                 const input = event.target;
                 await handleFileUpload(input.files?.[0]);

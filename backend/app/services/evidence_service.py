@@ -36,6 +36,6 @@ def observations(analysis):
         for index, value in enumerate(values):
             text = getattr(value, field)
             oid = hashlib.sha256(f"{artifact.artifact_id}:{kind}:{index}:{text}".encode()).hexdigest()[:24]
-            items.append(EvidenceObservation(observation_id="OBS-"+oid, observation_type=kind, value=text, source_artifact_id=artifact.artifact_id, source_location={"kind":getattr(value,"source","ATTACHMENT"), "index":index}, observed_at=artifact.ingested_at))
+            items.append(EvidenceObservation(observation_id="OBS-"+oid, observation_type=kind, value=text, source_artifact_id=artifact.artifact_id, source_location={"kind":getattr(value,"source","ATTACHMENT"), "index":index, "locations":getattr(value,"source_locations",[])}, observed_at=artifact.ingested_at))
     analysis.observations = items
     analysis.evidence_manifest = {"schema_version":"1.0", "artifact":artifact.model_dump(), "analysis_version":analysis.schema_version, "observation_ids":[i.observation_id for i in items], "limitations":["Hashes detect changes relative to stored digests; they do not establish an external chain of custody.", "Legacy cases may lack original artifacts."]}

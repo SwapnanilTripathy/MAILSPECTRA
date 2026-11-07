@@ -130,7 +130,7 @@ def test_10_origin_assessment(benign_eml_bytes, phishing_eml_bytes):
     res_benign = parser_benign.parse()
     origin_benign = IPIntelligenceService.assess_origin(res_benign)
     assert origin_benign.earliest_reliable_ip is not None
-    assert origin_benign.confidence > 0.6
+    assert origin_benign.confidence == 0.0  # Uploaded headers provide no calibrated trust
     assert len(origin_benign.evidentiary_basis) > 0
     assert len(origin_benign.limitations) > 0
 
