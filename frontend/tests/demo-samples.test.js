@@ -53,7 +53,7 @@ test('hostname extraction detects non-reserved domains in all supported contexts
   );
   assert.throws(
     () => assertReservedHostnames(raw),
-    /hostname outside\\.example\\.org must use the reserved \\.test namespace/,
+    /hostname outside\.example\.org must use the reserved \.test namespace/,
   );
 });
 
