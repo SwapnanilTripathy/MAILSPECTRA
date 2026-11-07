@@ -96,6 +96,7 @@ class ThreatPredictor:
                     confidence=best_conf,
                     probabilities=prob_dict,
                     is_model_available=True,
+                    limitations=["Demonstration corpus of 21 examples; not validated for operational decisions"],
                     model_version=self.bundle.metadata.get("version", "1.0.0"),
                     model_type=self.bundle.metadata.get("model_type", "LogisticRegression + TF-IDF"),
                 ),
@@ -165,8 +166,10 @@ class ThreatPredictor:
 
         return MLPredictionResult(
             predicted_class=pred_class,
-            confidence=prob_dict[pred_class],
-            probabilities=prob_dict,
+            confidence=0.0,
+            probabilities={},
+            confidence_definition="Unavailable: rule-only fallback has no class probability",
+            limitations=["Model unavailable; no probability estimate"],
             is_model_available=False,
             model_version="rule-fallback",
             model_type="Heuristic Rule-Engine",

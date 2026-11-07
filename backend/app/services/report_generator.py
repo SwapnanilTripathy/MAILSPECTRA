@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+from backend.app.core.assessment import severity_for_score
 from typing import Any, Dict, List, Optional
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -129,22 +130,23 @@ class ForensicReportGenerator:
         confidence = case_data.get("confidence") or case_data.get("threat_assessment", {}).get("confidence", 1.0)
         
         # Color coding for severity
-        if risk_score >= 80:
+        severity_label = severity_for_score(risk_score)
+        if severity_label == "CRITICAL":
             badge_bg = colors.HexColor("#fee2e2")
             badge_txt = colors.HexColor("#991b1b")
             severity_label = "CRITICAL"
-        elif risk_score >= 60:
+        elif severity_label == "HIGH":
             badge_bg = colors.HexColor("#ffedd5")
             badge_txt = colors.HexColor("#9a3412")
             severity_label = "HIGH"
-        elif risk_score >= 40:
+        elif severity_label == "MEDIUM":
             badge_bg = colors.HexColor("#fef9c3")
             badge_txt = colors.HexColor("#854d0e")
             severity_label = "MEDIUM"
         else:
             badge_bg = colors.HexColor("#dcfce7")
             badge_txt = colors.HexColor("#166534")
-            severity_label = "LOW / BENIGN"
+
 
         overview_data = [
             [

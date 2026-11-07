@@ -6,6 +6,10 @@ from pathlib import Path
 import sys
 from typing import Any, Dict, List, Tuple
 import joblib
+import hashlib
+import sklearn
+from sklearn.base import clone
+from sklearn.model_selection import StratifiedGroupKFold
 import numpy as np
 from scipy import sparse
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -74,25 +78,19 @@ def train_and_evaluate(
     unique_classes = sorted(list(set(labels)))
     n_samples = len(labels)
 
-    # 1. Fit TF-IDF Vectorizer
-    vectorizer = TfidfVectorizer(
-        ngram_range=(1, 2),
-        max_features=500,
-        sublinear_tf=True,
-        stop_words="english",
-    )
-    X_text = vectorizer.fit_transform(texts)
-
-    # 2. Fit Structured Features Scaler
-    X_struct_raw = np.array(
-        [[d.get(name, 0.0) for name in STRUCTURED_FEATURE_NAMES] for d in structured_list],
-        dtype=np.float64,
-    )
+    vectorizer = TfidfVectorizer(ngram_range=(1,2), max_features=500, sublinear_tf=True, stop_words="english")
+    X_struct_raw = np.array([[d.get(name,0) for name in STRUCTURED_FEATURE_NAMES] for d in structured_list], dtype=np.float64)
     scaler = StandardScaler()
-    X_struct_scaled = scaler.fit_transform(X_struct_raw)
-
-    # 3. Concatenate Sparse Feature Matrix
-    X_combined = sparse.hstack([X_text, sparse.csr_matrix(X_struct_scaled)]).tocsr()
+    # Exact duplicate normalized text remains in the same fold. Sender/thread grouping
+    # requires independently curated group metadata, unavailable in the inherited corpus.
+    groups = np.array([hashlib.sha256(" ".join(text.lower().split()).encode()).hexdigest() for text in texts])
+    def matrices(train, test):
+        vec, scale = clone(vectorizer), clone(scaler)
+        train_text = vec.fit_transform([texts[i] for i in train])
+        test_text = vec.transform([texts[i] for i in test])
+        train_struct = scale.fit_transform(X_struct_raw[train])
+        test_struct = scale.transform(X_struct_raw[test])
+        return sparse.hstack([train_text, train_struct]).tocsr(), sparse.hstack([test_text,test_struct]).tocsr(), vec, scale
 
     # 4. Initialize Multi-Class Classifier
     classifier = LogisticRegression(
@@ -119,35 +117,36 @@ def train_and_evaluate(
         ],
     }
 
-    if n_splits >= 2:
-        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
-        try:
-            y_pred_cv = cross_val_predict(classifier, X_combined, labels, cv=cv)
-            accuracy = float(np.mean(y_pred_cv == np.array(labels)))
-            f1_macro = float(f1_score(labels, y_pred_cv, average="macro", zero_division=0))
-            f1_weighted = float(f1_score(labels, y_pred_cv, average="weighted", zero_division=0))
-            prec_macro = float(precision_score(labels, y_pred_cv, average="macro", zero_division=0))
-            rec_macro = float(recall_score(labels, y_pred_cv, average="macro", zero_division=0))
-            cm = confusion_matrix(labels, y_pred_cv, labels=unique_classes).tolist()
-            cls_report = classification_report(labels, y_pred_cv, zero_division=0, output_dict=True)
-
-            metrics_report["cv_evaluation"] = {
-                "accuracy": round(accuracy, 4),
-                "f1_macro": round(f1_macro, 4),
-                "f1_weighted": round(f1_weighted, 4),
-                "precision_macro": round(prec_macro, 4),
-                "recall_macro": round(rec_macro, 4),
-                "confusion_matrix": cm,
-                "classification_report": cls_report,
-            }
-        except Exception as e:
-            logger.warning(f"Cross-validation note: {e}")
-            metrics_report["cv_evaluation_error"] = str(e)
-
-    # 6. Fit final model on all data
-    classifier.fit(X_combined, labels)
-
-    train_acc = float(classifier.score(X_combined, labels))
+    if n_splits < 3:
+        raise ValueError("At least three examples per class are needed for independent holdout and cross-validation")
+    y = np.array(labels)
+    holdout_split = (StratifiedKFold if len(set(groups)) == n_samples else StratifiedGroupKFold)(n_splits=3, shuffle=True, random_state=42)
+    train_idx, holdout_idx = next(holdout_split.split(np.zeros(n_samples), y, groups))
+    if set(y[train_idx]) != set(y):
+        raise ValueError("Insufficient grouped data: training split omits a class")
+    cv = (StratifiedKFold if len(set(groups[train_idx])) == len(train_idx) else StratifiedGroupKFold)(n_splits=2, shuffle=True, random_state=43)
+    y_pred_cv = np.empty(len(train_idx), dtype=object)
+    for tr, va in cv.split(np.zeros(len(train_idx)), y[train_idx], groups[train_idx]):
+        xtr, xva, _, _ = matrices(train_idx[tr],train_idx[va])
+        model = clone(classifier).fit(xtr,y[train_idx[tr]])
+        y_pred_cv[va] = model.predict(xva)
+    def evaluate(expected,predicted):
+        return {"accuracy":float(np.mean(expected==predicted)), "f1_macro":float(f1_score(expected,predicted,average="macro",zero_division=0)), "f1_weighted":float(f1_score(expected,predicted,average="weighted",zero_division=0)), "confusion_matrix":confusion_matrix(expected,predicted,labels=unique_classes).tolist(), "classification_report":classification_report(expected,predicted,zero_division=0,output_dict=True)}
+    metrics_report["cv_evaluation"] = evaluate(y[train_idx], y_pred_cv.tolist())
+    X_combined, X_holdout, vectorizer, scaler = matrices(train_idx,holdout_idx)
+    classifier.fit(X_combined,y[train_idx])
+    holdout_predictions = classifier.predict(X_holdout)
+    metrics_report["holdout_evaluation"] = evaluate(y[holdout_idx], holdout_predictions)
+    probabilities = classifier.predict_proba(X_holdout)
+    metrics_report["holdout_evaluation"]["multiclass_brier_score"] = float(np.mean(np.sum((probabilities - (y[holdout_idx,None] == classifier.classes_).astype(float))**2,axis=1)))
+    metrics_report["holdout_evaluation"]["errors"] = [{"sample_index":int(i),"actual":str(actual),"predicted":str(pred)} for i,actual,pred in zip(holdout_idx,y[holdout_idx],holdout_predictions) if actual != pred]
+    metrics_report["split"] = {"training_indices":train_idx.tolist(), "holdout_indices":holdout_idx.tolist(), "grouping":"SHA256 of normalized text; sender/campaign group labels unavailable", "preprocessing":"Fit on each training fold only", "random_seeds":[42,43]}
+    metrics_report["is_statistically_significant"] = False
+    metrics_report["dataset_sha256"] = hashlib.sha256(dataset_path.read_bytes()).hexdigest()
+    metrics_report["calibration_status"] = "Uncalibrated; seven-sample holdout cannot establish reliability"
+    # Preserve the holdout exclusion when producing this candidate model.
+    X_text = vectorizer.transform([texts[i] for i in train_idx])
+    train_acc = float(classifier.score(X_combined, y[train_idx]))
     metrics_report["training_accuracy"] = round(train_acc, 4)
 
     # 7. Create ModelBundle & Save
@@ -158,7 +157,11 @@ def train_and_evaluate(
         structured_feature_names=STRUCTURED_FEATURE_NAMES,
         classes=unique_classes,
         metadata={
-            "version": "2.0.0",
+            "version": "3.0.0-candidate",
+            "dataset_sha256": metrics_report["dataset_sha256"],
+            "library_versions": {"scikit-learn":sklearn.__version__, "numpy":np.__version__},
+            "feature_version":"structured-v1",
+            "evaluation":metrics_report,
             "model_type": "LogisticRegression (L2, Balanced) + TF-IDF (1-2 ngrams)",
             "n_samples": n_samples,
             "n_features_total": X_combined.shape[1],

@@ -1,0 +1,19 @@
+{
+  "generated_by": "CodeRabbit coding agent",
+  "name": "DeepTrace Demonstration Threat Corpus",
+  "source": "Inherited data/training/dataset.json in SwapnanilTripathy/MAILSPECTRA, derived from sidharth63/SIH_26106",
+  "license": "Repository MIT license retained; separate dataset authorship/provenance not established",
+  "sha256": "beff8ed2920e35822d8ef16faa650dd2241b91d43141b32487ae5ddba5ef4775",
+  "labels": {
+    "LEGITIMATE": 3,
+    "PHISHING": 3,
+    "BUSINESS_EMAIL_COMPROMISE": 3,
+    "IMPERSONATION": 3,
+    "FRAUD": 3,
+    "CREDENTIAL_HARVESTING": 3,
+    "SUSPICIOUS": 3
+  },
+  "usage": "Demonstration only; not representative",
+  "split": "Frozen stratified holdout, normalized-text duplicates grouped; preprocessing fitted inside each fold",
+  "feature_version": "structured-v1"
+}

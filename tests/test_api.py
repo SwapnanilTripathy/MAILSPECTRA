@@ -44,7 +44,7 @@ async def test_analyze_email_upload_benign(benign_eml_bytes, auth_headers):
         assert data["authentication"]["dmarc_result"] == "pass"
         assert len(data["relay_chain"]["hops"]) >= 2
         assert len(data["urls"]) >= 1
-        assert data["threat_assessment"]["classification"] == "BENIGN"
+        assert data["threat_assessment"]["classification"] == "LEGITIMATE"
 
 
 @pytest.mark.asyncio

@@ -8,7 +8,7 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
   const threatClass = analysis.risk_assessment?.classification || analysis.ai_inference?.predicted_class || analysis.threat_assessment?.classification || 'UNKNOWN';
   const riskScore = analysis.risk_assessment?.risk_score ?? analysis.threat_assessment?.risk_score ?? 0;
   const severity = analysis.risk_assessment?.severity || 'LOW';
-  const confidence = analysis.risk_assessment?.model_confidence ?? analysis.ai_inference?.confidence ?? analysis.threat_assessment?.confidence ?? 1.0;
+  const confidence = analysis.risk_assessment?.model_confidence ?? analysis.ai_inference?.confidence ?? analysis.threat_assessment?.confidence ?? 0;
   const indicators = analysis.observed_evidence || analysis.risk_assessment?.indicators || [];
 
   const isThreat = riskScore >= 40 || (threatClass !== 'LEGITIMATE' && threatClass !== 'BENIGN');
@@ -44,14 +44,14 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
           <div>
             <div className="text-xs font-mono text-slate-400 uppercase">RISK SCORE</div>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className={`text-4xl font-extrabold font-mono ${riskScore >= 70 ? 'text-red-400' : riskScore >= 40 ? 'text-amber-400' : 'text-emerald-400'}`}>
+              <span className={`text-4xl font-extrabold font-mono ${['CRITICAL', 'HIGH'].includes(analysis.risk_assessment?.severity) ? 'text-red-400' : riskScore >= 40 ? 'text-amber-400' : 'text-emerald-400'}`}>
                 {riskScore}
               </span>
               <span className="text-slate-500 font-mono text-sm">/100</span>
             </div>
             <div className="w-28 h-2 bg-slate-800 rounded-full mt-2 overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${riskScore >= 70 ? 'bg-red-500' : riskScore >= 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                className={`h-full rounded-full transition-all duration-500 ${['CRITICAL', 'HIGH'].includes(analysis.risk_assessment?.severity) ? 'bg-red-500' : riskScore >= 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
                 style={{ width: `${Math.min(100, Math.max(5, riskScore))}%` }}
               />
             </div>
@@ -62,7 +62,7 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
             <div className="text-xs font-mono text-slate-400 uppercase">AI CONFIDENCE</div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-3xl font-bold font-mono text-cyan-400">
-                {Math.round(confidence * 100)}%
+                {analysis.ai_inference?.is_model_available ? `${Math.round(confidence * 100)}% (uncalibrated)` : 'Unavailable — rule fallback'}
               </span>
             </div>
             <p className="text-[10px] text-slate-400 mt-2 font-mono">Multi-class L2 Model</p>

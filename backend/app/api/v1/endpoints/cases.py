@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.app.core.logging import logger
+from backend.app.core.assessment import severity_for_score
 from backend.app.database.session import get_db
 from backend.app.models.entities import AuditLogRecord, CaseRecord, ObservableRecord, TimelineEventRecord
 
@@ -97,6 +98,7 @@ async def list_cases(
                 "origin_ip": c.origin_ip,
                 "classification": c.classification,
                 "risk_score": c.risk_score,
+                "severity": severity_for_score(c.risk_score),
                 "confidence": c.confidence,
                 "status": c.status,
                 "priority": c.priority,
@@ -142,6 +144,7 @@ async def get_case_detail(case_id: str, db: AsyncSession = Depends(get_db)):
         "origin_ip": case_rec.origin_ip,
         "classification": case_rec.classification,
         "risk_score": case_rec.risk_score,
+        "severity": severity_for_score(case_rec.risk_score),
         "confidence": case_rec.confidence,
         "status": case_rec.status,
         "priority": case_rec.priority,

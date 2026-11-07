@@ -233,6 +233,9 @@ export type MLPredictionResult = {
   "is_model_available"?: boolean;
   "model_version"?: string;
   "model_type"?: string;
+  "feature_version"?: string;
+  "confidence_definition"?: string;
+  "limitations"?: Array<string>;
 };
 export type OriginAssessmentResult = {
   "earliest_reliable_ip"?: string | null;

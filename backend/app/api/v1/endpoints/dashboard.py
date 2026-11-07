@@ -5,6 +5,8 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.database.session import get_db
+from backend.app.core.assessment import severity_for_score
+from backend.app.core.config import settings
 from backend.app.models.entities import CampaignRecord, CaseRecord
 
 router = APIRouter()
@@ -27,13 +29,13 @@ async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
     impersonation_count = class_counts.get("IMPERSONATION", 0)
     fraud_count = class_counts.get("FRAUD", 0)
     suspicious_count = class_counts.get("SUSPICIOUS", 0)
-    legitimate_count = class_counts.get("LEGITIMATE", 0)
+    legitimate_count = class_counts.get("LEGITIMATE", 0) + class_counts.get("BENIGN", 0)
 
     # Threats detected (all non-legitimate)
-    threats_detected = sum(v for k, v in class_counts.items() if k != "LEGITIMATE")
+    threats_detected = sum(v for k, v in class_counts.items() if k not in {"LEGITIMATE", "BENIGN", "UNKNOWN"})
 
     # Critical / High severity cases
-    crit_high_query = select(func.count(CaseRecord.case_id)).where(CaseRecord.risk_score >= 60.0)
+    crit_high_query = select(func.count(CaseRecord.case_id)).where(CaseRecord.risk_score >= settings.ALERT_THRESHOLD_SCORE)
     critical_threats = (await db.execute(crit_high_query)).scalar() or 0
 
     # Active campaigns count
@@ -76,6 +78,7 @@ async def get_recent_investigations(db: AsyncSession = Depends(get_db)):
                 "from_address": c.from_address,
                 "classification": c.classification,
                 "risk_score": c.risk_score,
+                "severity": severity_for_score(c.risk_score),
                 "status": c.status,
                 "sha256": c.sha256,
                 "analyzed_at": c.created_at.isoformat() if c.created_at else None,
@@ -97,16 +100,7 @@ async def get_distribution(db: AsyncSession = Depends(get_db)):
     cases = (await db.execute(select(CaseRecord.risk_score))).scalars().all()
     severity_bands = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFORMATIONAL": 0}
     for score in cases:
-        if score >= 80.0:
-            severity_bands["CRITICAL"] += 1
-        elif score >= 60.0:
-            severity_bands["HIGH"] += 1
-        elif score >= 40.0:
-            severity_bands["MEDIUM"] += 1
-        elif score >= 20.0:
-            severity_bands["LOW"] += 1
-        else:
-            severity_bands["INFORMATIONAL"] += 1
+        severity_bands[severity_for_score(score)] += 1
 
     risk_distribution = [{"name": k, "value": v} for k, v in severity_bands.items() if v > 0]
 

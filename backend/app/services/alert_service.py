@@ -5,6 +5,7 @@ import uuid
 from pydantic import BaseModel, Field
 
 from backend.app.core.config import settings
+from backend.app.core.assessment import severity_for_score
 from backend.app.core.logging import logger
 
 if TYPE_CHECKING:
@@ -52,22 +53,8 @@ class AlertService:
         triggers: List[str] = []
         recommendations: List[str] = []
 
-        # 1. Determine Severity Band
-        if score >= crit_thresh:
-            severity = "CRITICAL"
-            requires_action = True
-        elif score >= high_thresh:
-            severity = "HIGH"
-            requires_action = True
-        elif score >= 40.0:
-            severity = "MEDIUM"
-            requires_action = False
-        elif score >= 20.0:
-            severity = "LOW"
-            requires_action = False
-        else:
-            severity = "INFORMATIONAL"
-            requires_action = False
+        severity = severity_for_score(score)
+        requires_action = severity in {"HIGH", "CRITICAL"}
 
         # 2. Extract specific triggers from evidence
         if analysis.observed_evidence:
@@ -82,11 +69,11 @@ class AlertService:
         # Add auth triggers if failed
         auth = analysis.authentication
         if auth.dmarc_result == "fail":
-            triggers.append("[AUTHENTICATION] DMARC alignment validation failed.")
+            triggers.append("[AUTHENTICATION] Supplied header reports DMARC failure (unverified).")
         if auth.spf_result == "fail":
-            triggers.append("[AUTHENTICATION] SPF sender authorization failed.")
+            triggers.append("[AUTHENTICATION] Supplied header reports SPF failure (unverified).")
         if auth.dkim_result == "fail":
-            triggers.append("[AUTHENTICATION] DKIM cryptographic signature verification failed.")
+            triggers.append("[AUTHENTICATION] Supplied header reports DKIM failure (unverified).")
 
         # Add content triggers
         if hasattr(analysis, "content_intelligence") and analysis.content_intelligence:

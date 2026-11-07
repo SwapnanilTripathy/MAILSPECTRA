@@ -154,7 +154,7 @@ class ThreatAnalysisPipeline:
         # Limitations declaration
         limitations = [
             "URL and domain analysis is static; deep sandboxing and dynamic payload execution are disabled for safety.",
-            "ML model trained on standardized multi-class baseline features; continuous domain reputation feed integration planned for subsequent phase.",
+            "Demonstration ML corpus has 21 samples; probabilities are uncalibrated and do not establish operational accuracy.",
             "SHAP explanations approximate local linear feature impact around prediction vector.",
             "Origin assessment and geolocation reflect technical infrastructure observables, not physical human identity.",
             "Attribution support provides technical correlation hypotheses and does not constitute definitive legal attribution."
@@ -173,8 +173,7 @@ class ThreatAnalysisPipeline:
         ]
 
         legacy_class = risk_result.classification
-        if legacy_class == ThreatClass.LEGITIMATE.value:
-            legacy_class = "BENIGN"
+
 
         base_analysis.threat_assessment = InitialThreatAssessment(
             risk_score=risk_result.risk_score,
@@ -186,6 +185,9 @@ class ThreatAnalysisPipeline:
 
         # 8. Alert Evaluation & Real-Time Alert Object Generation
         from backend.app.services.alert_service import AlertService
+        base_analysis.risk_assessment = risk_result
+        base_analysis.observed_evidence = risk_result.indicators
+        base_analysis.content_intelligence = content_intelligence
         alert_eval = AlertService.evaluate_analysis(base_analysis)
         base_analysis.security_alert = alert_eval.alert
 

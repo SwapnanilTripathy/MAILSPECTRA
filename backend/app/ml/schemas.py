@@ -68,6 +68,9 @@ class MLPredictionResult(BaseModel):
     is_model_available: bool = True
     model_version: str = "1.0.0"
     model_type: str = "LogisticRegression + TF-IDF"
+    feature_version: str = "structured-v1"
+    confidence_definition: str = "Predicted class probability; uncalibrated demonstration model"
+    limitations: List[str] = Field(default_factory=list)
 
 
 class RiskAssessmentResult(BaseModel):
