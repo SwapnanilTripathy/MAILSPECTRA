@@ -12,7 +12,7 @@
 
 # Specification phase status
 
-This records implementation of the owner's MAILSPECTRA coding specification. The owner authorized proceeding through all phases and pushing the work to `coderabbit/open-frontend-files/81a0d3ed`, then requested a push after each phase. Phases 1–8 were pushed together at bf22481 when that instruction arrived; Phase 9 is a separate final push. No changes were pushed to main.
+This records implementation of the MAILSPECTRA coding specification. The implementation branch was renamed to `Changes`; the former `coderabbit/open-frontend-files/81a0d3ed` branch was retired. Phases 1–9 describe the delivered implementation and their historical verification checkpoints. The merge history and later acceptance checks are summarized at the end of this document.
 
 “Implemented” describes delivered code and the checks below. It does not certify production readiness or resolve missing external evidence. **The specification cannot honestly be called unconditionally complete:** dataset rights/representativeness, live provider validation and external hosting acceptance remain open.
 
@@ -76,3 +76,11 @@ The image rebuilt successfully with the updated requirements and frontend depend
 
 
 <!-- /coderabbit-ai-generated:v1 -->
+
+## Repository merge history and later verification
+
+The application/security hardening was merged through [PR #2](https://github.com/SwapnanilTripathy/MAILSPECTRA/pull/2), and the comprehensive project guide through [PR #3](https://github.com/SwapnanilTripathy/MAILSPECTRA/pull/3). PR #4 introduced an updated security overview and MAILSPECTRA frontend package identity; PR #6 later reverted those documentation/metadata changes. This revision restores the accurate security overview and consistent npm package identity.
+
+The synthetic demo experience was added through [PR #5](https://github.com/SwapnanilTripathy/MAILSPECTRA/pull/5). Its review-driven isolation and hostname validation changes were merged through [PR #7](https://github.com/SwapnanilTripathy/MAILSPECTRA/pull/7), with explicit non-reserved-hostname regression coverage merged through [PR #8](https://github.com/SwapnanilTripathy/MAILSPECTRA/pull/8).
+
+The current `main` head before this restoration was `749b83339396de6ac6f74886281854fa472a56de`. Its GitHub Actions acceptance workflow completed successfully: backend tests/API type-drift check and frontend tests/production build passed. These checks validate the repository state at that commit; they do not establish live provider credentials, external hosting/TLS, production backup recovery, dataset rights, or operational ML readiness.
