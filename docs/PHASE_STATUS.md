@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:6dee5173e8f8451169cc6a582fb132d753c27caac5ffe51b4248e8c2a0bb6662 -->
+
 <!-- coderabbit-ai-generated-section:v1:c678abb0770d7103660bf491a9b9b2ad3f8095eb64edfd5e5be55911bd63f5da -->
 
 # Specification phase status
@@ -41,6 +43,12 @@ Detailed commands, tested input hashes and intermediate failures are retained in
 ## Provider completion follow-up
 
 VirusTotal existing-report and Shodan IP-host adapters are now implemented in the IOC workbench, superseding the earlier unimplemented status above. Thirteen provider tests passed, including credential absence, special-use exclusion, rate limits, malformed responses, URL identifiers and infrastructure-only Shodan semantics. Live accounts remain unverified. Provider dropdown and URL lookup are available in the frontend.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+## Storage and database verification follow-up
+
+Added a read-only evidence reconciliation command; five storage/evidence tests passed. PostgreSQL 17 explicit migrations and 15 API/security/end-to-end checks passed. The initial PostgreSQL run exposed test fixtures retaining connections across event loops; disposing the engine at fixture teardown fixed isolation. This supersedes the earlier PostgreSQL-unverified statement. Remote hosting recovery and retention policy remain open.
 
 
 <!-- /coderabbit-ai-generated:v1 -->

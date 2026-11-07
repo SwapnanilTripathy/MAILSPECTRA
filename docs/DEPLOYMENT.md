@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:44f314dbad413ed05b85b316bfae912d619adc3e23f6825243d35cb7d372bae6 -->
+
 <!-- coderabbit-ai-generated-section:v1:b0d2a6ddb98c73615a211f5202a77764bc65ddc5da88720375ed69c308522732 -->
 
 # Deployment and operations
@@ -28,7 +30,7 @@ Open `http://localhost:8000`. The named volume contains the SQLite database, ori
 
 ## Render / hosting
 
-`render.yaml` declares one Docker web service, an evidence disk, offline intelligence, disabled debug, generated secret and a manually specified CORS origin. Deployment explicitly migrates before starting. Automatic deployment is disabled. Review billing/plan, disk ownership (UID 10001), disk durability, backup and the public HTTPS origin with the hosting operator before creating the service. No external cloud deployment was performed in this task. SQLite requires a single writer service on its durable disk; do not scale instances against separate local databases. PostgreSQL configuration is accepted but has not been integration-tested in this sandbox.
+`render.yaml` declares one Docker web service, an evidence disk, offline intelligence, disabled debug, generated secret and a manually specified CORS origin. Deployment explicitly migrates before starting. Automatic deployment is disabled. Review billing/plan, disk ownership (UID 10001), disk durability, backup and the public HTTPS origin with the hosting operator before creating the service. No external cloud deployment was performed in this task. SQLite requires a single writer service on its durable disk; do not scale instances against separate local databases. PostgreSQL 17 migrations and 15 API/security/end-to-end tests have passed in an isolated container. Hosting-specific backup, restore and availability still require validation.
 
 ## Backup and restore
 
@@ -39,6 +41,12 @@ For local SQLite, copy the stopped database together with the upload/report dire
 ## Retention and recovery
 
 Retention values shown in settings are policy metadata; **there is no automatic deletion job**. Operators must apply an approved retention/legal-hold policy to coordinated database records, originals, report versions and backups. Do not delete only database rows or only files. Old generated report versions can remain as historical files; include them in reconciliation and retention. On interrupted ingestion/report creation, reconcile referenced storage paths against database records and investigate orphan files before deletion. Audit records are application records, not an immutable external ledger.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+## Read-only evidence inspection
+
+Run `python -m backend.app.evidence_audit` with the application database/storage configuration. It reports missing or changed originals/PDFs, unsafe paths, missing manifests and unreferenced files without modifying anything. Exit 0 means the inspected references match; exit 2 means review is needed. Stop writes for a stable inventory. Older report versions can be unreferenced intentionally. Never delete reported files automatically; retention and legal-hold policy must be established first.
 
 
 <!-- /coderabbit-ai-generated:v1 -->

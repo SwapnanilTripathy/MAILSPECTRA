@@ -9,6 +9,10 @@ SAMPLES_DIR = Path(__file__).parent.parent / "data" / "samples"
 @pytest.fixture(autouse=True)
 async def setup_test_db():
     await init_db()
+    yield
+    # Async PostgreSQL connections belong to the event loop that created them.
+    from backend.app.database.session import engine
+    await engine.dispose()
 
 
 
