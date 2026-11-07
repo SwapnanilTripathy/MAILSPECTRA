@@ -7,14 +7,22 @@ import { DEMO_SAMPLE_FILES } from '../src/demoSamples.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sampleDirectory = resolve(here, '../public/demo-samples');
-const hostnamePattern = /\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\b/gi;
+const hostnamePatterns = [
+  /@([a-z0-9.-]+\.[a-z]{2,63})/gi,
+  /https?:\/\/([a-z0-9.-]+\.[a-z]{2,63})(?=[:/?#\s]|$)/gi,
+  /\b(?:from|by)\s+([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9-]+)*\.[a-z]{2,63})\b/gi,
+];
 
 /**
- * Extract DNS-style hostnames from a raw email fixture.
- * IPv4 literals are excluded by the alphabetic final-label requirement.
+ * Extract email-address, URL, and Received-header hostnames.
+ * Restricting extraction to hostname contexts avoids treating auth tokens such as
+ * "smtp.mailfrom" and "header.from" as actual DNS names.
  */
 function extractHostnames(raw) {
-  return [...new Set(raw.match(hostnamePattern) || [])];
+  const matches = hostnamePatterns.flatMap((pattern) =>
+    [...raw.matchAll(pattern)].map((match) => match[1].toLowerCase()),
+  );
+  return [...new Set(matches)];
 }
 
 test('Quick Demo mapping contains the three documented scenarios', () => {
