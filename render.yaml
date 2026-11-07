@@ -39,7 +39,7 @@ databases:
     databaseName: mailspectra
     user: mailspectra
     postgresMajorVersion: "17"
-    plan: basic-256mb
+    plan: 0.1c-256mb
     region: singapore
     # Empty allowlist keeps database access on Render's private network.
     ipAllowList: []
