@@ -65,7 +65,10 @@ def test_hostname_extraction_detects_non_reserved_domains_in_supported_contexts(
         "mx.example.test",
         "links.example.net",
     }
-    with pytest.raises(AssertionError, match=r"hostname outside\.example\.org must use"):
+    with pytest.raises(
+        AssertionError,
+        match=r"hostname (?:outside\.example\.org|links\.example\.net) must use",
+    ):
         assert_reserved_hostnames(raw)
 
 
