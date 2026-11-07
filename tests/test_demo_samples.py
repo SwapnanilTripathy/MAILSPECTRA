@@ -14,13 +14,13 @@ DEMO_FILES = (
     "credential_harvest.eml",
     "executive_payment_request.eml",
 )
-EMAIL_HOST_PATTERN = re.compile(r"@([a-z0-9.-]+\\.[a-z]{2,63})", re.IGNORECASE)
+EMAIL_HOST_PATTERN = re.compile(r"@([a-z0-9.-]+\.[a-z]{2,63})", re.IGNORECASE)
 URL_HOST_PATTERN = re.compile(
-    r"https?://([a-z0-9.-]+\\.[a-z]{2,63})(?=[:/?#\\s]|$)",
+    r"https?://([a-z0-9.-]+\.[a-z]{2,63})(?=[:/?#\s]|$)",
     re.IGNORECASE,
 )
 RECEIVED_HOST_PATTERN = re.compile(
-    r"\\b(?:from|by)\\s+([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9-]+)*\\.[a-z]{2,63})\\b",
+    r"\b(?:from|by)\s+([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9-]+)*\.[a-z]{2,63})\b",
     re.IGNORECASE,
 )
 
@@ -55,9 +55,9 @@ DOCUMENTATION_NETWORKS = (
 def test_hostname_extraction_detects_non_reserved_domains_in_supported_contexts():
     """Ensure the extractor finds non-reserved hosts so fixture checks reject them."""
     raw = (
-        "From: sender@outside.example.org\\n"
-        "Received: from relay.example.test by mx.example.test\\n"
-        "Open https://links.example.net/path\\n"
+        "From: sender@outside.example.org\n"
+        "Received: from relay.example.test by mx.example.test\n"
+        "Open https://links.example.net/path\n"
     )
     assert extract_hostnames(raw) == {
         "outside.example.org",
@@ -67,7 +67,7 @@ def test_hostname_extraction_detects_non_reserved_domains_in_supported_contexts(
     }
     with pytest.raises(
         AssertionError,
-        match=r"hostname (?:outside\\.example\\.org|links\\.example\\.net) must use",
+        match=r"hostname (?:outside\.example\.org|links\.example\.net) must use",
     ):
         assert_reserved_hostnames(raw)
 
@@ -92,7 +92,7 @@ def test_demo_emails_use_only_reserved_test_domains_and_documentation_ips():
         raw = (DEMO_DIRECTORY / filename).read_text(encoding="utf-8")
         assert_reserved_hostnames(raw)
 
-        for literal in re.findall(r"\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b", raw):
+        for literal in re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", raw):
             address = IPv4Address(literal)
             assert any(address in network for network in DOCUMENTATION_NETWORKS), (
                 f"{filename} contains a non-documentation IP literal: {literal}"
