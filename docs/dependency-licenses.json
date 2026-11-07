@@ -360,11 +360,6 @@
       "license": "MIT"
     },
     {
-      "package": "node_modules/@react-leaflet/core",
-      "version": "2.1.0",
-      "license": "Hippocratic-2.1"
-    },
-    {
       "package": "node_modules/@reactflow/background",
       "version": "11.3.14",
       "license": "MIT"
@@ -883,11 +878,6 @@
       "package": "node_modules/react-is",
       "version": "18.3.1",
       "license": "MIT"
-    },
-    {
-      "package": "node_modules/react-leaflet",
-      "version": "4.2.1",
-      "license": "Hippocratic-2.1"
     },
     {
       "package": "node_modules/react-router",

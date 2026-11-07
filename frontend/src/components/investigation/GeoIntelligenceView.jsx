@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Globe, MapPin, Shield, Building2, Server, Radio, AlertTriangle } from 'lucide-react';
@@ -20,6 +19,23 @@ const createCustomIcon = (color = '#06b6d4', isOrigin = false) => {
   });
 };
 
+function InfrastructureMap({ items, originIp, onSelect }) {
+  const element = useRef(null);
+  useEffect(() => {
+    const map = L.map(element.current, { scrollWheelZoom: false }).setView([items[0].latitude, items[0].longitude], items.length === 1 ? 5 : 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; <a href="https://carto.com/">CARTO</a>' }).addTo(map);
+    for (const item of items) {
+      const isOrigin = item.ip === originIp;
+      const marker = L.marker([item.latitude, item.longitude], { icon: createCustomIcon(isOrigin ? '#ef4444' : '#06b6d4', isOrigin), title: item.ip, alt: item.ip }).addTo(map);
+      const popup = document.createElement('div');
+      popup.textContent = [isOrigin ? 'Observed source' : 'Infrastructure', item.ip, item.city, item.country || item.country_name, item.organization || item.isp, item.asn, item.status].filter(Boolean).join(' · ');
+      marker.bindPopup(popup).on('click', () => onSelect(item.ip));
+    }
+    return () => map.remove();
+  }, [items, originIp, onSelect]);
+  return <div ref={element} className="h-full w-full" role="region" aria-label="Approximate infrastructure locations map" />;
+}
+
 export default function GeoIntelligenceView({ infrastructureIntel, originAssessment }) {
   const [selectedIp, setSelectedIp] = useState(null);
   const [mapEnabled, setMapEnabled] = useState(false);
@@ -29,15 +45,15 @@ export default function GeoIntelligenceView({ infrastructureIntel, originAssessm
   const originIp = originAssessment?.confidence > 0 ? originAssessment?.earliest_reliable_ip : null;
 
   // Filter IPs with valid latitude & longitude
-  const mappedIps = ipList.filter(
+  const mappedIps = useMemo(() => ipList.filter(
     (item) =>
       item.latitude !== undefined &&
       item.longitude !== undefined &&
       item.latitude !== null &&
       item.longitude !== null &&
       !isNaN(item.latitude) &&
-      !isNaN(item.longitude)
-  );
+      !isNaN(item.longitude) && Math.abs(Number(item.latitude)) <= 90 && Math.abs(Number(item.longitude)) <= 180
+  ), [rawIpIntel]);
 
   const defaultCenter = mappedIps.length > 0
     ? [mappedIps[0].latitude, mappedIps[0].longitude]
@@ -65,49 +81,7 @@ export default function GeoIntelligenceView({ infrastructureIntel, originAssessm
         {mappedIps.length > 0 && !mapEnabled && <button className="m-4 btn-secondary" onClick={() => setMapEnabled(true)}>Load external map tiles</button>}
         <div className="h-96 w-full relative z-0">
           {mappedIps.length > 0 && mapEnabled ? (
-            <MapContainer
-              center={defaultCenter}
-              zoom={mappedIps.length === 1 ? 5 : 2}
-              scrollWheelZoom={false}
-              className="h-full w-full"
-            >
-              {/* Dark CartoDB Map Tiles */}
-              <TileLayer
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              />
-
-              {/* IP Markers */}
-              {mappedIps.map((item, idx) => {
-                const isOrigin = item.ip === originIp;
-                const icon = createCustomIcon(isOrigin ? '#ef4444' : '#06b6d4', isOrigin);
-
-                return (
-                  <Marker
-                    key={idx}
-                    position={[item.latitude, item.longitude]}
-                    icon={icon}
-                    eventHandlers={{
-                      click: () => setSelectedIp(item.ip),
-                    }}
-                  >
-                    <Popup className="custom-leaflet-popup">
-                      <div className="p-1 text-xs font-mono">
-                        <p className="font-bold text-white flex items-center gap-1.5">
-                          {isOrigin && <span className="text-red-400">● OBSERVED SOURCE:</span>}
-                          {item.ip}
-                        </p>
-                        <p className="text-slate-300 mt-1">
-                          {item.city ? `${item.city}, ` : ''}{item.country || item.country_name || item.country_code || 'Unknown Location'}
-                        </p>
-                        <p className="text-slate-400 mt-0.5">ISP: {item.isp || item.organization || 'N/A'}</p>
-                        {item.asn && <p className="text-cyan-400 mt-0.5">ASN: {item.asn}</p>}
-                      </div>
-                    </Popup>
-                  </Marker>
-                );
-              })}
-            </MapContainer>
+            <InfrastructureMap items={mappedIps} originIp={originIp} onSelect={setSelectedIp} />
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 font-mono text-xs">
               <MapPin className="w-8 h-8 text-slate-600 mb-2" />
