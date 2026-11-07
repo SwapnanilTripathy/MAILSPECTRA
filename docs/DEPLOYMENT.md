@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:a0bebffda0d40824c40e9d28ed8acaf003d403cc84032604b4ec209b02d27796 -->
+
 <!-- coderabbit-ai-generated-section:v1:2331e229ee36b62838db51fcf15412d901ff46974af79e822ed869dfbb5cad46 -->
 
 <!-- coderabbit-ai-generated-section:v1:f8a15675abf4c45dfde6c1517edb7e7c7f07f638bfaa5651af2ca696c4d5e3c6 -->
@@ -18,7 +20,7 @@ Production requires `APP_ENV=production`, `DEBUG=false`, a random `SECRET_KEY` (
 
 ## Docker
 
-The image builds the SPA with Node 24 and serves it through Python 3.11 as UID 10001. Storage must be writable by that UID. From the repository root, set SECRET_KEY in your private environment or `.env`, then:
+The image builds the SPA with Node 24 and serves it through Python 3.11 as UID 10001. Storage must be writable by that UID. From the repository root, configure SECRET_KEY, CORS_ORIGINS and DATABASE_URL in your private environment or `.env`. PostgreSQL is recommended: use your external PostgreSQL connection URL; no database is provisioned by Compose. For an explicitly approved SQLite single-instance deployment, set `DATABASE_URL=sqlite+aiosqlite:////app/storage/mailspectra.db` and `ALLOW_SQLITE_PRODUCTION=true`. Then:
 
 ```sh
 docker compose build
@@ -28,19 +30,19 @@ docker compose up -d
 curl --fail http://localhost:8000/api/v1/ready
 ```
 
-Open `http://localhost:8000`. The named volume contains the SQLite database, original files and reports. Never use `docker compose down -v` when preserving evidence. A fresh volume requires migration before application startup. Existing schema upgrades must be backed up first. Downgrades are intentionally not a data-recovery procedure; restore a matched backup and image instead.
+Open `http://localhost:8000`. In either database configuration, the named volume mounted at `/app/storage` contains original email artifacts in `uploads/` and generated PDFs/manifests in `reports/`. With the explicit SQLite URL above it also contains `mailspectra.db`; with external PostgreSQL, database records live on that PostgreSQL service and are not backed up by copying this volume. Never use `docker compose down -v` when preserving evidence. A fresh database requires migration before application startup; a replacement evidence volume must contain the files referenced by that database. Existing schema upgrades must be backed up first. Downgrades are intentionally not a data-recovery procedure; restore a matched backup and image instead.
 
 `/health` is process liveness. `/ready` checks database access, schema revision 0003 and writable artifact/report directories; a failure returns 503. The image healthcheck uses readiness. API requests have request IDs and bounded logging. Provider availability and model quality are separate from process readiness.
 
 ## Render / hosting
 
-`render.yaml` declares one Docker web service, an evidence disk, offline intelligence, disabled debug, generated secret and a manually specified CORS origin. Deployment explicitly migrates before starting. Automatic deployment is disabled. Review billing/plan, disk ownership (UID 10001), disk durability, backup and the public HTTPS origin with the hosting operator before creating the service. No external cloud deployment was performed in this task. SQLite requires a single writer service on its durable disk; do not scale instances against separate local databases. PostgreSQL 17 migrations and 15 API/security/end-to-end tests have passed in an isolated container. Hosting-specific backup, restore and availability still require validation.
+`render.yaml` declares one Docker web service, an evidence disk, offline intelligence, disabled debug, generated secret and a manually specified CORS origin and private external DATABASE_URL. PostgreSQL is recommended; the blueprint does not provision it or silently select SQLite. Deployment explicitly migrates before starting. Automatic deployment is disabled. Review billing/plan, disk ownership (UID 10001), disk durability, backup and the public HTTPS origin with the hosting operator before creating the service. No external cloud deployment was performed in this task. SQLite requires a single writer service on its durable disk; do not scale instances against separate local databases. PostgreSQL 17 migrations and 15 API/security/end-to-end tests have passed in an isolated container. Hosting-specific backup, restore and availability still require validation.
 
 ## Backup and restore
 
-Quiesce ingestion, alert updates and report generation, then stop the application. Back up the entire persistent storage directory/volume (database plus originals, PDFs and manifests) as one versioned set. Preserve permissions and record the image/commit, migration revision and a checksum inventory. Encrypt off-site copies and restrict access. Provider keys/signing secrets belong in a separate protected secret-store backup, never in exported reports.
+Quiesce ingestion, alert updates and report generation, then stop the application. Back up the persistent evidence directory/volume (originals, PDFs and manifests) and the configured database as one coordinated versioned set. For the explicit SQLite path above, the database is inside that volume. For external PostgreSQL, use the database provider's approved consistent backup/export procedure in addition to the evidence-volume backup; the evidence volume alone cannot restore case/session/correlation records. Preserve permissions and record the image/commit, migration revision and a checksum inventory. Encrypt off-site copies and restrict access. Provider keys/signing secrets belong in a separate protected secret-store backup, never in exported reports.
 
-For local SQLite, copy the stopped database together with the upload/report directories. For Compose, use the operator's approved volume snapshot/backup tool against the `mailspectra_storage` volume while the service is stopped. Restore into an isolated replacement volume with UID 10001 ownership, start the matching application revision, check readiness, log in, reopen representative cases and recompute original/PDF digests before changing traffic. Test this restore periodically; this task verified container restart persistence and a local stopped-volume backup restored into a separate volume. The restored database, original evidence and PDF hashes matched, readiness passed, and the read-only evidence audit passed. Disaster recovery on your hosting provider remains unverified.
+For local SQLite, copy the stopped database together with the upload/report directories. For external PostgreSQL, restore the matched database backup into an isolated replacement database and set DATABASE_URL accordingly, together with the matching evidence volume. For Compose evidence files, use the operator's approved volume snapshot/backup tool against the `mailspectra_storage` volume while the service is stopped. Restore into an isolated replacement volume with UID 10001 ownership, start the matching application revision, check readiness, log in, reopen representative cases and recompute original/PDF digests before changing traffic. Test this restore periodically; this task verified container restart persistence and a local stopped-volume backup restored into a separate volume. The restored database, original evidence and PDF hashes matched, readiness passed, and the read-only evidence audit passed. Disaster recovery on your hosting provider remains unverified.
 
 ## Retention and recovery
 
