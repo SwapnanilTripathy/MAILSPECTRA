@@ -1,5 +1,7 @@
 from __future__ import annotations
 import hashlib
+from backend.app.core.config import settings
+from backend.app.utils.network import classify_ip
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from backend.app.graph.schemas import (
@@ -32,10 +34,10 @@ class CampaignCorrelator:
         # 1. Extract current observables for comparison
         curr_ips: Set[str] = {ip.ip for ip in analysis.ips if ip.is_public}
         for hop in analysis.relay_chain.hops:
-            if hop.from_ip:
+            if hop.from_ip and classify_ip(hop.from_ip).get("is_public"):
                 curr_ips.add(hop.from_ip)
         for u in analysis.urls:
-            if u.is_ip_host and u.host:
+            if u.is_ip_host and u.host and classify_ip(u.host).get("is_public"):
                 curr_ips.add(u.host)
 
         curr_domains: Set[str] = set()
@@ -98,7 +100,7 @@ class CampaignCorrelator:
                 score += 0.10
 
             final_score = min(1.0, round(score, 2))
-            if final_score >= 0.35 and shared_inds:
+            if final_score >= settings.CORRELATION_MATCH_THRESHOLD and shared_inds:
                 matches.append(
                     CampaignCorrelationMatch(
                         related_case_id=hist_id,
@@ -107,6 +109,7 @@ class CampaignCorrelator:
                         related_case_classification=hist_class,
                         correlation_score=final_score,
                         shared_indicators=shared_inds,
+                        shared_values={"ips": sorted(common_ips), "domains":sorted(common_domains), "urls":sorted(common_urls), "senders":[curr_sender] if hist_sender == curr_sender else []},
                         evidence=evidence_lines,
                     )
                 )
@@ -116,19 +119,19 @@ class CampaignCorrelator:
 
         # 3. Dynamic Campaign Entity Clustering
         campaign_entity: Optional[CampaignEntity] = None
-        high_conf_matches = [m for m in matches if m.correlation_score >= 0.60]
+        high_conf_matches = [m for m in matches if m.correlation_score >= settings.CORRELATION_CLUSTER_THRESHOLD]
         if high_conf_matches:
             member_ids = [current_case_id] + [m.related_case_id for m in high_conf_matches]
             member_ids = sorted(list(set(member_ids)))
 
             # Deterministic campaign ID from member set
-            cid_hash = hashlib.sha256("".join(member_ids).encode("utf-8")).hexdigest()[:8].upper()
+            cid_hash = hashlib.sha256("|".join(sorted({v for m in high_conf_matches for values in m.shared_values.values() for v in values})).encode()).hexdigest()[:12].upper()
             campaign_id = f"CAMPAIGN-{cid_hash}"
 
             shared_infra: Dict[str, List[str]] = {
-                "ips": list(curr_ips),
-                "domains": list(curr_domains),
-                "urls": list(curr_urls)[:3],
+                "ips": sorted({v for match in high_conf_matches for v in match.shared_values["ips"]}),
+                "domains": sorted({v for match in high_conf_matches for v in match.shared_values["domains"]}),
+                "urls": sorted({v for match in high_conf_matches for v in match.shared_values["urls"]}),
             }
 
             campaign_entity = CampaignEntity(
@@ -169,63 +172,19 @@ class CampaignCorrelator:
         from_sender = analysis.metadata.from_sender
         risk_score = analysis.threat_assessment.risk_score
 
-        # Check Spoofed Identity
-        is_spoofed = (
-            auth.spf_result == "fail"
-            or auth.dmarc_result == "fail"
-            or (analysis.metadata.return_path and from_sender.domain and from_sender.domain not in analysis.metadata.return_path)
-        )
-
-        # Check Anonymized Infrastructure (VPN, Tor, Proxy)
-        is_anonymized = False
-        if intel and intel.ip_intelligence:
-            for ip_info in intel.ip_intelligence.values():
-                if ip_info.proxy_or_vpn:
-                    is_anonymized = True
-                    evidence.append(
-                        f"MTA relay IP '{ip_info.ip}' resolves to known VPN/Tor/Proxy exit node ({ip_info.isp or 'Anonymous'})."
-                    )
-
-        # Determine Assessment Category
-        if is_spoofed:
-            assessment = "SPOOFED_IDENTITY"
-            confidence = 0.88
-            evidence.append(
-                f"Sender domain '{from_sender.domain}' was unauthorized on sending host (SPF/DMARC alignment failed)."
-            )
-            if campaign:
-                evidence.append(
-                    f"Infrastructure matches active threat cluster '{campaign.campaign_id}' with {len(campaign.member_case_ids)} related cases."
-                )
-
-        elif is_anonymized:
-            assessment = "ANONYMIZED_INFRASTRUCTURE"
-            confidence = 0.82
-            evidence.append("Traffic routed through anonymization network obscuring direct origin.")
-
-        elif campaign and len(campaign.member_case_ids) > 1:
+        limitations.append("Reported authentication headers are untrusted; rule support is not a calibrated probability.")
+        if campaign:
             assessment = "SHARED_CAMPAIGN_INFRASTRUCTURE"
             confidence = campaign.confidence
-            evidence.append(
-                f"Direct observable overlap detected with Campaign '{campaign.campaign_id}' across multiple cases."
-            )
-
-        elif risk_score >= 70.0:
-            assessment = "DIRECT_MALICIOUS_INFRASTRUCTURE"
-            confidence = 0.75
-            evidence.append(
-                f"Observed malicious payload hosted directly on unaligned network infrastructure."
-            )
-
-        elif risk_score < 40.0:
-            assessment = "LEGITIMATE_AUTHENTICATED_SENDER"
-            confidence = 0.90
-            evidence.append("Cryptographic authentication (SPF/DKIM/DMARC) aligned with authentic domain owner.")
-
+            evidence = [line for match in matches for line in match.evidence]
+        elif auth.spf_result == "fail" or auth.dmarc_result == "fail":
+            assessment = "POSSIBLE_IDENTITY_INCONSISTENCY"
+            confidence = 0.0
+            evidence = ["Supplied headers report authentication failure; independent verification is required."]
         else:
             assessment = "INSUFFICIENT_EVIDENCE"
-            confidence = 0.40
-            evidence.append("Observables present insufficient distinctive overlap for cluster attribution.")
+            confidence = 0.0
+            evidence = ["No verified evidence establishes sender authenticity or an actor identity."]
 
         return AttributionSupportResult(
             assessment=assessment,

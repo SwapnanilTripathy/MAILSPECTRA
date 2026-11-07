@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from backend.app.core.config import settings
 import json
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from sqlalchemy import select
@@ -42,7 +43,7 @@ class CorrelationPersistenceService:
             # 1. Fetch historical cases and their observables
             historical_cases: List[Dict[str, Any]] = []
             try:
-                stmt = select(CaseRecord).options(selectinload(CaseRecord.observables)).order_by(CaseRecord.created_at.desc()).limit(100)
+                stmt = select(CaseRecord).options(selectinload(CaseRecord.observables)).where(CaseRecord.created_at >= datetime.now(timezone.utc) - timedelta(days=settings.CORRELATION_WINDOW_DAYS)).order_by(CaseRecord.created_at.desc()).limit(500)
                 result = await session.execute(stmt)
                 cases_orm = result.scalars().all()
 
@@ -156,7 +157,7 @@ class CorrelationPersistenceService:
                     existing_camp = (await session.execute(camp_stmt)).scalar_one_or_none()
 
                     if existing_camp:
-                        existing_camp.member_case_ids_json = json.dumps(campaign_entity.member_case_ids)
+                        existing_camp.member_case_ids_json = json.dumps(sorted(set(json.loads(existing_camp.member_case_ids_json)) | set(campaign_entity.member_case_ids)))
                         existing_camp.shared_indicators_json = json.dumps(campaign_entity.shared_infrastructure)
                         existing_camp.confidence = campaign_entity.confidence
                         existing_camp.last_seen = datetime.now(timezone.utc)

@@ -184,7 +184,8 @@ def test_13_shared_infrastructure_detection(phishing_eml_bytes):
     assert len(matches) == 1
     assert matches[0].related_case_id == "CASE-PAST-001"
     assert matches[0].correlation_score >= 0.60
-    assert "SHARED_IP_INFRASTRUCTURE" in matches[0].shared_indicators
+    assert "IDENTICAL_URL_PAYLOAD" in matches[0].shared_indicators
+    assert matches[0].shared_values["urls"]
 
 
 # 14. Campaign Correlation Test
@@ -218,15 +219,15 @@ def test_15_attribution_support_output(phishing_eml_bytes, benign_eml_bytes):
     parser_phish = EmailForensicParser(raw_bytes=phishing_eml_bytes)
     analysis_phish = parser_phish.parse()
     _, _, attr_phish = CampaignCorrelator.correlate_case(analysis_phish, [])
-    assert attr_phish.assessment in ["SPOOFED_IDENTITY", "DIRECT_MALICIOUS_INFRASTRUCTURE"]
-    assert attr_phish.confidence > 0.5
+    assert attr_phish.assessment == "POSSIBLE_IDENTITY_INCONSISTENCY"
+    assert attr_phish.confidence == 0
     assert len(attr_phish.limitations) > 0
 
     # Test Benign (Legitimate Authenticated Sender)
     parser_benign = EmailForensicParser(raw_bytes=benign_eml_bytes)
     analysis_benign = parser_benign.parse()
     _, _, attr_benign = CampaignCorrelator.correlate_case(analysis_benign, [])
-    assert attr_benign.assessment == "LEGITIMATE_AUTHENTICATED_SENDER"
+    assert attr_benign.assessment == "INSUFFICIENT_EVIDENCE"
 
 
 # 16. Missing Intelligence Graceful Degradation Test

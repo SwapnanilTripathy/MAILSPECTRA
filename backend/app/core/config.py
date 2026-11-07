@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     HTTP_INTEL_TIMEOUT_SECONDS: float = 5.0
     CACHE_TTL_HOURS: int = 24
 
+    CORRELATION_MATCH_THRESHOLD: float = 0.35
+    CORRELATION_CLUSTER_THRESHOLD: float = 0.60
+    CORRELATION_WINDOW_DAYS: int = 90
+
     # Alerting & Thresholds
     ALERT_THRESHOLD_SCORE: float = 60.0  # Threshold for generating high alerts
     CRITICAL_ALERT_SCORE: float = 80.0   # Threshold for critical alerts

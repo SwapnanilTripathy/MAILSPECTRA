@@ -208,6 +208,24 @@ class ThreatGraphBuilder:
                             evidence=f"DNS MX record delegates mail for '{dom_name}' to '{mx}'",
                         )
 
+        # Each Received header asserts a specific from -> by hop; do not invent links
+        # across gaps between unrelated headers.
+        artifact_ref = analysis.artifact.artifact_id if analysis.artifact else analysis.evidence_hashes.sha256
+        for hop in analysis.relay_chain.hops:
+            if hop.from_host and hop.by_host:
+                for host in (hop.from_host, hop.by_host):
+                    node_id = "mail_server:" + host
+                    if node_id not in G:
+                        G.add_node(node_id, node_type="MAIL_SERVER", label=host, source="RELAY_HEADER", properties={"hostname":host})
+                G.add_edge("mail_server:"+hop.from_host, "mail_server:"+hop.by_host, relationship="RECEIVED_FROM", evidence=hop.raw_header, evidence_refs=[f"{artifact_ref}#/relay_chain/hops/{hop.hop_index-1}"], provenance="OBSERVED_UNTRUSTED_HEADER", timestamp=hop.timestamp_iso)
+        for source, target, data in G.edges(data=True):
+            relationship = data.get("relationship")
+            derived = relationship in {"HOSTED_ON_ASN", "LOCATED_IN"} or data.get("evidence","").startswith("DNS")
+            data.setdefault("provenance", "PROVIDER_DERIVED" if derived else "OBSERVED_SUPPLIED_ARTIFACT")
+            data.setdefault("source_type", "PROVIDER" if derived else "EMAIL_ARTIFACT")
+            if derived and intel and intel.mode == "offline":
+                data["source_type"] = "OFFLINE_FIXTURE"
+            data.setdefault("evidence_refs", [f"{artifact_ref}#/infrastructure_intelligence" if derived else f"{artifact_ref}#/metadata" if relationship == "SENT_FROM" else f"{artifact_ref}#/urls" if source.startswith("url:") or relationship == "CONTAINS_URL" else f"{artifact_ref}#/relay_chain"])
         return G
 
     @classmethod
@@ -302,6 +320,10 @@ class ThreatGraphBuilder:
                     relationship=data.get("relationship", GraphEdgeType.ASSOCIATED_WITH.value),
                     confidence=data.get("confidence", 1.0),
                     evidence=data.get("evidence", ""),
+                    evidence_refs=data.get("evidence_refs", []),
+                    provenance=data.get("provenance", "UNKNOWN"),
+                    source_type=data.get("source_type", "UNKNOWN"),
+                    timestamp=data.get("timestamp"),
                 )
             )
 
@@ -311,7 +333,9 @@ class ThreatGraphBuilder:
         # Calculate connected components and density on undirected copy
         G_undirected = G.to_undirected()
         num_components = nx.number_connected_components(G_undirected) if total_nodes > 0 else 0
-        density = round(nx.density(G), 4) if total_nodes > 1 else 0.0
+        simple = nx.DiGraph(G)
+        simple.remove_edges_from(nx.selfloop_edges(simple))
+        density = round(nx.density(simple), 4) if total_nodes > 1 else 0.0
 
         return ThreatGraphData(
             total_nodes=total_nodes,

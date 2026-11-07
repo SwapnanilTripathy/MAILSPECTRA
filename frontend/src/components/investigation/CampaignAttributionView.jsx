@@ -52,7 +52,7 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
           <p className="mt-2 text-xs text-slate-300 leading-relaxed font-sans">
             {attributionSupport?.technical_justification ||
               attributionSupport?.evidentiary_basis ||
-              'Attribution hypothesis formulated via cross-correlation of SPF/DKIM authentication state, relay origin IP provenance, domain registration age, and shared infrastructure indicators.'}
+              'No supporting evidence is available.'}
           </p>
         </div>
 
@@ -151,7 +151,7 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
                     <span className="text-slate-400">• Match Score: <strong className="text-slate-200">{Math.round((corr.correlation_score ?? 0) * 100)}%</strong></span>
                   </div>
                   <p className="text-slate-300 font-sans text-xs">
-                    Linked via shared {corr.shared_type || 'infrastructure'}: <DefangedIndicator value={(corr.shared_indicators || []).join(', ')} />
+                    Linked via shared {corr.shared_type || 'infrastructure'}: <DefangedIndicator value={Object.values(corr.shared_values || {}).flat().join(', ')} />
                   </p>
                 </div>
                 <div className="text-slate-400 text-[11px] shrink-0">

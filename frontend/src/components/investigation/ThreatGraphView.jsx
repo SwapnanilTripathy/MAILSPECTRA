@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Network, ZoomIn, ZoomOut, Filter, Info, ShieldAlert, Globe, Server, Mail, Link as LinkIcon, Layers } from 'lucide-react';
 import DefangedIndicator from '../common/DefangedIndicator';
 
@@ -7,6 +7,14 @@ export default function ThreatGraphView({ threatGraph }) {
   const [filterType, setFilterType] = useState('ALL');
   const [zoomLevel, setZoomLevel] = useState(1.0);
 
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const drag = useRef(null);
+  const [relationshipFilter, setRelationshipFilter] = useState('ALL');
+  const exportGraph = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(threatGraph, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'mailspectra-graph.json'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
   const nodes = threatGraph?.nodes || [];
   const edges = threatGraph?.edges || [];
   const metrics = {
@@ -119,6 +127,7 @@ export default function ThreatGraphView({ threatGraph }) {
             <div className="flex items-center gap-1.5">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <select
+                aria-label="Filter graph nodes"
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
                 className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300 focus:outline-none focus:border-cyan-500"
@@ -130,6 +139,10 @@ export default function ThreatGraphView({ threatGraph }) {
                 ))}
               </select>
 
+              <select aria-label="Filter graph relationships" className="bg-slate-800 text-xs" value={relationshipFilter} onChange={e => setRelationshipFilter(e.target.value)}>
+                {['ALL', ...new Set(edges.map(e => e.relationship))].map(value => <option key={value}>{value}</option>)}
+              </select>
+              <button onClick={exportGraph} className="text-xs text-cyan-300">Export JSON</button>
               {/* Zoom Controls */}
               <div className="flex items-center ml-2 border-l border-slate-700 pl-2 gap-1">
                 <button
@@ -164,8 +177,14 @@ export default function ThreatGraphView({ threatGraph }) {
 
             <svg
               viewBox="0 0 800 560"
+              role="group" aria-label="Evidence relationship graph; arrow keys pan" tabIndex={0}
+              onPointerDown={e => { if (e.target.closest('[role="button"]')) return; drag.current = { x:e.clientX-pan.x, y:e.clientY-pan.y }; e.currentTarget.setPointerCapture(e.pointerId); }}
+              onPointerMove={e => { if (drag.current) setPan({ x:e.clientX-drag.current.x, y:e.clientY-drag.current.y }); }}
+              onPointerUp={() => { drag.current = null; }}
+              onPointerCancel={() => { drag.current = null; }}
+              onKeyDown={e => { const move = { ArrowLeft:[-20,0], ArrowRight:[20,0], ArrowUp:[0,-20], ArrowDown:[0,20] }[e.key]; if(move) { e.preventDefault(); setPan(p => ({x:p.x+move[0],y:p.y+move[1]})); } }}
               className="w-full h-full cursor-grab active:cursor-grabbing transition-transform duration-200"
-              style={{ transform: `scale(${zoomLevel})` }}
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})` }}
             >
               <defs>
                 <marker
@@ -196,7 +215,7 @@ export default function ThreatGraphView({ threatGraph }) {
               {edges.map((edge, idx) => {
                 const src = nodeMap.get(edge.source);
                 const tgt = nodeMap.get(edge.target);
-                if (!src || !tgt) return null;
+                if (!src || !tgt || !filteredNodes.some(n => n.id === src.id) || !filteredNodes.some(n => n.id === tgt.id) || (relationshipFilter !== 'ALL' && edge.relationship !== relationshipFilter)) return null;
 
                 const isConnectedToSelected =
                   selectedNode && (selectedNode.id === edge.source || selectedNode.id === edge.target);
@@ -243,6 +262,8 @@ export default function ThreatGraphView({ threatGraph }) {
                     key={node.id}
                     transform={`translate(${node.x}, ${node.y})`}
                     onClick={() => setSelectedNode(node)}
+                    role="button" tabIndex={0} aria-label={`Inspect ${node.node_type}: ${node.label}`}
+                    onKeyDown={e => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedNode(node); } }}
                     className="cursor-pointer group"
                   >
                     {/* Selected Halo Pulse */}
@@ -344,6 +365,9 @@ export default function ThreatGraphView({ threatGraph }) {
                           <span className="text-cyan-400 font-bold">{isSource ? '→ ' : '← '}</span>
                           <span className="text-slate-400">{edge.relationship}: </span>
                           <span className="text-slate-200">{targetId}</span>
+                          <p>{edge.provenance} — {edge.source_type}</p>
+                          <p>{edge.evidence}</p>
+                          <p className="break-all">{(edge.evidence_refs || []).join(', ')}</p>
                         </div>
                       );
                     })}

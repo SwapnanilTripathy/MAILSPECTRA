@@ -39,6 +39,9 @@ class ThreatGraphNode(BaseModel):
 
 
 class ThreatGraphEdge(BaseModel):
+    evidence_refs: List[str] = Field(default_factory=list)
+    provenance: str = "OBSERVED_SUPPLIED_ARTIFACT"
+    source_type: str = "EMAIL_ARTIFACT"
     source: str
     target: str
     relationship: str
@@ -52,6 +55,7 @@ class ThreatGraphData(BaseModel):
     total_edges: int = 0
     connected_components_count: int = 0
     density: float = 0.0
+    metric_definition: str = "Density of simple directed graph without self-loops; components of undirected projection"
     nodes: List[ThreatGraphNode] = Field(default_factory=list)
     edges: List[ThreatGraphEdge] = Field(default_factory=list)
 
@@ -63,6 +67,8 @@ class CampaignCorrelationMatch(BaseModel):
     related_case_classification: str = ""
     correlation_score: float = 0.0  # 0.0 to 1.0
     shared_indicators: List[str] = Field(default_factory=list)
+    shared_values: Dict[str, List[str]] = Field(default_factory=dict)
+    score_definition: str = "Bounded exact-match rule score, not actor probability"
     evidence: List[str] = Field(default_factory=list)
 
 
