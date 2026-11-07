@@ -4,6 +4,7 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 const apiClient = axios.create({
   baseURL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,10 +20,23 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+let refreshFlight = null;
 // Interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response.data,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+    if (error.response?.status === 401 && config && !config._retried && !config.url.includes("/auth/login") && !config.url.includes("/auth/refresh")) {
+      config._retried = true;
+      try {
+        if (!refreshFlight) refreshFlight = axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true, headers: { "X-Mailspectra-CSRF": "1" } }).then(({data}) => {
+          sessionStorage.setItem("deeptrace_token", data.access_token);
+          return data;
+        }).finally(() => { refreshFlight = null; });
+        await refreshFlight;
+        return apiClient(config);
+      } catch { /* Fall through to local session cleanup. */ }
+    }
     if (error.response?.status === 401) {
       sessionStorage.removeItem('deeptrace_token');
       sessionStorage.removeItem('deeptrace_user');

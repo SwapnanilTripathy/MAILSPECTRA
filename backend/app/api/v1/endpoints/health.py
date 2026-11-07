@@ -29,7 +29,7 @@ async def ready(db: AsyncSession = Depends(get_db)):
     try:
         await db.execute(text("SELECT 1"))
         revision = (await db.execute(text("SELECT version_num FROM alembic_version"))).scalar()
-        if revision != "0002": raise RuntimeError("Migration required")
+        if revision != "0003": raise RuntimeError("Migration required")
         for directory in (settings.UPLOAD_DIR, settings.REPORTS_DIR):
             Path(directory).mkdir(parents=True,exist_ok=True,mode=0o700)
             with tempfile.TemporaryFile(dir=directory) as stream: stream.write(b'readiness')

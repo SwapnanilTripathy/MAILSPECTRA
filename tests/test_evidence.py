@@ -59,5 +59,5 @@ def test_migration_preserves_legacy_records(tmp_path):
         config = Config('alembic.ini'); config.attributes['connection'] = connection
         command.upgrade(config, 'head')
         assert connection.execute(text("SELECT subject FROM cases WHERE case_id='LEGACY'")).scalar() == 'Preserve me'
-        assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar() == '0002'
+        assert connection.execute(text('SELECT version_num FROM alembic_version')).scalar() == '0003'
     engine.dispose()

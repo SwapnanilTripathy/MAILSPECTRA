@@ -1,16 +1,16 @@
 from datetime import datetime, timedelta, timezone
 import hashlib
 import secrets
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 import jwt
-from sqlalchemy import select, func, delete
+from sqlalchemy import select, func, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 from backend.app.core.config import settings
 from backend.app.core.security import current_user, hash_password, verify_password
 from backend.app.database.session import get_db
-from backend.app.models.entities import AuditLogRecord, UserRecord, SessionRecord, LoginAttemptRecord
+from backend.app.models.entities import AuditLogRecord, UserRecord, SessionRecord, LoginAttemptRecord, RefreshTokenRecord
 
 router = APIRouter()
 # Equal-cost password work for unknown accounts. No usable default account exists.
@@ -37,7 +37,7 @@ def profile(user):
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)):
+async def login(payload: LoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(seconds=settings.LOGIN_WINDOW_SECONDS)
     # Ignore forwarded headers: the deployment proxy must enforce its own global limit.
@@ -54,9 +54,12 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
         raise HTTPException(401, "Invalid credentials")
     expires = now + timedelta(minutes=settings.ACCESS_TOKEN_MINUTES)
     session_id = secrets.token_hex(32)
-    db.add(SessionRecord(session_id=session_id, user_id=user.id, expires_at=expires))
+    db.add(SessionRecord(session_id=session_id, user_id=user.id, expires_at=now + timedelta(days=settings.REFRESH_TOKEN_DAYS)))
     db.add(AuditLogRecord(action="USER_LOGIN", actor=user.username, details="Session created"))
+    await db.flush()
+    await issue_refresh(response, db, session_id, now + timedelta(days=settings.REFRESH_TOKEN_DAYS))
     await db.commit()
+    response.headers["Cache-Control"] = "no-store"
     token = jwt.encode({"sub": str(user.id), "jti": session_id, "exp": expires, "iat": now, "iss": settings.TOKEN_ISSUER, "aud": "mailspectra-api", "type": "access"}, settings.SECRET_KEY, algorithm="HS256")
     return LoginResponse(access_token=token, expires_in=settings.ACCESS_TOKEN_MINUTES*60, user=profile(user))
 
@@ -67,9 +70,50 @@ async def me(user: UserRecord = Depends(current_user)):
 
 
 @router.post("/logout")
-async def logout(request: Request, user: UserRecord = Depends(current_user), db: AsyncSession = Depends(get_db)):
+async def logout(request: Request, response: Response, user: UserRecord = Depends(current_user), db: AsyncSession = Depends(get_db)):
     session = await db.get(SessionRecord, request.state.session_id)
     session.revoked = True
+    response.delete_cookie("mailspectra_refresh", path=settings.API_V1_STR+"/auth")
     db.add(AuditLogRecord(action="USER_LOGOUT", actor=user.username, details="Session revoked"))
     await db.commit()
     return {"status": "SUCCESS"}
+
+
+async def issue_refresh(response, db, session_id, expires):
+    token = secrets.token_urlsafe(48)
+    db.add(RefreshTokenRecord(token_hash=hashlib.sha256(token.encode()).hexdigest(),session_id=session_id,consumed=False))
+    response.set_cookie('mailspectra_refresh',token,httponly=True,secure=settings.APP_ENV=='production',samesite='strict',path=settings.API_V1_STR+'/auth',max_age=max(0,int((expires.replace(tzinfo=timezone.utc)-datetime.now(timezone.utc)).total_seconds())))
+
+
+def require_refresh_csrf(request):
+    if request.headers.get('X-Mailspectra-CSRF') != '1' or (request.headers.get('origin') and request.headers['origin'] not in settings.CORS_ORIGINS):
+        raise HTTPException(403,'Refresh origin/header rejected')
+
+
+@router.post('/refresh',response_model=LoginResponse)
+async def refresh(request: Request,response: Response,db: AsyncSession=Depends(get_db)):
+    require_refresh_csrf(request)
+    raw=request.cookies.get('mailspectra_refresh','')
+    if not raw or len(raw)>256: raise HTTPException(401,'Invalid refresh session')
+    digest=hashlib.sha256(raw.encode()).hexdigest()
+    record=await db.get(RefreshTokenRecord,digest)
+    if not record: raise HTTPException(401,'Invalid refresh session')
+    session=await db.scalar(select(SessionRecord).where(SessionRecord.session_id==record.session_id).with_for_update())
+    now=datetime.now(timezone.utc)
+    if not session or session.revoked or session.expires_at.replace(tzinfo=timezone.utc)<=now:
+        raise HTTPException(401,'Invalid refresh session')
+    consumed=await db.execute(update(RefreshTokenRecord).where(RefreshTokenRecord.token_hash==digest,RefreshTokenRecord.consumed==False).values(consumed=True))
+    if consumed.rowcount != 1:
+        session.revoked=True
+        await db.commit()
+        raise HTTPException(401,'Invalid refresh session')
+    user=await db.get(UserRecord,session.user_id)
+    if not user or not user.is_active or user.role not in {'admin','analyst','viewer'}:
+        session.revoked=True
+        await db.commit()
+        raise HTTPException(401,'Invalid refresh session')
+    await issue_refresh(response,db,session.session_id,session.expires_at)
+    await db.commit()
+    response.headers['Cache-Control']='no-store'
+    token=jwt.encode({'sub':str(user.id),'jti':session.session_id,'exp':now+timedelta(minutes=settings.ACCESS_TOKEN_MINUTES),'iat':now,'iss':settings.TOKEN_ISSUER,'aud':'mailspectra-api','type':'access'},settings.SECRET_KEY,algorithm='HS256')
+    return LoginResponse(access_token=token,expires_in=settings.ACCESS_TOKEN_MINUTES*60,user=profile(user))

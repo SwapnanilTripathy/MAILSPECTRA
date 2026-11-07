@@ -156,3 +156,10 @@ class AlertRecord(Base):
     status: Mapped[str] = mapped_column(String(32), default='OPEN')
     assigned_to: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class RefreshTokenRecord(Base):
+    __tablename__ = 'refresh_tokens'
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    session_id: Mapped[str] = mapped_column(ForeignKey('auth_sessions.session_id'), index=True)
+    consumed: Mapped[bool] = mapped_column(Boolean, default=False)

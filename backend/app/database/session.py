@@ -31,7 +31,7 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         if settings.APP_ENV == "production":
             revision = (await conn.execute(text("SELECT version_num FROM alembic_version"))).scalar()
-            if revision != "0002":
+            if revision != "0003":
                 raise RuntimeError("Database migration required: run alembic upgrade head")
         else:
             def migrate(connection):
