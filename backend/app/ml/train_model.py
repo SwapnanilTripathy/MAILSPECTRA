@@ -29,7 +29,7 @@ from backend.app.services.email_parser import EmailForensicParser
 
 
 DEFAULT_DATASET_PATH = Path(__file__).parent.parent.parent.parent / "data" / "training" / "dataset.json"
-DEFAULT_OUTPUT_DIR = Path(__file__).parent / "models"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[3] / "model-candidates"
 
 
 def load_dataset(dataset_path: Path) -> Tuple[List[str], List[Dict[str, float]], List[str], Dict[str, Any]]:
@@ -72,6 +72,10 @@ def train_and_evaluate(
     output_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> Dict[str, Any]:
     """Train baseline multi-class threat classifier, evaluate metrics, and save model artifacts."""
+    output_dir = Path(output_dir)
+    candidate_path = output_dir / "threat_classifier.joblib"
+    if candidate_path.resolve() == ModelLoader.get_model_path().resolve():
+        raise ValueError("Training cannot overwrite the deployed model; choose a candidate output directory")
     output_dir.mkdir(parents=True, exist_ok=True)
     texts, structured_list, labels, dataset_meta = load_dataset(dataset_path)
 
@@ -143,7 +147,7 @@ def train_and_evaluate(
     metrics_report["split"] = {"training_indices":train_idx.tolist(), "holdout_indices":holdout_idx.tolist(), "grouping":"SHA256 of normalized text; sender/campaign group labels unavailable", "preprocessing":"Fit on each training fold only", "random_seeds":[42,43]}
     metrics_report["is_statistically_significant"] = False
     metrics_report["dataset_sha256"] = hashlib.sha256(dataset_path.read_bytes()).hexdigest()
-    metrics_report["calibration_status"] = "Uncalibrated; seven-sample holdout cannot establish reliability"
+    metrics_report["calibration_status"] = f"Uncalibrated; reliability has not been established on the {len(holdout_idx)}-sample holdout"
     # Preserve the holdout exclusion when producing this candidate model.
     X_text = vectorizer.transform([texts[i] for i in train_idx])
     train_acc = float(classifier.score(X_combined, y[train_idx]))

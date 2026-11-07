@@ -112,3 +112,6 @@ ipython_config.py
 # OS Generated Files
 .DS_Store
 Thumbs.db
+
+# Training candidates must be reviewed before deployment
+/model-candidates/

@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:089f11f691f16131394a2a9f251a6e1721faa4e01b7f615007f2a24e02e8adc7 -->
+
 <!-- coderabbit-ai-generated-section:v1:3491ef07f83855b054a6445daf69ca97cc05803eb0adba39c9ec60277aa1a7b5 -->
 
 <!-- coderabbit-ai-generated-section:v1:6dee5173e8f8451169cc6a582fb132d753c27caac5ffe51b4248e8c2a0bb6662 -->
@@ -18,12 +20,12 @@ This records implementation of the owner's MAILSPECTRA coding specification. The
 | 1 — Auth | `2423a73`; scrypt, expiring signed sessions, revocation, roles, persistent login throttling, negative tests and authenticated downloads. Phase 9 replaces python-jose with PyJWT after vulnerability review. | Single-organization access; proxy concurrency/rate controls remain deployment responsibilities. |
 | 2 — Contracts | `0b130bd`; canonical schemas/types, corrected panel bindings and render fixtures; generated declarations refreshed after graph changes. | Legacy snapshots can lack newly introduced evidence fields and are shown as unavailable. |
 | 3 — Persistence | `7c19ec`; additive migrations, original artifacts, idempotent ingestion, snapshots, observations/audit and verification; migration/tamper tests. | No distributed filesystem/SQL transaction; reconcile interrupted writes. Legacy evidence cannot be reconstructed. |
-| 4 — Forensics | `60e3b06`; duplicate headers, extraction provenance, IP classification, DKIM cryptographic verification, SPF adapter and verified-result DMARC alignment, conservative relay/origin handling. | Saved email does not supply a trusted SMTP envelope/peer. SPF is unavailable without it; ARC is deferred. Live DNS verification was not exercised. |
+| 4 — Forensics | `60e3b06`; duplicate headers, extraction provenance, IP classification, DKIM cryptographic verification, SPF adapter and verified-result DMARC alignment, conservative relay/origin handling. | Saved email does not supply a trusted SMTP envelope/peer. SPF is unavailable without it. ARC cryptographic verification is implemented in follow-up 5748708; operator trust remains separate. Live DNS verification was not exercised. |
 | 5 — ML/risk | `8353473`; leakage-free fold preprocessing, grouped duplicates, independent holdout, manifest/metrics, bounded canonical scoring and labelled explanation methods. | Dataset licensing/labels are unverified; 21 messages are inadequate. Seven-message holdout accuracy 0.7143 and CV 0.1429 are not operational evidence. Model/rule feature correlation remains a calibration concern. |
-| 6 — Intelligence | `e65f9d8`; provider status/source/freshness, bounded HTTPS, special-use filtering, TTL cache, backend IOC lookup and provider mock tests. | No live provider credentials validated. Emulate v0.0.1 has no matching adapters. VirusTotal/Shodan remain explicitly unimplemented. |
+| 6 — Intelligence | `e65f9d8`; provider status/source/freshness, bounded HTTPS, special-use filtering, TTL cache, backend IOC lookup and provider mock tests. | No live provider credentials validated. Emulate v0.0.1 has no matching adapters. VirusTotal/Shodan workbench adapters are implemented in follow-up 548e403. |
 | 7 — Graph/campaign | `4217d36`; evidence references, observed/inferred relationships, graph metrics/filters/inspection, shared-value/time-window correlation and cautious attribution. | Campaign similarity is investigative support, not actor identity. Saved Received headers remain supplied claims. |
 | 8 — Analyst workflow | `bf22481`; durable alerts, acknowledgement/resolution, reopen, masking, PDF/manifest/audit, two API end-to-end workflows. Final UI refinements included in Phase 9. | Masking is best effort. Viewer PDF generation remains disallowed; existing authorized report downloads are supported. |
-| 9 — Deployment/hardening | Final implementation includes nonroot image, persistent storage, migration gate, readiness, request IDs/JSON logs, request byte limits, vulnerability remediation, bundle splitting, accessibility fixes and operator docs. | External hosting was not deployed. PostgreSQL and hosting disaster recovery are not integration-tested. Dependency license/use requirements need operator review. |
+| 9 — Deployment/hardening | Final implementation includes nonroot image, persistent storage, migration gate, readiness, request IDs/JSON logs, request byte limits, vulnerability remediation, bundle splitting, accessibility fixes and operator docs. | External hosting was not deployed. PostgreSQL 17 checks passed in follow-up 06a3dbf. Hosting disaster recovery remains unverified. Dependency license/use requirements need operator review. |
 
 ## Verification evidence
 
@@ -57,6 +59,12 @@ Added a read-only evidence reconciliation command; five storage/evidence tests p
 ## ARC and license follow-up
 
 Independent ARC verification now handles signed chains, tampered bodies and bounded chain work when DNS verification is enabled. It does not establish trust in sealing operators. This supersedes the earlier ARC-deferred statement. All 124 backend tests pass; pip-audit reports no known vulnerabilities. Live DNS remains unverified. Map wrappers react-leaflet and @react-leaflet/core were removed; Leaflet rendering and marker interaction passed in the shared cloud preview.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+## Candidate model safeguards
+
+Training writes to a separate ignored candidate directory and rejects overwriting the deployed model, including symlink aliases. Saving a candidate preserves the active model cache. Twenty-two targeted training, ML and scoring tests passed, and a demonstration training run produced an explicitly uncalibrated candidate without modifying the bundled model. The seven-sample holdout remains inadequate for production claims; data ownership, a representative corpus and risk calibration require owner input. Final frontend privacy/render checks and production build pass; the IOC workbench has one provider selector.
 
 
 <!-- /coderabbit-ai-generated:v1 -->

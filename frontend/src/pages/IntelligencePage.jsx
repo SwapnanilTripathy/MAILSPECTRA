@@ -186,11 +186,6 @@ export default function IntelligencePage() {
           Measures character unpredictability. Entropy alone does not establish DGA activity or maliciousness.
         </p>
 
-        <label className="block text-sm text-slate-300 mb-3">Provider
-          <select value={provider} onChange={event => setProvider(event.target.value)} className="ml-3 bg-slate-900 border border-slate-700 rounded p-2">
-            <option value="auto">Automatic</option><option value="abuseipdb">AbuseIPDB (IP reputation)</option><option value="virustotal">VirusTotal (existing reports)</option><option value="shodan">Shodan (IP infrastructure)</option>
-          </select>
-        </label>
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <input
             type="text"

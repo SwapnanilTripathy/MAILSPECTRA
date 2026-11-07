@@ -82,7 +82,8 @@ class ModelLoader:
         }
 
         joblib.dump(artifact, target_path)
-        cls._cached_bundle = bundle
+        if target_path.resolve() == cls.get_model_path().resolve():
+            cls._cached_bundle = bundle
         logger.info(f"ML Model successfully saved to '{target_path}'")
         return target_path
 
