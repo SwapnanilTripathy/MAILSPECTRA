@@ -22,6 +22,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import api from '../api/client';
+import { DEMO_SAMPLE_FILES } from '../demoSamples';
 import { maskAnalysis } from '../utils/privacy';
 import { usePrivacy } from '../context/PrivacyContext';
 import VerdictBanner from '../components/investigation/VerdictBanner';
@@ -92,59 +93,43 @@ export default function InvestigatePage() {
   };
 
   const loadSample = async (sampleType) => {
-    setLoading(true);
-    setAlertMessage(null);
-    let sampleContent = '';
-
-    if (sampleType === 'phishing') {
-      sampleContent = `Received: by mx.target-organization.com (Postfix, from userid 1000) id 8F32B20045; Sun, 30 Aug 2026 01:15:20 +0530
-Authentication-Results: mx.target-organization.com; spf=fail (domain of security-alert@global-banking-corp.com does not designate 203.0.113.88 as permitted sender); dkim=fail (bad signature); dmarc=fail (p=REJECT)
-Received: from malicious-vps.attacker-net.org (malicious-vps.attacker-net.org [203.0.113.88]) by mx.target-organization.com (Postfix) with ESMTPS
-From: "Global Banking Security" <security-alert@global-banking-corp.com>
-Reply-To: "External Drop" <harvest-collector@darkweb-relay.ru>
-To: <employee@target-organization.com>
-Subject: URGENT: Immediate Action Required - Unauthorized Access Detected!
-Date: Sun, 30 Aug 2026 01:14:55 +0530
-MIME-Version: 1.0
-Content-Type: text/html; charset="utf-8"
-
-<html><body><h2>SECURITY ALERT: Immediate Action Required</h2><p>Click <a href="http://198.51.100.45/portal/login.php?session=928472910">VERIFY CREDENTIALS NOW</a> within 2 hours.</p></body></html>`;
-    } else if (sampleType === 'benign') {
-      sampleContent = `Received: by mail-wr1-x22e.google.com with SMTP id v18so8847648wrc.2 for <user@target.com>; Sun, 30 Aug 2026 00:10:00 -0700
-Authentication-Results: mx.google.com; spf=pass (google.com: domain of newsletter@engineering-updates.com designates 142.250.190.46 as permitted sender); dkim=pass header.i=@engineering-updates.com; dmarc=pass
-From: "Engineering Weekly" <newsletter@engineering-updates.com>
-To: <user@target.com>
-Subject: Engineering Digest: Python 3.14 & Cloud Security Architecture
-Date: Sun, 30 Aug 2026 00:09:50 -0700
-Content-Type: text/plain; charset="utf-8"
-
-Hi Developer,\n\nHere is your weekly summary of distributed cloud security architectures and compiler optimizations.\n\nRead more at https://engineering-updates.com/digest-2026\n\nBest regards,\nEngineering Team`;
-    } else if (sampleType === 'spoofed') {
-      sampleContent = `Received: from mail.spoofed-server.net (unknown [198.51.100.99]) by mx.corporate.com with ESMTP id 4A1B2C; Sun, 30 Aug 2026 02:00:00 +0000
-Authentication-Results: mx.corporate.com; spf=fail (domain of ceo@corporate.com does not designate 198.51.100.99 as permitted sender); dkim=none; dmarc=fail
-From: "Chief Executive Officer" <ceo@corporate.com>
-Reply-To: "Confidential Advisory" <ceo-offshore@protonmail.ch>
-To: <cfo@corporate.com>
-Subject: CONFIDENTIAL: Urgent Wire Transfer Request Before Close of Business
-Date: Sun, 30 Aug 2026 01:59:00 +0000
-Content-Type: text/plain; charset="utf-8"
-
-Please execute urgent transfer of $450,000 for foreign acquisition before COB. Send wire receipt directly to my private inbox.`;
+    const sampleFilename = DEMO_SAMPLE_FILES[sampleType];
+    if (!sampleFilename) {
+      setAlertMessage({ type: 'error', text: 'Unknown demonstration sample.' });
+      return;
     }
 
+    setLoading(true);
+    setAlertMessage(null);
     try {
-      const res = await api.analyzeRawEmail(
-        sampleContent,
-        `${sampleType}_demo_sample.eml`,
-      );
+      // The Quick Demo buttons and downloadable sample files use the same
+      // committed .eml artifacts so the walkthrough stays reproducible.
+      const sampleUrl = `${import.meta.env.BASE_URL}demo-samples/${sampleFilename}`;
+      const response = await fetch(sampleUrl, {
+        headers: { Accept: 'message/rfc822, text/plain' },
+        cache: 'no-store',
+      });
+      if (!response.ok) {
+        throw new Error(`Could not load bundled sample (${response.status}).`);
+      }
+
+      const sampleContent = await response.text();
+      if (!sampleContent.trim()) {
+        throw new Error('The bundled demonstration email is empty.');
+      }
+
+      const res = await api.analyzeRawEmail(sampleContent, sampleFilename);
       setAnalysis(res);
       setActiveTab('summary');
       setAlertMessage({
         type: 'success',
-        text: `Loaded and analyzed sample: ${sampleType.toUpperCase()}`,
+        text: `Loaded and analyzed bundled sample: ${sampleType.toUpperCase()}`,
       });
     } catch (err) {
-      setAlertMessage({ type: 'error', text: err.message });
+      setAlertMessage({
+        type: 'error',
+        text: err.message || 'Could not load the demonstration sample.',
+      });
     } finally {
       setLoading(false);
     }

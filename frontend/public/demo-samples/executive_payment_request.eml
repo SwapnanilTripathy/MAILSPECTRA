@@ -1,0 +1,40 @@
+Received: from edge-77.external.example.test (edge-77.external.example.test [198.51.100.77])
+        by mx.organization.example.test with ESMTP id DEMO-BEC-001;
+        Sun, 08 Nov 2026 00:22:10 +0000
+Authentication-Results: mx.organization.example.test;
+        spf=fail smtp.mailfrom=ceo@organization.example.test;
+        dkim=none;
+        dmarc=fail header.from=organization.example.test
+Return-Path: <reply@external.example.test>
+From: "Morgan Lee - Chief Executive Officer" <ceo@organization.example.test>
+Reply-To: "Executive Office" <payments@external.example.test>
+To: "Finance Operations" <finance@organization.example.test>
+Subject: Confidential: Supplier Payment Before Close of Business
+Date: Sun, 08 Nov 2026 00:21:48 +0000
+Message-ID: <demo-bec-20261108-001@edge-77.external.example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="MAILSPECTRA-BEC-DEMO"
+
+--MAILSPECTRA-BEC-DEMO
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Finance Team,
+
+Please arrange the fictional supplier payment of USD 48,250 before close of business. The sender asks that the payment confirmation be sent to the Reply-To address rather than the normal finance workflow.
+
+Treat the urgency, payment request, sender/reply mismatch, and authentication claims as investigative clues. Independently verify any real payment request through an established out-of-band process.
+
+Regards,
+Morgan Lee
+Chief Executive Officer
+--MAILSPECTRA-BEC-DEMO
+Content-Type: text/plain; charset="utf-8"
+Content-Disposition: attachment; filename="synthetic_invoice_notes.txt"
+Content-Transfer-Encoding: 7bit
+
+SYNTHETIC DEMO ATTACHMENT
+No real supplier, bank account, customer, or payment details are present.
+Reference: MAILSPECTRA-BEC-DEMO-001
+Amount: USD 48,250 (fictional)
+--MAILSPECTRA-BEC-DEMO--

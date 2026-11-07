@@ -119,6 +119,15 @@ The typical analyst workflow is:
 
 The workflow is designed to preserve the distinction between the original message, extracted observations, external enrichment, the risk decision, and the analyst's later actions.
 
+### Try the bundled synthetic demo
+
+MAILSPECTRA includes three reproducible synthetic `.eml` scenarios: a benign newsletter, a credential-harvesting lure, and an executive payment-diversion message. The Investigate page's **Quick Demos** buttons load these same committed files from `frontend/public/demo-samples/`; the downloadable files and UI therefore share one source of truth.
+
+Run locally with `INTELLIGENCE_MODE=offline`, sign in with a provisioned analyst account, and open **Investigate → Quick Demos**. Review the evidence, save a case, generate a PDF report, and verify both the original artifact and report digests. All sample domains use `.test`, and sample IP literals use RFC 5737 documentation ranges. Do not click message URLs. Embedded `Authentication-Results` fields remain untrusted message claims, not independent verification. The sample model output is illustrative and has no prescribed score or verdict.
+
+See the complete [Demo walkthrough](docs/DEMO_WALKTHROUGH.md) and [synthetic sample manifest](data/demo/manifest.json).
+
+
 ## 4. Architecture
 
 ### High-level data flow
@@ -855,6 +864,7 @@ The inherited training samples have separately unresolved authorship and redistr
 | [Deployment](docs/DEPLOYMENT.md) | Docker, Render, migrations, backup, restore, and retention |
 | [Testing](docs/TESTING.md) | Test commands and validation coverage |
 | [Dependency licenses](docs/DEPENDENCY_LICENSES.md) | Dependency inventory and licensing notes |
+| [Demo walkthrough](docs/DEMO_WALKTHROUGH.md) | Reproducible synthetic email scenarios and end-to-end analyst workflow |
 | [Changelog](docs/CHANGELOG.md) | Summary of specification implementation changes |
 
 ---
