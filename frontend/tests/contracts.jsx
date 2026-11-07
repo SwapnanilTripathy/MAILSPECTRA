@@ -26,6 +26,10 @@ export function checkContracts() {
   assert.match(graph, />0\.125</);
   const campaign = render(<CampaignAttributionView campaignCorrelations={fixture.campaign_correlations} attributionSupport={fixture.attribution_support} />);
   assert.match(campaign, /CASE-RELATED/);
+  assert.match(campaign, /Temporal context unavailable/);
+  const withContext = render(<CampaignAttributionView campaignCorrelations={[{related_case_id:'CASE-HASH',shared_values:{attachment_hashes:['a'.repeat(64)]},temporal_context:{elapsed_days:2,window_days:90}}]} />);
+  assert.match(withContext, new RegExp('a'.repeat(64)));
+  assert.match(withContext, /2.00 days apart; 90-day window/);
   assert.match(campaign, /0%/); // Must preserve a real zero, not invent an 80% fallback.
   const attachments = render(<ObservablesView observables={[]} attachments={fixture.attachments} />);
   assert.match(attachments, /Attachments \(1\)/);
@@ -33,5 +37,5 @@ export function checkContracts() {
   assert.match(missing, /Unavailable/);
   assert.match(missing, /UNKNOWN/);
   assert.match(missing, /Model unavailable; rule fallback/);
-  console.log('6 frontend contract render checks passed');
+  console.log('8 frontend contract render checks passed');
 }
