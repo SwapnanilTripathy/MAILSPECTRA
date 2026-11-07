@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:2331e229ee36b62838db51fcf15412d901ff46974af79e822ed869dfbb5cad46 -->
+
 <!-- coderabbit-ai-generated-section:v1:f8a15675abf4c45dfde6c1517edb7e7c7f07f638bfaa5651af2ca696c4d5e3c6 -->
 
 <!-- coderabbit-ai-generated-section:v1:44f314dbad413ed05b85b316bfae912d619adc3e23f6825243d35cb7d372bae6 -->
@@ -28,7 +30,7 @@ curl --fail http://localhost:8000/api/v1/ready
 
 Open `http://localhost:8000`. The named volume contains the SQLite database, original files and reports. Never use `docker compose down -v` when preserving evidence. A fresh volume requires migration before application startup. Existing schema upgrades must be backed up first. Downgrades are intentionally not a data-recovery procedure; restore a matched backup and image instead.
 
-`/health` is process liveness. `/ready` checks database access, schema revision 0002 and writable artifact/report directories; a failure returns 503. The image healthcheck uses readiness. API requests have request IDs and bounded logging. Provider availability and model quality are separate from process readiness.
+`/health` is process liveness. `/ready` checks database access, schema revision 0003 and writable artifact/report directories; a failure returns 503. The image healthcheck uses readiness. API requests have request IDs and bounded logging. Provider availability and model quality are separate from process readiness.
 
 ## Render / hosting
 
@@ -49,6 +51,12 @@ Retention values shown in settings are policy metadata; **there is no automatic 
 ## Read-only evidence inspection
 
 Run `python -m backend.app.evidence_audit` with the application database/storage configuration. It reports missing or changed originals/PDFs, unsafe paths, missing manifests and unreferenced files without modifying anything. Exit 0 means the inspected references match; exit 2 means review is needed. Stop writes for a stable inventory. Older report versions can be unreferenced intentionally. Never delete reported files automatically; retention and legal-hold policy must be established first.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+## Final security hardening
+
+See [Security and deployment hardening](SECURITY_HARDENING.md) for reported versus verified authentication, rotating refresh cookies, revision0003, and explicit production PostgreSQL configuration. Docker/Compose now require DATABASE_URL; SQLite production additionally requires ALLOW_SQLITE_PRODUCTION=true. Earlier SQLite examples require this explicit operator choice.
 
 
 <!-- /coderabbit-ai-generated:v1 -->

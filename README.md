@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:70ffa6cc3d2877fe054bce8f6a204c4c17a278070ff1c4e000280a82708abf2a -->
+
 <!-- coderabbit-ai-generated-section:v1:c7cb7ae90d968c009d55c8eee41a15ccf6ca43a961ef501cd78e88c6db7727c8 -->
 
 <!-- coderabbit-ai-generated-section:v1:71edf5d73d0f176b988297450657df215860b1584f6fdb3e321eda266c90d50a -->
@@ -58,6 +60,12 @@ See [Testing](docs/TESTING.md) for isolated storage commands and verified result
 Saved mail is untrusted evidence. The app never executes attachments or follows message URLs. Original artifacts remain private and unchanged by presentation masking. Live enrichment discloses queried indicators to external providers; map tiles and Google Fonts contact third parties. Offline fixtures are labelled synthetic and must not be cited as live intelligence. See [Security](docs/SECURITY.md), [Threat model](docs/THREAT_MODEL.md), [Providers](docs/INTELLIGENCE_PROVIDERS.md), [Forensics](docs/EMAIL_FORENSICS.md), [Evidence](docs/EVIDENCE_AND_CHAIN_OF_CUSTODY.md), [Risk scoring](docs/RISK_SCORING.md) and [Analyst workflow](docs/ANALYST_WORKFLOW.md).
 
 Dataset authorship and redistribution rights remain unverified; the repository license alone does not establish rights to every inherited sample. Dependency inventory is recorded in `docs/dependency-licenses.json`; audit results are time-specific, not a security guarantee. See [Changelog](docs/CHANGELOG.md).
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+## Final security hardening
+
+See [Security and deployment hardening](docs/SECURITY_HARDENING.md) for reported versus verified authentication, rotating refresh cookies, revision0003, and explicit production PostgreSQL configuration. Docker/Compose now require DATABASE_URL; SQLite production additionally requires ALLOW_SQLITE_PRODUCTION=true. Earlier SQLite examples require this explicit operator choice.
 
 
 <!-- /coderabbit-ai-generated:v1 -->

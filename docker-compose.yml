@@ -10,7 +10,8 @@ services:
       SECRET_KEY: ${SECRET_KEY:?Set a random SECRET_KEY before starting}
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:8000"]}
       INTELLIGENCE_MODE: offline
-      DATABASE_URL: sqlite+aiosqlite:////app/storage/mailspectra.db
+      DATABASE_URL: ${DATABASE_URL:?Set explicit PostgreSQL DATABASE_URL}
+      ALLOW_SQLITE_PRODUCTION: ${ALLOW_SQLITE_PRODUCTION:-false}
       UPLOAD_DIR: /app/storage/uploads
       REPORTS_DIR: /app/storage/reports
     volumes:
