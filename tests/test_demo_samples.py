@@ -44,6 +44,7 @@ def assert_reserved_hostnames(raw: str) -> None:
             f"hostname {hostname} must use the reserved .test namespace"
         )
 
+
 DOCUMENTATION_NETWORKS = (
     IPv4Network("192.0.2.0/24"),
     IPv4Network("198.51.100.0/24"),
@@ -64,7 +65,7 @@ def test_hostname_extraction_detects_non_reserved_domains_in_supported_contexts(
         "mx.example.test",
         "links.example.net",
     }
-    with pytest.raises(AssertionError, match=r"hostname outside\\.example\\.org must use"):
+    with pytest.raises(AssertionError, match=r"hostname outside\.example\.org must use"):
         assert_reserved_hostnames(raw)
 
 
