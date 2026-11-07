@@ -9,14 +9,14 @@ export default function ThreatGraphView({ threatGraph }) {
 
   const nodes = threatGraph?.nodes || [];
   const edges = threatGraph?.edges || [];
-  const metrics = threatGraph?.metrics || {
-    node_count: nodes.length,
-    edge_count: edges.length,
-    density: 0.0,
-    connected_components: 1,
+  const metrics = {
+    node_count: threatGraph?.total_nodes,
+    edge_count: threatGraph?.total_edges,
+    density: threatGraph?.density,
+    connected_components: threatGraph?.connected_components_count,
   };
 
-  const nodeTypes = ['ALL', ...Array.from(new Set(nodes.map((n) => n.type || 'UNKNOWN')))];
+  const nodeTypes = ['ALL', ...Array.from(new Set(nodes.map((n) => n.node_type || 'UNKNOWN')))];
 
   // Color & Icon mapping for node types
   const nodeConfig = {
@@ -41,13 +41,13 @@ export default function ThreatGraphView({ threatGraph }) {
 
     // Place email/case node at center if present, others arranged radially
     return nodes.map((node, index) => {
-      const isCenter = node.type === 'EMAIL' || node.type === 'SENDER';
+      const isCenter = node.node_type === 'EMAIL' || node.node_type === 'SENDER';
       let x = centerX;
       let y = centerY;
 
       if (!isCenter || total > 1) {
         const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-        const dist = node.type === 'EMAIL' ? 0 : node.type === 'SENDER' || node.type === 'DOMAIN' ? radius * 0.55 : radius;
+        const dist = node.node_type === 'EMAIL' ? 0 : node.node_type === 'SENDER' || node.node_type === 'DOMAIN' ? radius * 0.55 : radius;
         x = centerX + dist * Math.cos(angle);
         y = centerY + dist * Math.sin(angle);
       }
@@ -68,7 +68,7 @@ export default function ThreatGraphView({ threatGraph }) {
 
   const filteredNodes = filterType === 'ALL'
     ? renderedNodes
-    : renderedNodes.filter((n) => n.type === filterType);
+    : renderedNodes.filter((n) => n.node_type === filterType);
 
   if (nodes.length === 0) {
     return (
@@ -84,21 +84,21 @@ export default function ThreatGraphView({ threatGraph }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-[#111827] border border-slate-800">
           <span className="text-[10px] font-mono uppercase text-slate-400">GRAPH NODES</span>
-          <p className="text-xl font-bold font-mono text-cyan-400 mt-1">{metrics.node_count || nodes.length}</p>
+          <p className="text-xl font-bold font-mono text-cyan-400 mt-1">{metrics.node_count ?? 'Unavailable'}</p>
         </div>
         <div className="p-4 rounded-xl bg-[#111827] border border-slate-800">
           <span className="text-[10px] font-mono uppercase text-slate-400">RELATIONSHIP EDGES</span>
-          <p className="text-xl font-bold font-mono text-blue-400 mt-1">{metrics.edge_count || edges.length}</p>
+          <p className="text-xl font-bold font-mono text-blue-400 mt-1">{metrics.edge_count ?? 'Unavailable'}</p>
         </div>
         <div className="p-4 rounded-xl bg-[#111827] border border-slate-800">
           <span className="text-[10px] font-mono uppercase text-slate-400">GRAPH DENSITY</span>
           <p className="text-xl font-bold font-mono text-purple-400 mt-1">
-            {metrics.density !== undefined ? Number(metrics.density).toFixed(3) : '0.000'}
+            {metrics.density !== undefined ? Number(metrics.density).toFixed(3) : 'Unavailable'}
           </p>
         </div>
         <div className="p-4 rounded-xl bg-[#111827] border border-slate-800">
           <span className="text-[10px] font-mono uppercase text-slate-400">CONNECTED CLUSTERS</span>
-          <p className="text-xl font-bold font-mono text-emerald-400 mt-1">{metrics.connected_components || 1}</p>
+          <p className="text-xl font-bold font-mono text-emerald-400 mt-1">{metrics.connected_components ?? 'Unavailable'}</p>
         </div>
       </div>
 
@@ -235,7 +235,7 @@ export default function ThreatGraphView({ threatGraph }) {
 
               {/* Render Nodes */}
               {filteredNodes.map((node) => {
-                const cfg = nodeConfig[node.type] || { color: '#94a3b8', bg: '#475569', label: node.type };
+                const cfg = nodeConfig[node.node_type] || { color: '#94a3b8', bg: '#475569', label: node.node_type };
                 const isSelected = selectedNode?.id === node.id;
 
                 return (
@@ -277,7 +277,7 @@ export default function ThreatGraphView({ threatGraph }) {
                       fontFamily="monospace"
                       className="select-none pointer-events-none"
                     >
-                      {(node.type || 'N').substring(0, 2)}
+                      {(node.node_type || 'N').substring(0, 2)}
                     </text>
 
                     {/* Node Label Text Below */}
@@ -312,7 +312,7 @@ export default function ThreatGraphView({ threatGraph }) {
               <div>
                 <span className="text-[10px] uppercase text-slate-500 block">ENTITY TYPE</span>
                 <span className="inline-block mt-1 px-2.5 py-1 rounded text-xs font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
-                  {selectedNode.type}
+                  {selectedNode.node_type}
                 </span>
               </div>
 

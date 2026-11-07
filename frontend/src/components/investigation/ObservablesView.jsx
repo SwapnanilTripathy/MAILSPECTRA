@@ -92,7 +92,7 @@ export default function ObservablesView({ observables, attachments }) {
                 <div key={i} className="p-5 space-y-3 font-mono text-xs hover:bg-slate-800/20 transition">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-white text-sm">{att.filename || `attachment_${i+1}`}</span>
-                    <span className="text-slate-400">{att.filesize_bytes ? `${(att.filesize_bytes / 1024).toFixed(1)} KB` : 'N/A'}</span>
+                    <span className="text-slate-400">{att.size_bytes ? `${(att.size_bytes / 1024).toFixed(1)} KB` : 'N/A'}</span>
                   </div>
                   <div className="text-slate-400">MIME Type: <span className="text-slate-200">{att.content_type || 'application/octet-stream'}</span></div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">

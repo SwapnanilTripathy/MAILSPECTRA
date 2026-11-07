@@ -36,7 +36,7 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
             <div className="text-right">
               <span className="text-[10px] font-mono uppercase text-slate-400 block">CONFIDENCE</span>
               <span className="text-sm font-bold font-mono text-cyan-400">
-                {Math.round((originAssessment.confidence || 0.8) * 100)}%
+                {Math.round((originAssessment.confidence ?? 0) * 100)}%
               </span>
             </div>
           </div>
@@ -61,12 +61,12 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
               MTA Relay Path Reconstruction ({totalHops} Hops Traversed)
             </h4>
           </div>
-          <span className="text-xs font-mono text-slate-400">Chronological Order (Hop 1 = Origin)</span>
+          <span className="text-xs font-mono text-slate-400">Header order reversed; supplied evidence is untrusted</span>
         </div>
 
         <div className="relative pl-6 space-y-8 before:absolute before:left-[17px] before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-cyan-500 before:via-blue-500 before:to-slate-700">
           {hops.map((hop, index) => {
-            const isOrigin = hop.hop_number === 1 || hop.ip === originIP;
+            const isOrigin = hop.hop_index === 1 || hop.from_ip === originIP;
             const isDestination = index === hops.length - 1;
             const hasAnomaly = hop.anomalies && hop.anomalies.length > 0;
 
@@ -84,7 +84,7 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
                       : 'bg-slate-800 border-slate-600 text-slate-300'
                   }`}
                 >
-                  {hop.hop_number || index + 1}
+                  {hop.hop_index || index + 1}
                 </div>
 
                 {/* Hop Card */}
@@ -100,11 +100,11 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono font-bold text-white">
-                        HOP #{hop.hop_number || index + 1}
+                        HOP #{hop.hop_index || index + 1}
                       </span>
                       {isOrigin && (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                          CLIENT SUBMISSION / ORIGIN
+                          EARLIEST OBSERVED HOP
                         </span>
                       )}
                       {isDestination && (
@@ -112,7 +112,7 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
                           FINAL MX INBOX
                         </span>
                       )}
-                      {hop.is_private && (
+                      {hop.is_private_ip && (
                         <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-400 border border-slate-700">
                           RFC1918 PRIVATE IP
                         </span>
@@ -135,8 +135,8 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
                       </div>
                       <div className="text-slate-400 flex items-center gap-1.5">
                         Relaying IP:
-                        {hop.ip ? (
-                          <DefangedIndicator value={hop.ip} type="IP" />
+                        {hop.from_ip ? (
+                          <DefangedIndicator value={hop.from_ip} type="IP" />
                         ) : (
                           <span className="text-slate-500">Unspecified</span>
                         )}
@@ -148,7 +148,7 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
                         By Receiver: <span className="text-slate-200">{hop.by_host || 'N/A'}</span>
                       </div>
                       <div className="text-slate-400">
-                        Protocol: <span className="text-cyan-300">{hop.protocol || hop.with_protocol || 'ESMTP'}</span>
+                        Protocol: <span className="text-cyan-300">{hop.with_protocol || 'Unknown'}</span>
                         {hop.tls_version && <span className="ml-2 text-emerald-400">({hop.tls_version})</span>}
                       </div>
                     </div>
@@ -157,7 +157,7 @@ export default function RelayHopsView({ relayPath, originAssessment }) {
                   {/* Timestamp & Auth */}
                   <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400">
                     <div>
-                      Timestamp: <span className="text-slate-300">{hop.timestamp || hop.date_raw || 'N/A'}</span>
+                      Timestamp: <span className="text-slate-300">{hop.timestamp_iso || hop.timestamp_raw || 'N/A'}</span>
                     </div>
                     {hop.auth_status && (
                       <div className="flex items-center gap-1 text-emerald-400">

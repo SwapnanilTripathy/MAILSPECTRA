@@ -3,9 +3,9 @@ import { Network, ShieldAlert, GitBranch, Database, CheckCircle2, AlertCircle, I
 import DefangedIndicator from '../common/DefangedIndicator';
 
 export default function CampaignAttributionView({ activeCampaign, campaignCorrelations, attributionSupport }) {
-  const correlations = campaignCorrelations?.correlations || [];
-  const hypothesis = attributionSupport?.hypothesis || 'INSUFFICIENT_EVIDENCE';
-  const confidence = attributionSupport?.confidence ?? 0.5;
+  const correlations = campaignCorrelations || [];
+  const hypothesis = attributionSupport?.assessment || 'INSUFFICIENT_EVIDENCE';
+  const confidence = attributionSupport?.confidence ?? 0;
 
   const hypothesisColors = {
     DIRECT_MALICIOUS_INFRASTRUCTURE: 'bg-red-500/20 text-red-300 border-red-500/40',
@@ -39,7 +39,7 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
           </div>
 
           <div className="sm:text-right">
-            <span className="text-[10px] font-mono uppercase text-slate-400 block">HYPOTHESIS CONFIDENCE</span>
+            <span className="text-[10px] font-mono uppercase text-slate-400 block">RULE SUPPORT (NOT PROBABILITY)</span>
             <span className="text-2xl font-extrabold font-mono text-cyan-400">
               {Math.round(confidence * 100)}%
             </span>
@@ -57,10 +57,10 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
         </div>
 
         {/* Forensic Limitations */}
-        {attributionSupport?.forensic_limitations && (
+        {attributionSupport?.limitations && (
           <div className="mt-3 text-[11px] font-mono text-amber-400/90 flex items-start gap-2">
             <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            <span>Forensic Disclaimer: {attributionSupport.forensic_limitations}</span>
+            <span>Forensic Disclaimer: {attributionSupport.limitations}</span>
           </div>
         )}
       </div>
@@ -104,7 +104,7 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
             {activeCampaign.shared_infrastructure && (
               <div className="pt-3 border-t border-slate-800">
                 <span className="text-slate-400 text-xs font-semibold block mb-2">
-                  Shared Attack Infrastructure In Cluster:
+                  Shared Observed Infrastructure In Cluster:
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded bg-slate-900 border border-slate-800">
@@ -147,11 +147,11 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
               <div key={idx} className="p-4 hover:bg-slate-800/30 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-cyan-400">{corr.matched_case_id}</span>
-                    <span className="text-slate-400">• Match Score: <strong className="text-slate-200">{Math.round((corr.score || 0.8) * 100)}%</strong></span>
+                    <span className="font-bold text-cyan-400">{corr.related_case_id}</span>
+                    <span className="text-slate-400">• Match Score: <strong className="text-slate-200">{Math.round((corr.correlation_score ?? 0) * 100)}%</strong></span>
                   </div>
                   <p className="text-slate-300 font-sans text-xs">
-                    Linked via shared {corr.shared_type || 'infrastructure'}: <DefangedIndicator value={corr.shared_indicator || corr.indicator} />
+                    Linked via shared {corr.shared_type || 'infrastructure'}: <DefangedIndicator value={(corr.shared_indicators || []).join(', ')} />
                   </p>
                 </div>
                 <div className="text-slate-400 text-[11px] shrink-0">

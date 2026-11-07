@@ -16,9 +16,9 @@ export default function DnsRdapView({ infrastructureIntel }) {
   }
 
   const currentDomain = domains[selectedDomainIndex] || domains[0];
-  const dnsRecords = currentDomain.dns_records || {};
+  const dnsRecords = currentDomain.dns || {};
   const rdap = currentDomain.rdap || {};
-  const lexical = currentDomain.lexical_analysis || {};
+  const lexical = currentDomain;
 
   return (
     <div className="space-y-6">
@@ -73,13 +73,13 @@ export default function DnsRdapView({ infrastructureIntel }) {
           <div>
             <span className="text-[10px] font-mono uppercase text-slate-400 block">SHANNON ENTROPY</span>
             <span className={`text-lg font-bold font-mono ${lexical.entropy > 3.8 ? 'text-red-400' : 'text-emerald-400'}`}>
-              {lexical.entropy ? Number(lexical.entropy).toFixed(2) : 'N/A'}
+              {lexical.entropy != null ? Number(lexical.entropy).toFixed(2) : 'Unavailable'}
             </span>
           </div>
           <div>
             <span className="text-[10px] font-mono uppercase text-slate-400 block">SUBDOMAIN DEPTH</span>
             <span className="text-lg font-bold font-mono text-slate-200">
-              {lexical.subdomain_count ?? 0}
+              {lexical.subdomain ? lexical.subdomain.split('.').length : 0}
             </span>
           </div>
         </div>
@@ -96,7 +96,7 @@ export default function DnsRdapView({ infrastructureIntel }) {
                 Safe DNS Record Resolution
               </h4>
             </div>
-            <span className="text-[11px] font-mono text-emerald-400">Asynchronous dnspython</span>
+            <span className="text-[11px] font-mono text-emerald-400">{dnsRecords.status || 'Unavailable'}</span>
           </div>
 
           <div className="p-5 space-y-4 font-mono text-xs">
@@ -104,17 +104,17 @@ export default function DnsRdapView({ infrastructureIntel }) {
             <div>
               <div className="text-slate-400 font-semibold mb-1 flex items-center justify-between">
                 <span>A (IPv4 Addresses):</span>
-                <span className="text-[10px] text-slate-500">{(dnsRecords.A || []).length} found</span>
+                <span className="text-[10px] text-slate-500">{(dnsRecords.a_records || []).length} found</span>
               </div>
               <div className="space-y-1">
-                {(dnsRecords.A && dnsRecords.A.length > 0) ? (
-                  dnsRecords.A.map((ip, i) => (
+                {(dnsRecords.a_records && dnsRecords.a_records.length > 0) ? (
+                  dnsRecords.a_records.map((ip, i) => (
                     <div key={i} className="p-2 rounded bg-slate-900/80 border border-slate-800 text-slate-200 flex items-center justify-between">
                       <DefangedIndicator value={ip} type="IP" />
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-500 italic">No A records resolved</p>
+                  <p className="text-slate-500 italic">No A records available</p>
                 )}
               </div>
             </div>
@@ -123,11 +123,11 @@ export default function DnsRdapView({ infrastructureIntel }) {
             <div>
               <div className="text-slate-400 font-semibold mb-1 flex items-center justify-between">
                 <span>MX (Mail Exchanger):</span>
-                <span className="text-[10px] text-slate-500">{(dnsRecords.MX || []).length} found</span>
+                <span className="text-[10px] text-slate-500">{(dnsRecords.mx_hosts || []).length} found</span>
               </div>
               <div className="space-y-1">
-                {(dnsRecords.MX && dnsRecords.MX.length > 0) ? (
-                  dnsRecords.MX.map((mx, i) => (
+                {(dnsRecords.mx_hosts && dnsRecords.mx_hosts.length > 0) ? (
+                  dnsRecords.mx_hosts.map((mx, i) => (
                     <div key={i} className="p-2 rounded bg-slate-900/80 border border-slate-800 text-slate-200 truncate" title={typeof mx === 'object' ? JSON.stringify(mx) : mx}>
                       {typeof mx === 'object' ? `${mx.preference || ''} ${mx.exchange || ''}` : mx}
                     </div>
@@ -142,11 +142,11 @@ export default function DnsRdapView({ infrastructureIntel }) {
             <div>
               <div className="text-slate-400 font-semibold mb-1 flex items-center justify-between">
                 <span>TXT Records:</span>
-                <span className="text-[10px] text-slate-500">{(dnsRecords.TXT || []).length} found</span>
+                <span className="text-[10px] text-slate-500">{(dnsRecords.txt_records || []).length} found</span>
               </div>
               <div className="space-y-1 max-h-40 overflow-y-auto">
-                {(dnsRecords.TXT && dnsRecords.TXT.length > 0) ? (
-                  dnsRecords.TXT.map((txt, i) => (
+                {(dnsRecords.txt_records && dnsRecords.txt_records.length > 0) ? (
+                  dnsRecords.txt_records.map((txt, i) => (
                     <div key={i} className="p-2 rounded bg-slate-900/80 border border-slate-800 text-slate-300 break-all text-[11px]">
                       {txt}
                     </div>
@@ -165,7 +165,7 @@ export default function DnsRdapView({ infrastructureIntel }) {
             <div className="flex items-center gap-2">
               <FileSearch className="w-4 h-4 text-cyan-400" />
               <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">
-                Official RDAP Registration Metadata
+                RDAP Registration Metadata — {rdap.lookup_status || 'Unavailable'}
               </h4>
             </div>
             {rdap.privacy_protected && (
@@ -180,11 +180,11 @@ export default function DnsRdapView({ infrastructureIntel }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <span className="text-slate-500 block text-[10px]">REGISTRAR</span>
-                <span className="text-slate-200 font-semibold">{rdap.registrar || 'Privacy Protected / Unlisted'}</span>
+                <span className="text-slate-200 font-semibold">{rdap.registrar || 'Unavailable'}</span>
               </div>
               <div>
                 <span className="text-slate-500 block text-[10px]">DOMAIN STATUS</span>
-                <span className="text-slate-200 truncate block">{(rdap.status || ['Active']).join(', ')}</span>
+                <span className="text-slate-200 truncate block">{(rdap.domain_status || []).join(', ') || 'Unknown'}</span>
               </div>
               <div>
                 <span className="text-slate-500 block text-[10px]">CREATION DATE</span>
