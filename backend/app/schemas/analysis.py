@@ -58,6 +58,7 @@ class InitialThreatAssessment(BaseModel):
 
 class EmailAnalysisResponse(BaseModel):
     success: bool = True
+    privacy_redaction_applied: bool = False
     case_id: str
     analyzed_at: str
     filename: Optional[str] = "uploaded.eml"

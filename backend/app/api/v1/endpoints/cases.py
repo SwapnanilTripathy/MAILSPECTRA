@@ -62,6 +62,7 @@ async def list_cases(
             | (CaseRecord.subject.ilike(search_pattern))
             | (CaseRecord.from_address.ilike(search_pattern))
             | (CaseRecord.filename.ilike(search_pattern))
+            | (CaseRecord.sha256.ilike(search_pattern))
         )
 
     stmt = stmt.offset(offset).limit(limit)
@@ -72,6 +73,16 @@ async def list_cases(
     count_stmt = select(func.count(CaseRecord.case_id))
     if status_filter:
         count_stmt = count_stmt.where(CaseRecord.status == status_filter.upper())
+    if classification_filter:
+        count_stmt = count_stmt.where(CaseRecord.classification == classification_filter.upper())
+    if search:
+        count_stmt = count_stmt.where(
+            (CaseRecord.case_id.ilike(search_pattern))
+            | (CaseRecord.subject.ilike(search_pattern))
+            | (CaseRecord.from_address.ilike(search_pattern))
+            | (CaseRecord.filename.ilike(search_pattern))
+            | (CaseRecord.sha256.ilike(search_pattern))
+        )
     total_count = (await db.execute(count_stmt)).scalar() or 0
 
     return {

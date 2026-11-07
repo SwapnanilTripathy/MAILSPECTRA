@@ -63,6 +63,7 @@ async def analyze_email_file(
         analysis_result = await pipeline.analyze_bytes_async(raw_bytes=content, filename=filename, db_session=db)
         if mask_pii or settings.PRIVACY_MASKING_ENABLED:
             analysis_result = PrivacyService.apply_to_response(analysis_result)
+            analysis_result.privacy_redaction_applied = True
         pred_cls = analysis_result.ai_inference.predicted_class if analysis_result.ai_inference else "UNKNOWN"
         risk_sc = analysis_result.risk_assessment.risk_score if analysis_result.risk_assessment else 0.0
         logger.info(f"Analysis completed: Case ID {analysis_result.case_id} | AI Class: {pred_cls} | Risk: {risk_sc}/100")
@@ -98,6 +99,7 @@ async def analyze_raw_email(
         res = await pipeline.analyze_bytes_async(raw_bytes=raw_bytes, filename=payload.filename, db_session=db)
         if payload.mask_pii or settings.PRIVACY_MASKING_ENABLED:
             res = PrivacyService.apply_to_response(res)
+            res.privacy_redaction_applied = True
         return res
     except Exception as e:
         logger.error(f"Error during raw email parsing: {e}", exc_info=True)

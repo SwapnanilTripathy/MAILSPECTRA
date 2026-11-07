@@ -23,6 +23,11 @@ export default function CasesPage() {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [submittedSearch, setSubmittedSearch] = useState('');
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState('');
+  const pageSize = 50;
   const [statusFilter, setStatusFilter] = useState('');
   const [classificationFilter, setClassificationFilter] = useState('');
   const [selectedCase, setSelectedCase] = useState(null);
@@ -32,20 +37,22 @@ export default function CasesPage() {
 
   useEffect(() => {
     fetchCases();
-  }, [statusFilter, classificationFilter]);
+  }, [statusFilter, classificationFilter, submittedSearch, offset]);
 
   const fetchCases = async () => {
     setLoading(true);
+    setError('');
     try {
-      const params = {};
+      const params = { limit: pageSize, offset };
       if (statusFilter) params.status = statusFilter;
       if (classificationFilter) params.classification = classificationFilter;
-      if (search) params.search = search;
+      if (submittedSearch) params.search = submittedSearch;
 
       const res = await api.listCases(params);
       setCases(res?.items || []);
+      setTotal(res?.total || 0);
     } catch (err) {
-      console.error('Failed to load cases:', err);
+      setError('Unable to load cases. Check the connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -53,7 +60,11 @@ export default function CasesPage() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchCases();
+    if (offset === 0 && submittedSearch === search) fetchCases();
+    else {
+      setOffset(0);
+      setSubmittedSearch(search);
+    }
   };
 
   const handleUpdateStatus = async () => {
@@ -93,7 +104,8 @@ export default function CasesPage() {
             SOC Case Management & Chain of Custody
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Preserved email forensic cases with SHA-256 evidence tracking and investigation lifecycle.
+            Preserved email forensic cases with SHA-256 evidence tracking and
+            investigation lifecycle.
           </p>
         </div>
 
@@ -108,7 +120,10 @@ export default function CasesPage() {
 
       {/* Filter & Search Toolbar */}
       <div className="p-4 rounded-xl bg-[#111827] border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
-        <form onSubmit={handleSearchSubmit} className="flex-1 w-full flex items-center gap-2">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex-1 w-full flex items-center gap-2"
+        >
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
             <input
@@ -131,7 +146,10 @@ export default function CasesPage() {
           {/* Status Filter */}
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setOffset(0);
+              setStatusFilter(e.target.value);
+            }}
             className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300 focus:outline-none focus:border-cyan-500"
           >
             <option value="">All Statuses</option>
@@ -144,7 +162,10 @@ export default function CasesPage() {
           {/* Classification Filter */}
           <select
             value={classificationFilter}
-            onChange={(e) => setClassificationFilter(e.target.value)}
+            onChange={(e) => {
+              setOffset(0);
+              setClassificationFilter(e.target.value);
+            }}
             className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300 focus:outline-none focus:border-cyan-500"
           >
             <option value="">All Threat Classes</option>
@@ -164,6 +185,13 @@ export default function CasesPage() {
           <div className="p-12 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
             <div className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
             <span>Loading investigation cases from database...</span>
+          </div>
+        ) : error ? (
+          <div role="alert" className="p-8 text-center text-amber-300 text-sm">
+            {error}{' '}
+            <button onClick={fetchCases} className="text-cyan-300 underline">
+              Retry
+            </button>
           </div>
         ) : cases.length === 0 ? (
           <div className="p-12 text-center text-slate-500 font-mono text-xs space-y-2">
@@ -186,7 +214,10 @@ export default function CasesPage() {
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {cases.map((c) => (
-                  <tr key={c.case_id} className="hover:bg-slate-800/30 transition">
+                  <tr
+                    key={c.case_id}
+                    className="hover:bg-slate-800/30 transition"
+                  >
                     <td className="px-5 py-3.5 font-bold text-cyan-400">
                       <button
                         onClick={() => navigate(`/cases/${c.case_id}`)}
@@ -196,16 +227,23 @@ export default function CasesPage() {
                       </button>
                     </td>
                     <td className="px-5 py-3.5 max-w-xs">
-                      <p className="text-slate-200 font-sans truncate font-medium" title={c.subject}>
+                      <p
+                        className="text-slate-200 font-sans truncate font-medium"
+                        title={c.subject}
+                      >
                         {c.subject || c.filename}
                       </p>
-                      <p className="text-slate-400 text-[11px] truncate mt-0.5">{c.from_address || 'N/A'}</p>
+                      <p className="text-slate-400 text-[11px] truncate mt-0.5">
+                        {c.from_address || 'N/A'}
+                      </p>
                     </td>
                     <td className="px-5 py-3.5">
                       <SeverityBadge severity={c.classification} size="sm" />
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className={`font-bold ${c.risk_score >= 60 ? 'text-red-400' : c.risk_score >= 30 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      <span
+                        className={`font-bold ${c.risk_score >= 60 ? 'text-red-400' : c.risk_score >= 30 ? 'text-amber-400' : 'text-emerald-400'}`}
+                      >
                         {c.risk_score}/100
                       </span>
                     </td>
@@ -246,37 +284,82 @@ export default function CasesPage() {
         )}
       </div>
 
+      {!loading && !error && total > pageSize && (
+        <div className="flex items-center justify-between gap-4 text-sm text-slate-300">
+          <span>
+            Showing {offset + 1}–{Math.min(offset + pageSize, total)} of {total}
+          </span>
+          <div className="flex gap-2">
+            <button
+              disabled={offset === 0}
+              onClick={() => setOffset(Math.max(0, offset - pageSize))}
+              className="px-3 py-2 rounded bg-slate-800 disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <button
+              disabled={offset + pageSize >= total}
+              onClick={() => setOffset(offset + pageSize)}
+              className="px-3 py-2 rounded bg-slate-800 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Case Status Modal */}
       {selectedCase && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 font-mono">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white uppercase">Update Case Lifecycle</h3>
-              <button onClick={() => setSelectedCase(null)} className="text-slate-400 hover:text-white">✕</button>
+              <h3 className="text-sm font-bold text-white uppercase">
+                Update Case Lifecycle
+              </h3>
+              <button
+                onClick={() => setSelectedCase(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="text-xs space-y-3">
               <div>
-                <span className="text-slate-400 block mb-1">Target Case ID:</span>
-                <span className="text-cyan-400 font-bold">{selectedCase.case_id}</span>
+                <span className="text-slate-400 block mb-1">
+                  Target Case ID:
+                </span>
+                <span className="text-cyan-400 font-bold">
+                  {selectedCase.case_id}
+                </span>
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1">Investigation Status:</label>
+                <label className="text-slate-400 block mb-1">
+                  Investigation Status:
+                </label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
                   className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 focus:border-cyan-500"
                 >
                   <option value="OPEN">OPEN (Triage Queue)</option>
-                  <option value="INVESTIGATING">INVESTIGATING (In Progress)</option>
-                  <option value="RESOLVED">RESOLVED (Threat Contained / Remediated)</option>
-                  <option value="ARCHIVED">ARCHIVED (Evidence Preserved)</option>
+                  <option value="INVESTIGATING">
+                    INVESTIGATING (In Progress)
+                  </option>
+                  <option value="RESOLVED">
+                    RESOLVED (Threat Contained / Remediated)
+                  </option>
+                  <option value="ARCHIVED">
+                    ARCHIVED (Evidence Preserved)
+                  </option>
                 </select>
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1">Analyst Notes / Triage Justification:</label>
+                <label className="text-slate-400 block mb-1">
+                  Analyst Notes / Triage Justification:
+                </label>
                 <textarea
                   value={statusComment}
                   onChange={(e) => setStatusComment(e.target.value)}

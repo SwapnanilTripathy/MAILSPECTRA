@@ -16,20 +16,26 @@ import SeverityBadge from '../components/common/SeverityBadge';
 export default function ReportsPage() {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState('');
+  const pageSize = 50;
   const [verifyingId, setVerifyingId] = useState(null);
   const [verificationModalData, setVerificationModalData] = useState(null);
 
   useEffect(() => {
     fetchReports();
-  }, []);
+  }, [offset]);
 
   const fetchReports = async () => {
     setLoading(true);
+    setError('');
     try {
-      const res = await api.listCases();
+      const res = await api.listCases({ limit: pageSize, offset });
       setCases(res?.items || []);
+      setTotal(res?.total || 0);
     } catch (err) {
-      console.error('Failed to load reports:', err);
+      setError('Unable to load reports. Check the connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -67,9 +73,9 @@ export default function ReportsPage() {
             Forensic Report Repository & Evidence Vault
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Evidence-preserving PDF forensic intelligence reports with cryptographic SHA-256 integrity verification.
+            Evidence-preserving PDF forensic intelligence reports with
+            cryptographic SHA-256 integrity verification.
           </p>
-
         </div>
 
         <button
@@ -87,6 +93,13 @@ export default function ReportsPage() {
           <div className="p-12 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
             <div className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
             <span>Loading forensic reports repository...</span>
+          </div>
+        ) : error ? (
+          <div role="alert" className="p-8 text-center text-amber-300 text-sm">
+            {error}{' '}
+            <button onClick={fetchReports} className="text-cyan-300 underline">
+              Retry
+            </button>
           </div>
         ) : cases.length === 0 ? (
           <div className="p-12 text-center text-slate-500 font-mono text-xs space-y-2">
@@ -109,9 +122,17 @@ export default function ReportsPage() {
                 {cases.map((c) => {
                   const hasReport = Boolean(c.report_sha256);
                   return (
-                    <tr key={c.case_id} className="hover:bg-slate-800/30 transition">
-                      <td className="px-5 py-3.5 font-bold text-cyan-400">{c.case_id}</td>
-                      <td className="px-5 py-3.5 max-w-xs font-sans text-slate-200 truncate" title={c.subject}>
+                    <tr
+                      key={c.case_id}
+                      className="hover:bg-slate-800/30 transition"
+                    >
+                      <td className="px-5 py-3.5 font-bold text-cyan-400">
+                        {c.case_id}
+                      </td>
+                      <td
+                        className="px-5 py-3.5 max-w-xs font-sans text-slate-200 truncate"
+                        title={c.subject}
+                      >
                         {c.subject || c.filename}
                       </td>
                       <td className="px-5 py-3.5">
@@ -120,7 +141,10 @@ export default function ReportsPage() {
                       <td className="px-5 py-3.5 text-slate-300">
                         {hasReport ? (
                           <div className="flex items-center gap-2">
-                            <span className="truncate max-w-[140px] text-cyan-300" title={c.report_sha256}>
+                            <span
+                              className="truncate max-w-[140px] text-cyan-300"
+                              title={c.report_sha256}
+                            >
                               {c.report_sha256.substring(0, 16)}...
                             </span>
                             <button
@@ -132,7 +156,9 @@ export default function ReportsPage() {
                             </button>
                           </div>
                         ) : (
-                          <span className="text-slate-500 italic">Not Generated Yet</span>
+                          <span className="text-slate-500 italic">
+                            Not Generated Yet
+                          </span>
                         )}
                       </td>
                       <td className="px-5 py-3.5 text-right space-x-2">
@@ -165,6 +191,30 @@ export default function ReportsPage() {
         )}
       </div>
 
+      {!loading && !error && total > pageSize && (
+        <div className="flex items-center justify-between gap-4 text-sm text-slate-300">
+          <span>
+            Showing {offset + 1}–{Math.min(offset + pageSize, total)} of {total}
+          </span>
+          <div className="flex gap-2">
+            <button
+              disabled={offset === 0}
+              onClick={() => setOffset(Math.max(0, offset - pageSize))}
+              className="px-3 py-2 rounded bg-slate-800 disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <button
+              disabled={offset + pageSize >= total}
+              onClick={() => setOffset(offset + pageSize)}
+              className="px-3 py-2 rounded bg-slate-800 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Cryptographic Verification Modal */}
       {verificationModalData && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -172,25 +222,44 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white uppercase">Cryptographic Integrity Attestation</h3>
+                <h3 className="text-sm font-bold text-white uppercase">
+                  Cryptographic Integrity Attestation
+                </h3>
               </div>
-              <button onClick={() => setVerificationModalData(null)} className="text-slate-400 hover:text-white">✕</button>
+              <button
+                onClick={() => setVerificationModalData(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="text-xs space-y-3">
               <div>
-                <span className="text-slate-400 block text-[10px]">CASE IDENTIFIER:</span>
-                <span className="text-cyan-400 font-bold">{verificationModalData.case_id}</span>
+                <span className="text-slate-400 block text-[10px]">
+                  CASE IDENTIFIER:
+                </span>
+                <span className="text-cyan-400 font-bold">
+                  {verificationModalData.case_id}
+                </span>
               </div>
 
               <div>
-                <span className="text-slate-400 block text-[10px]">STORED DATABASE HASH:</span>
-                <span className="text-slate-200 break-all select-all">{verificationModalData.stored_hash}</span>
+                <span className="text-slate-400 block text-[10px]">
+                  STORED DATABASE HASH:
+                </span>
+                <span className="text-slate-200 break-all select-all">
+                  {verificationModalData.stored_hash}
+                </span>
               </div>
 
               <div>
-                <span className="text-slate-400 block text-[10px]">RE-COMPUTED ON-DISK HASH:</span>
-                <span className="text-slate-200 break-all select-all">{verificationModalData.calculated_hash}</span>
+                <span className="text-slate-400 block text-[10px]">
+                  RE-COMPUTED ON-DISK HASH:
+                </span>
+                <span className="text-slate-200 break-all select-all">
+                  {verificationModalData.calculated_hash}
+                </span>
               </div>
 
               <div

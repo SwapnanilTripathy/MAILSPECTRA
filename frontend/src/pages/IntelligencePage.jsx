@@ -55,8 +55,8 @@ export default function IntelligencePage() {
         type: queryType,
         entropy: entropy.toFixed(2),
         is_dga: entropy > 3.8,
-        status: 'QUERIED_OFFLINE_DATABASE',
-        reputation: entropy > 3.8 ? 'SUSPICIOUS (High Lexical Randomness)' : 'CLEAN / NEUTRAL',
+        status: 'LEXICAL_ONLY',
+        reputation: 'Not checked',
         timestamp: new Date().toISOString(),
       });
       setCalculating(false);
@@ -72,7 +72,8 @@ export default function IntelligencePage() {
           Threat Intelligence & IOC Workbench
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Standalone lookup tool for IPs, Domains, and File Hashes with lexical entropy and typosquatting analysis.
+          Calculate lexical entropy for an indicator. This tool does not perform
+          a reputation lookup.
         </p>
       </div>
 
@@ -105,8 +106,8 @@ export default function IntelligencePage() {
                 queryType === 'DOMAIN'
                   ? 'e.g. login-secure-portal.com or micr0s0ft.net'
                   : queryType === 'IP'
-                  ? 'e.g. 203.0.113.88 or 198.51.100.45'
-                  : 'e.g. 5d41402abc4b2a76b9719d911017c592'
+                    ? 'e.g. 203.0.113.88 or 198.51.100.45'
+                    : 'e.g. 5d41402abc4b2a76b9719d911017c592'
               }
               className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500"
             />
@@ -124,7 +125,9 @@ export default function IntelligencePage() {
         {result && (
           <div className="mt-4 p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3 font-mono text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-slate-400 font-bold uppercase">IOC Telemetry Result</span>
+              <span className="text-slate-400 font-bold uppercase">
+                Lexical Analysis Result
+              </span>
               <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-cyan-300 border border-slate-700">
                 {result.type}
               </span>
@@ -132,22 +135,38 @@ export default function IntelligencePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
               <div>
-                <span className="text-slate-500 text-[10px] block">INDICATOR VALUE</span>
-                <DefangedIndicator value={result.indicator} type={result.type} className="text-white" />
+                <span className="text-slate-500 text-[10px] block">
+                  INDICATOR VALUE
+                </span>
+                <DefangedIndicator
+                  value={result.indicator}
+                  type={result.type}
+                  className="text-white"
+                />
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">REPUTATION ASSESSMENT</span>
-                <span className={`font-bold ${result.is_dga ? 'text-red-400' : 'text-emerald-400'}`}>
+                <span className="text-slate-500 text-[10px] block">
+                  REPUTATION LOOKUP
+                </span>
+                <span className="font-bold text-slate-300">
                   {result.reputation}
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">SHANNON ENTROPY SCORE</span>
-                <span className="text-cyan-400 font-bold">{result.entropy} bits / char</span>
+                <span className="text-slate-500 text-[10px] block">
+                  SHANNON ENTROPY SCORE
+                </span>
+                <span className="text-cyan-400 font-bold">
+                  {result.entropy} bits / char
+                </span>
               </div>
               <div>
-                <span className="text-slate-500 text-[10px] block">QUERY TIMESTAMP</span>
-                <span className="text-slate-300">{result.timestamp.substring(0, 19)}</span>
+                <span className="text-slate-500 text-[10px] block">
+                  QUERY TIMESTAMP
+                </span>
+                <span className="text-slate-300">
+                  {result.timestamp.substring(0, 19)}
+                </span>
               </div>
             </div>
           </div>
@@ -163,7 +182,9 @@ export default function IntelligencePage() {
           </h3>
         </div>
         <p className="text-xs text-slate-400">
-          Evaluates character unpredictability (bits per symbol) to detect Domain Generation Algorithms (DGA) and algorithmic randomness used by malware C2 channels.
+          Evaluates character unpredictability (bits per symbol) to detect
+          Domain Generation Algorithms (DGA) and algorithmic randomness used by
+          malware C2 channels.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -185,15 +206,25 @@ export default function IntelligencePage() {
         {calculatedEntropy !== null && (
           <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs flex items-center justify-between">
             <div>
-              <span className="text-slate-400 block text-[10px]">COMPUTED SHANNON ENTROPY</span>
-              <span className={`text-xl font-bold ${calculatedEntropy > 3.8 ? 'text-red-400' : 'text-emerald-400'}`}>
+              <span className="text-slate-400 block text-[10px]">
+                COMPUTED SHANNON ENTROPY
+              </span>
+              <span
+                className={`text-xl font-bold ${calculatedEntropy > 3.8 ? 'text-red-400' : 'text-emerald-400'}`}
+              >
                 {calculatedEntropy.toFixed(3)} bits
               </span>
             </div>
             <div className="text-right">
-              <span className="text-slate-400 block text-[10px]">DGA THRESHOLD (&gt; 3.8)</span>
-              <span className={`font-bold ${calculatedEntropy > 3.8 ? 'text-red-400' : 'text-emerald-400'}`}>
-                {calculatedEntropy > 3.8 ? 'LIKELY ALGORITHMIC DGA' : 'STANDARD LEXICAL DISTRIBUTION'}
+              <span className="text-slate-400 block text-[10px]">
+                DGA THRESHOLD (&gt; 3.8)
+              </span>
+              <span
+                className={`font-bold ${calculatedEntropy > 3.8 ? 'text-red-400' : 'text-emerald-400'}`}
+              >
+                {calculatedEntropy > 3.8
+                  ? 'LIKELY ALGORITHMIC DGA'
+                  : 'STANDARD LEXICAL DISTRIBUTION'}
               </span>
             </div>
           </div>

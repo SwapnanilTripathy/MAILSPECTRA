@@ -21,6 +21,7 @@ export default function CampaignsPage() {
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [campaignDetail, setCampaignDetail] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function CampaignsPage() {
 
   const fetchCampaigns = async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await api.listCampaigns();
       const items = res?.items || [];
@@ -37,7 +39,7 @@ export default function CampaignsPage() {
         setSelectedCampaignId(items[0].campaign_id);
       }
     } catch (err) {
-      console.error('Failed to load campaigns:', err);
+      setError('Unable to load campaigns. Check the connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -70,7 +72,8 @@ export default function CampaignsPage() {
           Threat Campaigns & Cross-Case Infrastructure Correlation
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Automated clustering of multi-case email attack infrastructure across shared IPs, domains, and phishing payloads.
+          Automated clustering of multi-case email attack infrastructure across
+          shared IPs, domains, and phishing payloads.
         </p>
       </div>
 
@@ -79,10 +82,20 @@ export default function CampaignsPage() {
           <div className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
           <span>Discovering correlated campaign clusters...</span>
         </div>
+      ) : error ? (
+        <div role="alert" className="p-8 text-center text-amber-300 text-sm">
+          {error}{' '}
+          <button onClick={fetchCampaigns} className="text-cyan-300 underline">
+            Retry
+          </button>
+        </div>
       ) : campaigns.length === 0 ? (
         <div className="p-12 rounded-xl bg-[#111827] border border-slate-800 text-center text-slate-500 font-mono text-xs space-y-2">
           <Network className="w-8 h-8 mx-auto text-slate-600" />
-          <p>No active cross-case campaign clusters discovered yet. Analyze multiple related emails to trigger correlation.</p>
+          <p>
+            No active cross-case campaign clusters discovered yet. Analyze
+            multiple related emails to trigger correlation.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -108,11 +121,18 @@ export default function CampaignsPage() {
                       <span className="font-bold font-mono text-xs text-cyan-400">
                         {camp.name || camp.campaign_id}
                       </span>
-                      <SeverityBadge severity={camp.primary_threat_type || 'PHISHING'} size="sm" />
+                      <SeverityBadge
+                        severity={camp.primary_threat_type || 'PHISHING'}
+                        size="sm"
+                      />
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs font-mono text-slate-400">
                       <span>{camp.member_count || 1} Linked Cases</span>
-                      <span>{camp.last_seen ? camp.last_seen.substring(0, 10) : 'Recent'}</span>
+                      <span>
+                        {camp.last_seen
+                          ? camp.last_seen.substring(0, 10)
+                          : 'Recent'}
+                      </span>
                     </div>
                   </div>
                 );
@@ -123,23 +143,32 @@ export default function CampaignsPage() {
           {/* Campaign Details Pane */}
           <div className="lg:col-span-2 space-y-6">
             {detailLoading || !campaignDetail ? (
-              <div className="p-12 text-center text-slate-400 font-mono text-xs">Loading campaign cluster...</div>
+              <div className="p-12 text-center text-slate-400 font-mono text-xs">
+                Loading campaign cluster...
+              </div>
             ) : (
               <div className="space-y-6">
                 {/* Campaign Header Card */}
                 <div className="p-6 rounded-xl bg-[#111827] border border-slate-800 shadow-xl">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <span className="text-xs font-mono text-slate-400 uppercase">THREAT CLUSTER ENTITY</span>
+                      <span className="text-xs font-mono text-slate-400 uppercase">
+                        THREAT CLUSTER ENTITY
+                      </span>
                       <h2 className="text-2xl font-bold font-mono text-white mt-1">
                         {campaignDetail.name || campaignDetail.campaign_id}
                       </h2>
                       <p className="text-xs text-slate-400 font-mono mt-1">
-                        Campaign ID: <span className="text-cyan-400">{campaignDetail.campaign_id}</span>
+                        Campaign ID:{' '}
+                        <span className="text-cyan-400">
+                          {campaignDetail.campaign_id}
+                        </span>
                       </p>
                     </div>
                     <div className="sm:text-right">
-                      <span className="text-[10px] font-mono text-slate-400 uppercase block">CONFIDENCE</span>
+                      <span className="text-[10px] font-mono text-slate-400 uppercase block">
+                        CONFIDENCE
+                      </span>
                       <span className="text-2xl font-extrabold font-mono text-cyan-400">
                         {Math.round((campaignDetail.confidence || 0.85) * 100)}%
                       </span>
@@ -148,16 +177,28 @@ export default function CampaignsPage() {
 
                   <div className="mt-4 pt-4 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs font-mono">
                     <div>
-                      <span className="text-slate-500 text-[10px] block">PRIMARY THREAT</span>
-                      <span className="text-slate-200 font-semibold">{campaignDetail.primary_threat_type || 'PHISHING'}</span>
+                      <span className="text-slate-500 text-[10px] block">
+                        PRIMARY THREAT
+                      </span>
+                      <span className="text-slate-200 font-semibold">
+                        {campaignDetail.primary_threat_type || 'PHISHING'}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-slate-500 text-[10px] block">FIRST SEEN</span>
-                      <span className="text-slate-300">{campaignDetail.first_seen || 'N/A'}</span>
+                      <span className="text-slate-500 text-[10px] block">
+                        FIRST SEEN
+                      </span>
+                      <span className="text-slate-300">
+                        {campaignDetail.first_seen || 'N/A'}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-slate-500 text-[10px] block">LAST SEEN</span>
-                      <span className="text-slate-300">{campaignDetail.last_seen || 'N/A'}</span>
+                      <span className="text-slate-500 text-[10px] block">
+                        LAST SEEN
+                      </span>
+                      <span className="text-slate-300">
+                        {campaignDetail.last_seen || 'N/A'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -173,23 +214,36 @@ export default function CampaignsPage() {
                     {/* Shared IPs */}
                     {campaignDetail.shared_infrastructure?.ips?.length > 0 && (
                       <div>
-                        <span className="text-slate-400 font-semibold block mb-1.5">Shared Relaying / Origin IPs:</span>
+                        <span className="text-slate-400 font-semibold block mb-1.5">
+                          Shared Relaying / Origin IPs:
+                        </span>
                         <div className="flex flex-wrap gap-2">
-                          {campaignDetail.shared_infrastructure.ips.map((ip, i) => (
-                            <DefangedIndicator key={i} value={ip} type="IP" />
-                          ))}
+                          {campaignDetail.shared_infrastructure.ips.map(
+                            (ip, i) => (
+                              <DefangedIndicator key={i} value={ip} type="IP" />
+                            ),
+                          )}
                         </div>
                       </div>
                     )}
 
                     {/* Shared Domains */}
-                    {campaignDetail.shared_infrastructure?.domains?.length > 0 && (
+                    {campaignDetail.shared_infrastructure?.domains?.length >
+                      0 && (
                       <div>
-                        <span className="text-slate-400 font-semibold block mb-1.5">Shared Domains & Lookalikes:</span>
+                        <span className="text-slate-400 font-semibold block mb-1.5">
+                          Shared Domains & Lookalikes:
+                        </span>
                         <div className="flex flex-wrap gap-2">
-                          {campaignDetail.shared_infrastructure.domains.map((dom, i) => (
-                            <DefangedIndicator key={i} value={dom} type="DOMAIN" />
-                          ))}
+                          {campaignDetail.shared_infrastructure.domains.map(
+                            (dom, i) => (
+                              <DefangedIndicator
+                                key={i}
+                                value={dom}
+                                type="DOMAIN"
+                              />
+                            ),
+                          )}
                         </div>
                       </div>
                     )}
@@ -197,13 +251,20 @@ export default function CampaignsPage() {
                     {/* Shared URLs */}
                     {campaignDetail.shared_infrastructure?.urls?.length > 0 && (
                       <div>
-                        <span className="text-slate-400 font-semibold block mb-1.5">Shared Attack URLs:</span>
+                        <span className="text-slate-400 font-semibold block mb-1.5">
+                          Shared Attack URLs:
+                        </span>
                         <div className="space-y-1 max-h-36 overflow-y-auto">
-                          {campaignDetail.shared_infrastructure.urls.map((u, i) => (
-                            <div key={i} className="p-2 rounded bg-slate-900 border border-slate-800">
-                              <DefangedIndicator value={u} type="URL" />
-                            </div>
-                          ))}
+                          {campaignDetail.shared_infrastructure.urls.map(
+                            (u, i) => (
+                              <div
+                                key={i}
+                                className="p-2 rounded bg-slate-900 border border-slate-800"
+                              >
+                                <DefangedIndicator value={u} type="URL" />
+                              </div>
+                            ),
+                          )}
                         </div>
                       </div>
                     )}
@@ -216,7 +277,8 @@ export default function CampaignsPage() {
                     <div className="flex items-center gap-2">
                       <FolderGit2 className="w-4 h-4 text-cyan-400" />
                       <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">
-                        Correlated Member Cases ({(campaignDetail.member_cases || []).length})
+                        Correlated Member Cases (
+                        {(campaignDetail.member_cases || []).length})
                       </h3>
                     </div>
                   </div>
@@ -230,13 +292,22 @@ export default function CampaignsPage() {
                       >
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-cyan-400">{mc.case_id}</span>
-                            <SeverityBadge severity={mc.classification} size="sm" />
+                            <span className="font-bold text-cyan-400">
+                              {mc.case_id}
+                            </span>
+                            <SeverityBadge
+                              severity={mc.classification}
+                              size="sm"
+                            />
                           </div>
-                          <p className="text-slate-300 font-sans text-xs">{mc.subject || mc.filename}</p>
+                          <p className="text-slate-300 font-sans text-xs">
+                            {mc.subject || mc.filename}
+                          </p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="font-bold text-slate-300">{mc.risk_score}/100</span>
+                          <span className="font-bold text-slate-300">
+                            {mc.risk_score}/100
+                          </span>
                           <ChevronRight className="w-4 h-4 text-slate-500" />
                         </div>
                       </div>

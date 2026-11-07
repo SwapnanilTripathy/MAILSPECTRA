@@ -78,6 +78,11 @@ class CorrelationPersistenceService:
                 intel=intel,
             )
 
+            # Store the complete analysis before any presentation masking is applied.
+            analysis.campaign_correlations = matches
+            analysis.active_campaign = campaign_entity
+            analysis.attribution_support = attribution
+
             # 3. Persist current CaseRecord and Observables
             try:
                 origin_ip = None
@@ -95,9 +100,7 @@ class CorrelationPersistenceService:
                     risk_score=analysis.threat_assessment.risk_score,
                     confidence=analysis.threat_assessment.confidence,
                     sha256=analysis.evidence_hashes.sha256,
-                    full_analysis_json=json.dumps(
-                        {"case_id": analysis.case_id, "classification": analysis.threat_assessment.classification}
-                    ),
+                    full_analysis_json=analysis.model_dump_json(),
                 )
                 session.add(case_rec)
 
