@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:e8dd1a5b0863ecc99fcd1cdd4c8cc32d3d6bb319f2887db23aeaea773fc0c34e -->
+
 <!-- coderabbit-ai-generated-section:v1:089f11f691f16131394a2a9f251a6e1721faa4e01b7f615007f2a24e02e8adc7 -->
 
 <!-- coderabbit-ai-generated-section:v1:3491ef07f83855b054a6445daf69ca97cc05803eb0adba39c9ec60277aa1a7b5 -->
@@ -31,7 +33,7 @@ This records implementation of the owner's MAILSPECTRA coding specification. The
 
 - Backend: **110 tests passed** in the complete suite after request/report hardening; **13 affected API/hardening/end-to-end tests passed** after the final system-status adjustment. Synthetic data and isolated offline SQLite were used.
 - Frontend: privacy regression test and **six contract render checks**, plus production build. Large pages are split into lazy-loaded chunks. A temporary heading-tag build error was fixed before the final build.
-- Dependency audits: npm and pip reported **zero known vulnerabilities** at check time. Earlier npm and python-jose/ecdsa advisories were resolved. License metadata inventory covers 70 Python packages and 122 frontend runtime entries; React Leaflet declares Hippocratic-2.1 and certifi/tqdm include MPL terms. See DEPENDENCY_LICENSES.md.
+- Dependency audits: npm and pip reported **zero known vulnerabilities** at check time. Earlier npm and python-jose/ecdsa advisories were resolved. Updated license metadata inventory covers 71 Python packages and 120 frontend runtime entries; the Hippocratic-2.1 map wrappers were removed and certifi/tqdm include MPL terms. See DEPENDENCY_LICENSES.md.
 - Docker: image built; initial nonroot migration failed because copied files retained root-only permissions, fixed with COPY ownership. Explicit migrations and readiness passed. Container login, ingestion, reopen, original hash, masked PDF download/hash and logout passed. Restart retained case/original/report with matching digests. A scratch restart-check field-name mistake was corrected before the passing check.
 - Browser: shared cloud Chromium used the actual API. Synthetic benign and phishing uploads, all ten tabs, masking, case reopening, original/PDF verification and PDF downloads, alert acknowledgement/resolution, offline-unavailable IOC lookup, and mobile navigation were exercised. Accessibility findings were corrected and targeted checks rerun; automated audits and manual checks are not exhaustive accessibility certification.
 - History and hygiene: scoped credential-pattern scan found no matches; original license retained; generated artifacts/secrets are excluded from Git. README/local-document links and whitespace were checked.
@@ -65,6 +67,12 @@ Independent ARC verification now handles signed chains, tampered bodies and boun
 ## Candidate model safeguards
 
 Training writes to a separate ignored candidate directory and rejects overwriting the deployed model, including symlink aliases. Saving a candidate preserves the active model cache. Twenty-two targeted training, ML and scoring tests passed, and a demonstration training run produced an explicitly uncalibrated candidate without modifying the bundled model. The seven-sample holdout remains inadequate for production claims; data ownership, a representative corpus and risk calibration require owner input. Final frontend privacy/render checks and production build pass; the IOC workbench has one provider selector.
+
+
+<!-- /coderabbit-ai-generated:v1 -->
+## Final local deployment verification
+
+The image rebuilt successfully with the updated requirements and frontend dependencies. A synthetic container workflow passed login, ingestion, reopening, original verification, masked PDF generation and report hashing. With writes stopped, all storage was copied to a separate replacement volume. The restored service passed readiness, case/original/PDF digest checks and the read-only evidence audit. Synthetic test containers and volumes were removed afterward. This establishes local restore behavior, not hosting-provider disaster recovery.
 
 
 <!-- /coderabbit-ai-generated:v1 -->

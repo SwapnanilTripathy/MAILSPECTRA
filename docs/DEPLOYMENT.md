@@ -1,5 +1,7 @@
 <!-- coderabbit-ai-generated:v1 -->
 
+<!-- coderabbit-ai-generated-section:v1:f8a15675abf4c45dfde6c1517edb7e7c7f07f638bfaa5651af2ca696c4d5e3c6 -->
+
 <!-- coderabbit-ai-generated-section:v1:44f314dbad413ed05b85b316bfae912d619adc3e23f6825243d35cb7d372bae6 -->
 
 <!-- coderabbit-ai-generated-section:v1:b0d2a6ddb98c73615a211f5202a77764bc65ddc5da88720375ed69c308522732 -->
@@ -36,7 +38,7 @@ Open `http://localhost:8000`. The named volume contains the SQLite database, ori
 
 Quiesce ingestion, alert updates and report generation, then stop the application. Back up the entire persistent storage directory/volume (database plus originals, PDFs and manifests) as one versioned set. Preserve permissions and record the image/commit, migration revision and a checksum inventory. Encrypt off-site copies and restrict access. Provider keys/signing secrets belong in a separate protected secret-store backup, never in exported reports.
 
-For local SQLite, copy the stopped database together with the upload/report directories. For Compose, use the operator's approved volume snapshot/backup tool against the `mailspectra_storage` volume while the service is stopped. Restore into an isolated replacement volume with UID 10001 ownership, start the matching application revision, check readiness, log in, reopen representative cases and recompute original/PDF digests before changing traffic. Test this restore periodically; this task verified container restart persistence, not disaster recovery on your hosting provider.
+For local SQLite, copy the stopped database together with the upload/report directories. For Compose, use the operator's approved volume snapshot/backup tool against the `mailspectra_storage` volume while the service is stopped. Restore into an isolated replacement volume with UID 10001 ownership, start the matching application revision, check readiness, log in, reopen representative cases and recompute original/PDF digests before changing traffic. Test this restore periodically; this task verified container restart persistence and a local stopped-volume backup restored into a separate volume. The restored database, original evidence and PDF hashes matched, readiness passed, and the read-only evidence audit passed. Disaster recovery on your hosting provider remains unverified.
 
 ## Retention and recovery
 
