@@ -61,7 +61,7 @@ export default function CaseDetailPage() {
     setGeneratingReport(true);
     try {
       await api.generateReport(caseId);
-      window.open(api.getReportDownloadUrl(caseId), '_blank');
+      await api.downloadReport(caseId);
       fetchCase();
     } catch (err) {
       alert(`Report error: ${err.message}`);

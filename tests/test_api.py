@@ -4,8 +4,8 @@ from backend.app.main import app
 
 
 @pytest.mark.asyncio
-async def test_root_endpoint():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_root_endpoint(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         response = await client.get("/")
         assert response.status_code == 200
         data = response.json()
@@ -16,8 +16,8 @@ async def test_root_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_health_endpoint():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_health_endpoint(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         response = await client.get("/api/v1/health")
         assert response.status_code == 200
         data = response.json()
@@ -27,8 +27,8 @@ async def test_health_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_analyze_email_upload_benign(benign_eml_bytes):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_analyze_email_upload_benign(benign_eml_bytes, auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         files = {
             "file": ("benign_standard.eml", benign_eml_bytes, "message/rfc822")
         }
@@ -48,8 +48,8 @@ async def test_analyze_email_upload_benign(benign_eml_bytes):
 
 
 @pytest.mark.asyncio
-async def test_analyze_email_upload_phishing(phishing_eml_bytes):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_analyze_email_upload_phishing(phishing_eml_bytes, auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         files = {
             "file": ("phishing_credential_harvest.eml", phishing_eml_bytes, "message/rfc822")
         }
@@ -63,8 +63,8 @@ async def test_analyze_email_upload_phishing(phishing_eml_bytes):
 
 
 @pytest.mark.asyncio
-async def test_analyze_email_upload_spoofed(spoofed_eml_bytes):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_analyze_email_upload_spoofed(spoofed_eml_bytes, auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         files = {
             "file": ("spoofed_spf_fail.eml", spoofed_eml_bytes, "message/rfc822")
         }
@@ -80,8 +80,8 @@ async def test_analyze_email_upload_spoofed(spoofed_eml_bytes):
 
 
 @pytest.mark.asyncio
-async def test_analyze_empty_file_error():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_analyze_empty_file_error(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         files = {
             "file": ("empty.eml", b"", "message/rfc822")
         }
@@ -91,8 +91,8 @@ async def test_analyze_empty_file_error():
 
 
 @pytest.mark.asyncio
-async def test_analyze_raw_empty_payload_error():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_analyze_raw_empty_payload_error(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         payload = {"raw_content": "   ", "filename": "empty.eml"}
         response = await client.post("/api/v1/analyze/raw", json=payload)
         assert response.status_code == 400
@@ -100,7 +100,7 @@ async def test_analyze_raw_empty_payload_error():
 
 
 @pytest.mark.asyncio
-async def test_analyze_raw_payload():
+async def test_analyze_raw_payload(auth_headers):
     raw_eml = """From: sender@test.com
 To: recipient@test.com
 Subject: Quick Test
@@ -108,7 +108,7 @@ Date: Sun, 30 Aug 2026 00:00:00 +0000
 
 This is a test message body.
 """
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         payload = {"raw_content": raw_eml, "filename": "test.eml"}
         response = await client.post("/api/v1/analyze/raw", json=payload)
         assert response.status_code == 200

@@ -57,7 +57,7 @@ export default function ReportsPage() {
     try {
       await api.generateReport(caseId);
       fetchReports();
-      window.open(api.getReportDownloadUrl(caseId), '_blank');
+      await api.downloadReport(caseId);
     } catch (err) {
       alert(`Report error: ${err.message}`);
     }
@@ -163,15 +163,13 @@ export default function ReportsPage() {
                       </td>
                       <td className="px-5 py-3.5 text-right space-x-2">
                         {hasReport ? (
-                          <a
-                            href={api.getReportDownloadUrl(c.case_id)}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            onClick={() => api.downloadReport(c.case_id).catch(error => alert(error.message))}
                             className="inline-flex items-center gap-1 px-3 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-[11px] transition shadow-sm"
                           >
                             <FileDown className="w-3.5 h-3.5" />
                             <span>Download PDF</span>
-                          </a>
+                          </button>
                         ) : (
                           <button
                             onClick={() => handleGenerate(c.case_id)}

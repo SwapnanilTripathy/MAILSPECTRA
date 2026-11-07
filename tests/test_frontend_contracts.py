@@ -4,8 +4,8 @@ from backend.app.main import app
 
 
 @pytest.mark.asyncio
-async def test_masked_analysis_preserves_full_unmasked_case(phishing_eml_bytes):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as client:
+async def test_masked_analysis_preserves_full_unmasked_case(phishing_eml_bytes, auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test', headers=auth_headers) as client:
         response = await client.post('/api/v1/analyze/email?mask_pii=true', files={'file': ('review-phishing.eml', phishing_eml_bytes, 'message/rfc822')})
         assert response.status_code == 200
         masked = response.json()
@@ -23,8 +23,8 @@ async def test_masked_analysis_preserves_full_unmasked_case(phishing_eml_bytes):
 
 
 @pytest.mark.asyncio
-async def test_case_total_and_paging_follow_all_filters():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as client:
+async def test_case_total_and_paging_follow_all_filters(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test', headers=auth_headers) as client:
         for i, kind in enumerate(('PHISHING', 'PHISHING', 'BENIGN')):
             response = await client.post('/api/v1/cases', json={'case_id': f'PAGING-REVIEW-{i}', 'filename': 'review.eml', 'subject': 'unique paging review', 'sha256': f'reviewhash{i}', 'classification': kind})
             assert response.status_code == 200

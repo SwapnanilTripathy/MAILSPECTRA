@@ -219,7 +219,7 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
       // First ensure case is saved so report generator has records
       if (!(await handleSaveCase())) return;
       const reportRes = await api.generateReport(analysis.case_id);
-      window.open(api.getReportDownloadUrl(analysis.case_id), '_blank');
+      await api.downloadReport(analysis.case_id);
       setAlertMessage({
         type: 'success',
         text: `Forensic PDF report generated (SHA-256: ${reportRes.sha256.substring(0, 16)}...)`,

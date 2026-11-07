@@ -12,7 +12,7 @@ const apiClient = axios.create({
 
 // Interceptor for attaching auth token
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('deeptrace_token');
+  const token = sessionStorage.getItem('deeptrace_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,6 +23,11 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    if (error.response?.status === 401) {
+      sessionStorage.removeItem('deeptrace_token');
+      sessionStorage.removeItem('deeptrace_user');
+      window.dispatchEvent(new Event('session-expired'));
+    }
     const errorMsg = error.response?.data?.detail || error.message || 'API request failed';
     return Promise.reject(new Error(errorMsg));
   }
@@ -69,6 +74,12 @@ export const api = {
   generateReport: (caseId) => apiClient.post(`/reports/generate/${caseId}`),
   verifyReport: (caseId) => apiClient.get(`/reports/${caseId}/verify`),
   listReports: () => apiClient.get('/reports'),
+  downloadReport: async (caseId) => {
+    const blob = await apiClient.get(`/reports/${caseId}/download`, { responseType: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a'); link.href = url; link.download = `${caseId}.pdf`; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
   getReportDownloadUrl: (caseId) => `${baseURL}/reports/${caseId}/download`,
 
   // System & Health

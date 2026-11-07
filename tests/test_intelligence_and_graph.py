@@ -255,8 +255,8 @@ async def test_17_multiple_emails_sharing_infrastructure(pipeline_instance, phis
 
 # 18. API Integration Test with Full Phase 3 Response
 @pytest.mark.asyncio
-async def test_18_api_integration_phase3_response(phishing_eml_bytes):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_18_api_integration_phase3_response(phishing_eml_bytes, auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         files = {
             "file": ("phishing_test.eml", phishing_eml_bytes, "message/rfc822")
         }

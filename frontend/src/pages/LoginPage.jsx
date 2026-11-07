@@ -13,8 +13,8 @@ import { useAuth } from '../context/AuthContext';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, loading } = useAuth();
-  const [username, setUsername] = useState('analyst');
-  const [password, setPassword] = useState('deeptrace2026');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
@@ -97,22 +97,7 @@ export default function LoginPage() {
             <ArrowRight size={17} aria-hidden="true" />
           </button>
         </form>
-        <div className="login-demo">
-          <ShieldCheck size={17} aria-hidden="true" />
-          <div>
-            <p>Demo access</p>
-            <button
-              type="button"
-              onClick={() => {
-                setUsername('analyst');
-                setPassword('deeptrace2026');
-              }}
-            >
-              Use analyst demo credentials{' '}
-              <ArrowRight size={13} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
+
       </div>
       <p className="login-footer">
         DEEPTRACE <span> / </span> EMAIL FORENSICS & THREAT INTELLIGENCE

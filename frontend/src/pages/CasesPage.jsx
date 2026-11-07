@@ -88,7 +88,7 @@ export default function CasesPage() {
   const handleExportPDF = async (caseId) => {
     try {
       await api.generateReport(caseId);
-      window.open(api.getReportDownloadUrl(caseId), '_blank');
+      await api.downloadReport(caseId);
     } catch (err) {
       alert(`Report error: ${err.message}`);
     }

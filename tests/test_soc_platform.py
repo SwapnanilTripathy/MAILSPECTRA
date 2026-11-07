@@ -7,8 +7,8 @@ from backend.app.services.report_generator import ForensicReportGenerator
 
 
 @pytest.mark.asyncio
-async def test_1_dashboard_stats_endpoint():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_1_dashboard_stats_endpoint(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         resp = await client.get("/api/v1/dashboard/stats")
         assert resp.status_code == 200
         data = resp.json()
@@ -19,8 +19,8 @@ async def test_1_dashboard_stats_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_2_dashboard_distribution_endpoint():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_2_dashboard_distribution_endpoint(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         resp = await client.get("/api/v1/dashboard/distribution")
         assert resp.status_code == 200
         data = resp.json()
@@ -29,8 +29,8 @@ async def test_2_dashboard_distribution_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_3_case_creation_and_retrieval():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_3_case_creation_and_retrieval(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         case_payload = {
             "case_id": "CASE-TEST-0001",
             "filename": "suspicious_test.eml",
@@ -58,8 +58,8 @@ async def test_3_case_creation_and_retrieval():
 
 
 @pytest.mark.asyncio
-async def test_4_case_status_update():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_4_case_status_update(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         patch_resp = await client.patch(
             "/api/v1/cases/CASE-TEST-0001/status",
             json={"status": "INVESTIGATING", "priority": "CRITICAL", "comment": "Assigned to Tier 2 triage."},
@@ -74,8 +74,8 @@ async def test_4_case_status_update():
 
 
 @pytest.mark.asyncio
-async def test_5_report_generation_and_integrity_verification():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_5_report_generation_and_integrity_verification(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         # Generate report
         gen_resp = await client.post("/api/v1/reports/generate/CASE-TEST-0001")
         assert gen_resp.status_code == 200
@@ -93,8 +93,8 @@ async def test_5_report_generation_and_integrity_verification():
 
 
 @pytest.mark.asyncio
-async def test_6_report_download():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_6_report_download(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         dl_resp = await client.get("/api/v1/reports/CASE-TEST-0001/download")
         assert dl_resp.status_code == 200
         assert dl_resp.headers["content-type"] == "application/pdf"
@@ -102,21 +102,21 @@ async def test_6_report_download():
 
 
 @pytest.mark.asyncio
-async def test_7_auth_login():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_7_auth_login(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         login_resp = await client.post(
             "/api/v1/auth/login",
-            json={"username": "analyst", "password": "deeptrace2026"},
+            json={"username": "test-admin", "password": "test-only-long-password"},
         )
         assert login_resp.status_code == 200
         data = login_resp.json()
         assert "access_token" in data
-        assert data["user"]["username"] == "analyst"
+        assert data["user"]["username"] == "test-admin"
 
 
 @pytest.mark.asyncio
-async def test_8_system_status_and_settings():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_8_system_status_and_settings(auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         status_resp = await client.get("/api/v1/system/status")
         assert status_resp.status_code == 200
         assert status_resp.json()["database"]["status"] == "CONNECTED"

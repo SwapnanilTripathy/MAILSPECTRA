@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('deeptrace_user');
+    const saved = sessionStorage.getItem('deeptrace_user');
     try {
       return saved ? JSON.parse(saved) : null;
     } catch {
@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
     }
   });
   const [token, setToken] = useState(
-    () => localStorage.getItem('deeptrace_token') || null,
+    () => sessionStorage.getItem('deeptrace_token') || null,
   );
   const [loading, setLoading] = useState(false);
 
@@ -23,8 +23,8 @@ export function AuthProvider({ children }) {
       const res = await api.login(username, password);
       setToken(res.access_token);
       setUser(res.user);
-      localStorage.setItem('deeptrace_token', res.access_token);
-      localStorage.setItem('deeptrace_user', JSON.stringify(res.user));
+      sessionStorage.setItem('deeptrace_token', res.access_token);
+      sessionStorage.setItem('deeptrace_user', JSON.stringify(res.user));
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
@@ -33,13 +33,26 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
-    api.logout().catch(() => {});
+  const logout = async () => {
+    try { await api.logout(); } catch { /* Local logout still clears an expired session. */ }
     setToken(null);
     setUser(null);
+    sessionStorage.removeItem('deeptrace_token');
+    sessionStorage.removeItem('deeptrace_user');
+  };
+
+  useEffect(() => {
     localStorage.removeItem('deeptrace_token');
     localStorage.removeItem('deeptrace_user');
-  };
+    if (token) api.getCurrentUser().then(setUser).catch(() => {
+      setUser(null); setToken(null);
+      sessionStorage.removeItem('deeptrace_token');
+      sessionStorage.removeItem('deeptrace_user');
+    });
+    const expire = () => { setUser(null); setToken(null); };
+    window.addEventListener('session-expired', expire);
+    return () => window.removeEventListener('session-expired', expire);
+  }, [token]);
 
   return (
     <AuthContext.Provider
