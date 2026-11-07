@@ -96,6 +96,5 @@ def test_alert_service_benign_no_immediate_action():
     )
 
     eval_result = AlertService.evaluate_analysis(resp)
-    assert eval_result.alert is not None
-    assert eval_result.alert.severity == "INFORMATIONAL"
-    assert eval_result.alert.requires_immediate_action is False
+    assert eval_result.is_alert_generated is False
+    assert eval_result.alert is None

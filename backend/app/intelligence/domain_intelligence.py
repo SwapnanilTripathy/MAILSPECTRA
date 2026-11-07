@@ -3,6 +3,7 @@ import math
 import re
 from typing import TYPE_CHECKING, Dict, List, Optional, Set
 import tldextract
+_TLD = tldextract.TLDExtract(suffix_list_urls=())
 
 from backend.app.core.config import settings
 from backend.app.intelligence.dns_intelligence import DNSIntelligenceService
@@ -46,7 +47,7 @@ class DomainIntelligenceService:
     def analyze_lexical_domain(self, domain_str: str) -> DomainIntelligenceResult:
         """Perform static lexical inspection: entropy, punycode, lookalikes, and TLD risks."""
         clean_domain = domain_str.strip().lower().rstrip(".")
-        ext = tldextract.extract(clean_domain)
+        ext = _TLD(clean_domain)
         reg_domain = ext.registered_domain or clean_domain
         subdomain = ext.subdomain
         tld = ext.suffix
@@ -66,7 +67,7 @@ class DomainIntelligenceService:
         # 3. Entropy check
         entropy = round(calculate_entropy(ext.domain), 2)
         if entropy >= 3.8 and len(ext.domain) >= 10:
-            signals.append("HIGH_LEXICAL_ENTROPY (DGA-like pattern)")
+            signals.append("HIGH_LEXICAL_ENTROPY (not proof of DGA)")
 
         # 4. Excessive Subdomains check
         sub_count = len(subdomain.split(".")) if subdomain else 0

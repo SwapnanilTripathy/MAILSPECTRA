@@ -62,7 +62,7 @@ class RDAPClientService:
                 domain_status=f.get("domain_status", []),
                 privacy_protected=f.get("privacy_protected", False),
                 raw_rdap_url=f"https://rdap.org/domain/{domain}",
-                lookup_status="SUCCESS",
+                lookup_status="FIXTURE",
                 source=EvidenceSource.OFFLINE_FIXTURE.value,
             )
 
@@ -76,66 +76,65 @@ class RDAPClientService:
     async def _lookup_live(self, domain: str) -> RDAPDomainInfo:
         url = f"https://rdap.org/domain/{domain}"
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
-                resp = await client.get(url, headers={"Accept": "application/rdap+json"})
-                if resp.status_code == 200:
-                    data = resp.json()
+            from backend.app.intelligence.http_client import provider_json
+            code, data = await provider_json(url, {"Accept":"application/rdap+json"})
+            if code == 200:
                     
-                    # Extract registrar
-                    registrar = None
-                    for entity in data.get("entities", []):
-                        if "registrar" in entity.get("roles", []):
-                            vcard = entity.get("vcardArray", [])
-                            if len(vcard) > 1:
-                                for item in vcard[1]:
-                                    if item[0] == "fn":
-                                        registrar = item[3]
-                                        break
+                # Extract registrar
+                registrar = None
+                for entity in data.get("entities", []):
+                    if "registrar" in entity.get("roles", []):
+                        vcard = entity.get("vcardArray", [])
+                        if len(vcard) > 1:
+                            for item in vcard[1]:
+                                if item[0] == "fn":
+                                    registrar = item[3]
+                                    break
 
-                    # Extract events (creation, expiration, updated)
-                    creation_date = None
-                    expiration_date = None
-                    updated_date = None
-                    for event in data.get("events", []):
-                        action = event.get("eventAction")
-                        date_str = event.get("eventDate")
-                        if action == "registration":
-                            creation_date = date_str
-                        elif action == "expiration":
-                            expiration_date = date_str
-                        elif action == "last changed" or action == "last update":
-                            updated_date = date_str
+                # Extract events (creation, expiration, updated)
+                creation_date = None
+                expiration_date = None
+                updated_date = None
+                for event in data.get("events", []):
+                    action = event.get("eventAction")
+                    date_str = event.get("eventDate")
+                    if action == "registration":
+                        creation_date = date_str
+                    elif action == "expiration":
+                        expiration_date = date_str
+                    elif action == "last changed" or action == "last update":
+                        updated_date = date_str
 
-                    # Extract nameservers
-                    nameservers = []
-                    for ns in data.get("nameservers", []):
-                        ns_name = ns.get("ldhName")
-                        if ns_name:
-                            nameservers.append(ns_name.lower())
+                # Extract nameservers
+                nameservers = []
+                for ns in data.get("nameservers", []):
+                    ns_name = ns.get("ldhName")
+                    if ns_name:
+                        nameservers.append(ns_name.lower())
 
-                    # Privacy protection check
-                    raw_text = str(data).lower()
-                    privacy_protected = "privacy" in raw_text or "whoisguard" in raw_text or "withheld" in raw_text or "redacted" in raw_text
+                # Privacy protection check
+                raw_text = str(data).lower()
+                privacy_protected = "privacy" in raw_text or "whoisguard" in raw_text or "withheld" in raw_text or "redacted" in raw_text
 
-                    return RDAPDomainInfo(
-                        domain=domain,
-                        registrar=registrar,
-                        creation_date=creation_date,
-                        expiration_date=expiration_date,
-                        updated_date=updated_date,
-                        nameservers=nameservers,
-                        domain_status=data.get("status", []),
-                        privacy_protected=privacy_protected,
-                        raw_rdap_url=url,
-                        lookup_status="SUCCESS",
-                        source=EvidenceSource.RDAP.value,
-                    )
-                elif resp.status_code == 404:
-                    return RDAPDomainInfo(domain=domain, lookup_status="NOT_FOUND", raw_rdap_url=url)
-                elif resp.status_code == 429:
-                    return RDAPDomainInfo(domain=domain, lookup_status="RATE_LIMITED", raw_rdap_url=url)
-                else:
-                    return RDAPDomainInfo(domain=domain, lookup_status=f"HTTP_{resp.status_code}", raw_rdap_url=url)
+                return RDAPDomainInfo(
+                    domain=domain,
+                    registrar=registrar,
+                    creation_date=creation_date,
+                    expiration_date=expiration_date,
+                    updated_date=updated_date,
+                    nameservers=nameservers,
+                    domain_status=data.get("status", []),
+                    privacy_protected=privacy_protected,
+                    raw_rdap_url=url,
+                    lookup_status="SUCCESS",
+                    source=EvidenceSource.RDAP.value,
+                )
+            elif code == 404:
+                return RDAPDomainInfo(domain=domain, lookup_status="NOT_FOUND", raw_rdap_url=url)
+            elif code == 429:
+                return RDAPDomainInfo(domain=domain, lookup_status="RATE_LIMITED", raw_rdap_url=url)
+            else:
+                return RDAPDomainInfo(domain=domain, lookup_status=f"HTTP_{code}", raw_rdap_url=url)
         except Exception as e:
-            logger.warning(f"Live RDAP query error for {domain}: {e}")
+            logger.warning("RDAP failed: %s", type(e).__name__)
             return RDAPDomainInfo(domain=domain, lookup_status="ERROR", raw_rdap_url=url)

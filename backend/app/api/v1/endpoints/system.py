@@ -17,6 +17,8 @@ async def get_system_status(db: AsyncSession = Depends(get_db)):
     except Exception:
         db_status = "DISCONNECTED"
 
+    from backend.app.ml.model_loader import ModelLoader
+    model_available = ModelLoader.load_model() is not None
     return {
         "platform": settings.PROJECT_NAME,
         "version": settings.VERSION,
@@ -29,12 +31,12 @@ async def get_system_status(db: AsyncSession = Depends(get_db)):
         },
         "intelligence_mode": settings.INTELLIGENCE_MODE.upper(),
         "providers": {
-            "geoip": "ACTIVE (Offline Fixtures & MaxMind/IPInfo Protocol)",
-            "dns": "ACTIVE (Asynchronous dnspython Resolver)",
-            "rdap": "ACTIVE (Official ICANN/RIR HTTPS RDAP Client)",
-            "threat_intel": "ACTIVE" if (settings.VIRUSTOTAL_API_KEY or settings.ABUSEIPDB_API_KEY) else "OFFLINE_DATABASE",
+            "geoip": "CONFIGURED_NOT_CHECKED" if settings.INTELLIGENCE_MODE == "live" and settings.IPINFO_TOKEN else "OFFLINE_OR_UNAVAILABLE",
+            "dns": "CONFIGURED_NOT_CHECKED" if settings.INTELLIGENCE_MODE == "live" else "OFFLINE_FIXTURES",
+            "rdap": "CONFIGURED_NOT_CHECKED" if settings.INTELLIGENCE_MODE == "live" else "OFFLINE_FIXTURES",
+            "threat_intel": "CONFIGURED_NOT_CHECKED" if settings.INTELLIGENCE_MODE == "live" and settings.ABUSEIPDB_API_KEY else "OFFLINE_OR_UNAVAILABLE",
             "threat_graph": "ACTIVE (NetworkX MultiDiGraph Engine)",
-            "ml_engine": "ACTIVE (Logistic Regression + Linear SHAP)",
+            "ml_engine": "AVAILABLE_DEMONSTRATION_MODEL" if model_available else "UNAVAILABLE_RULE_FALLBACK",
         },
         "privacy": {
             "masking_available": True,
@@ -54,7 +56,8 @@ async def get_system_settings():
         "http_timeout_seconds": settings.HTTP_INTEL_TIMEOUT_SECONDS,
         "cache_ttl_hours": settings.CACHE_TTL_HOURS,
         "max_upload_size_mb": settings.MAX_UPLOAD_SIZE_MB,
-        "has_virustotal_key": bool(settings.VIRUSTOTAL_API_KEY),
+        "virustotal_status": "CONFIGURED_NOT_CHECKED" if settings.VIRUSTOTAL_API_KEY else "UNCONFIGURED",
+        "shodan_status": "CONFIGURED_NOT_CHECKED" if settings.SHODAN_API_KEY else "UNCONFIGURED",
         "has_abuseipdb_key": bool(settings.ABUSEIPDB_API_KEY),
         "has_ipinfo_key": bool(settings.IPINFO_TOKEN),
     }

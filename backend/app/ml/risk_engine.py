@@ -1,4 +1,5 @@
 from __future__ import annotations
+from backend.app.core.assessment import CAPS, ASSESSMENT_VERSION, severity_for_score
 from typing import TYPE_CHECKING, Dict, List, Tuple
 from backend.app.ml.schemas import (
     IndicatorCategory,
@@ -41,7 +42,7 @@ class ThreatRiskEngine:
         # Probability of threat = 1.0 - prob(LEGITIMATE)
         legit_prob = prediction.probabilities.get(ThreatClass.LEGITIMATE.value, 0.0)
         threat_prob = max(0.0, min(1.0, 1.0 - legit_prob))
-        model_points = threat_prob * 40.0
+        model_points = threat_prob * 40.0 if prediction.is_model_available else 0.0
         breakdown["model_threat_probability"] = round(model_points, 1)
 
         if threat_prob >= 0.7:
@@ -56,62 +57,21 @@ class ThreatRiskEngine:
                 )
             )
 
-        # 2. Authentication & Protocol Evidence (Up to 30 points)
-        auth = analysis.authentication
+        # Reported passes contribute zero. Independently verified failures
+        # contribute at most the existing 15-point authentication cap; passes
+        # never subtract from the risk score.
         auth_points = 0.0
-
-        if auth.dmarc_result == "fail":
-            auth_points += 15.0
-            indicators.append(
-                SecurityIndicator(
-                    indicator="DMARC_ALIGNMENT_FAILURE",
-                    category=IndicatorCategory.AUTHENTICATION.value,
-                    severity=IndicatorSeverity.CRITICAL.value,
-                    observed=True,
-                    evidence="DMARC verification failed. The sending server failed SPF/DKIM domain alignment.",
-                    weight=15.0,
-                )
-            )
-
-        if auth.spf_result == "fail":
-            auth_points += 10.0
-            indicators.append(
-                SecurityIndicator(
-                    indicator="SPF_VALIDATION_FAILURE",
-                    category=IndicatorCategory.AUTHENTICATION.value,
-                    severity=IndicatorSeverity.HIGH.value,
-                    observed=True,
-                    evidence=f"SPF record failed (result: {auth.spf_result}). Client IP unauthorized by sender domain.",
-                    weight=10.0,
-                )
-            )
-        elif auth.spf_result == "softfail":
-            auth_points += 5.0
-            indicators.append(
-                SecurityIndicator(
-                    indicator="SPF_SOFTFAIL",
-                    category=IndicatorCategory.AUTHENTICATION.value,
-                    severity=IndicatorSeverity.MEDIUM.value,
-                    observed=True,
-                    evidence="SPF softfail detected. Sending host is questionable under domain policy.",
-                    weight=5.0,
-                )
-            )
-
-        if auth.dkim_result == "fail":
-            auth_points += 10.0
-            indicators.append(
-                SecurityIndicator(
-                    indicator="DKIM_SIGNATURE_FAILURE",
-                    category=IndicatorCategory.AUTHENTICATION.value,
-                    severity=IndicatorSeverity.HIGH.value,
-                    observed=True,
-                    evidence="Cryptographic DKIM signature failed verification or was altered in transit.",
-                    weight=10.0,
-                )
-            )
-
-        breakdown["authentication_evidence"] = round(min(30.0, auth_points), 1)
+        for mechanism, points in [('spf',10.0),('dkim',10.0),('dmarc',15.0)]:
+            verification = analysis.authentication.verified.get(mechanism,{})
+            if verification.get('result') == 'fail':
+                auth_points += points
+                indicators.append(SecurityIndicator(indicator=f'VERIFIED_{mechanism.upper()}_FAILURE',category='AUTHENTICATION',severity='HIGH',evidence=f'Independent {mechanism.upper()} verification failed; current verification context may differ from delivery time.',weight=points,details=verification))
+        reported_points = 0.0
+        for mechanism in ('spf','dkim','dmarc'):
+            if getattr(analysis.authentication,mechanism+'_result') in {'fail','softfail'}:
+                reported_points += 5.0
+                indicators.append(SecurityIndicator(indicator=f'REPORTED_{mechanism.upper()}_FAILURE',category='AUTHENTICATION',severity='LOW',evidence=f'Supplied header reports {mechanism.upper()} failure: UNVERIFIED attacker-controlled claim, not a protocol verification.',weight=5.0,details={'trust':'UNVERIFIED','scoring':'Reported-failure heuristic:5 per mechanism,15 total; no additive double-counting with verified failures'}))
+        breakdown['authentication_evidence'] = min(15.0,max(auth_points,reported_points))
 
         # 3. Identity & Spoofing Evidence (Up to 25 points)
         meta = analysis.metadata
@@ -271,32 +231,24 @@ class ThreatRiskEngine:
 
         breakdown["content_evidence"] = round(min(20.0, content_points), 1)
 
-        # Total Raw Score
-        raw_score = sum(breakdown.values())
-
-        # If email has legitimate authentication and no threat indicators, keep score low
-        if structured_features.get("auth_all_pass", 0) > 0 and len([i for i in indicators if i.category != IndicatorCategory.BEHAVIOR.value]) == 0:
-            raw_score = min(raw_score, 15.0)
-            breakdown["model_threat_probability"] = min(breakdown["model_threat_probability"], 10.0)
-
-        final_score = max(0.0, min(100.0, round(raw_score, 1)))
-
-        # Classification mapping
-        if final_score >= 80.0:
-            severity = IndicatorSeverity.CRITICAL.value
-            classification = prediction.predicted_class if prediction.predicted_class != ThreatClass.LEGITIMATE.value else ThreatClass.PHISHING.value
-        elif final_score >= 60.0:
-            severity = IndicatorSeverity.HIGH.value
-            classification = prediction.predicted_class if prediction.predicted_class != ThreatClass.LEGITIMATE.value else ThreatClass.SUSPICIOUS.value
-        elif final_score >= 40.0:
-            severity = IndicatorSeverity.MEDIUM.value
-            classification = ThreatClass.SUSPICIOUS.value
-        elif final_score >= 25.0:
-            severity = IndicatorSeverity.LOW.value
-            classification = prediction.predicted_class if prediction.predicted_class == ThreatClass.SUSPICIOUS.value else ThreatClass.LEGITIMATE.value
-        else:
-            severity = IndicatorSeverity.INFORMATIONAL.value
-            classification = ThreatClass.LEGITIMATE.value
+        # Normalize each old rule bucket to its explicit allocation. Categories are capped;
+        # correlated model/rule signals remain a documented limitation, not independent probabilities.
+        old_caps = {"authentication_evidence":15, "identity_evidence":25, "url_evidence":25, "attachment_evidence":30, "content_evidence":20}
+        for key, old_cap in old_caps.items():
+            breakdown[key] = round(breakdown[key] * CAPS[key] / old_cap, 2)
+        final_score = round(sum(breakdown.values()), 2)
+        severity = severity_for_score(final_score)
+        classification = prediction.predicted_class if prediction.is_model_available else "UNKNOWN"
+        if final_score < 40 and prediction.is_model_available:
+            classification = "LEGITIMATE"
+        if final_score >= 40 and classification in {"LEGITIMATE", "UNKNOWN"}:
+            classification = "SUSPICIOUS"
+        categories = {"AUTHENTICATION":"authentication_evidence", "IDENTITY":"identity_evidence", "URL":"url_evidence", "ATTACHMENT":"attachment_evidence", "CONTENT":"content_evidence", "BEHAVIOR":"model_threat_probability"}
+        for category, key in categories.items():
+            members = [item for item in indicators if item.category == category]
+            total = sum(item.weight for item in members)
+            for item in members:
+                item.weight = round(breakdown[key] * item.weight / total, 2) if total else 0
 
         return RiskAssessmentResult(
             risk_score=final_score,
@@ -306,5 +258,5 @@ class ThreatRiskEngine:
             model_confidence=prediction.confidence,
             evidence_breakdown=breakdown,
             indicators=indicators,
-            methodology="DeepTrace Hybrid Threat Risk Engine v2.0: ML Model Probability (40%) + Forensic Rule Observables (60%)",
+            methodology=ASSESSMENT_VERSION + ": bounded ML 40 + authentication 15 + identity 15 + URL 15 + attachment 10 + content 5; not calibrated",
         )

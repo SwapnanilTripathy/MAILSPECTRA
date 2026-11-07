@@ -27,11 +27,11 @@ def pipeline_instance():
 async def test_1_public_ip_intelligence():
     provider = OfflineGeoIPProvider()
     res = await provider.lookup("198.51.100.25")
-    assert res.is_public is True
+    assert res.is_public is False  # Documentation prefix, even in a fixture
     assert res.is_private is False
     assert res.country == "United States"
     assert res.asn == "AS15169"
-    assert res.status == "SUCCESS"
+    assert res.status == "FIXTURE"
     assert res.confidence > 0.5
 
 
@@ -61,7 +61,7 @@ async def test_3_missing_invalid_ip_handling():
 async def test_4_dns_success():
     dns_svc = DNSIntelligenceService(mode="offline")
     res = await dns_svc.resolve_domain("legitcorp.com")
-    assert res.status == "SUCCESS"
+    assert res.status == "FIXTURE"
     assert "198.51.100.25" in res.a_records
     assert any("mail-out.legitcorp.com" in mx for mx in res.mx_hosts)
     assert res.has_valid_mx is True
@@ -72,7 +72,7 @@ async def test_4_dns_success():
 async def test_5_dns_unknown_domain():
     dns_svc = DNSIntelligenceService(mode="offline")
     res = await dns_svc.resolve_domain("non-existent-random-domain-12345.xyz")
-    assert res.status == "SUCCESS"  # Handled cleanly without exception
+    assert res.status == "UNAVAILABLE"  # Offline absence is not a successful lookup
     assert res.has_valid_mx is False
 
 
@@ -130,7 +130,7 @@ def test_10_origin_assessment(benign_eml_bytes, phishing_eml_bytes):
     res_benign = parser_benign.parse()
     origin_benign = IPIntelligenceService.assess_origin(res_benign)
     assert origin_benign.earliest_reliable_ip is not None
-    assert origin_benign.confidence > 0.6
+    assert origin_benign.confidence == 0.0  # Uploaded headers provide no calibrated trust
     assert len(origin_benign.evidentiary_basis) > 0
     assert len(origin_benign.limitations) > 0
 
@@ -184,7 +184,8 @@ def test_13_shared_infrastructure_detection(phishing_eml_bytes):
     assert len(matches) == 1
     assert matches[0].related_case_id == "CASE-PAST-001"
     assert matches[0].correlation_score >= 0.60
-    assert "SHARED_IP_INFRASTRUCTURE" in matches[0].shared_indicators
+    assert "IDENTICAL_URL_PAYLOAD" in matches[0].shared_indicators
+    assert matches[0].shared_values["urls"]
 
 
 # 14. Campaign Correlation Test
@@ -218,15 +219,15 @@ def test_15_attribution_support_output(phishing_eml_bytes, benign_eml_bytes):
     parser_phish = EmailForensicParser(raw_bytes=phishing_eml_bytes)
     analysis_phish = parser_phish.parse()
     _, _, attr_phish = CampaignCorrelator.correlate_case(analysis_phish, [])
-    assert attr_phish.assessment in ["SPOOFED_IDENTITY", "DIRECT_MALICIOUS_INFRASTRUCTURE"]
-    assert attr_phish.confidence > 0.5
+    assert attr_phish.assessment == "POSSIBLE_IDENTITY_INCONSISTENCY"
+    assert attr_phish.confidence == 0
     assert len(attr_phish.limitations) > 0
 
     # Test Benign (Legitimate Authenticated Sender)
     parser_benign = EmailForensicParser(raw_bytes=benign_eml_bytes)
     analysis_benign = parser_benign.parse()
     _, _, attr_benign = CampaignCorrelator.correlate_case(analysis_benign, [])
-    assert attr_benign.assessment == "LEGITIMATE_AUTHENTICATED_SENDER"
+    assert attr_benign.assessment == "INSUFFICIENT_EVIDENCE"
 
 
 # 16. Missing Intelligence Graceful Degradation Test
@@ -255,8 +256,8 @@ async def test_17_multiple_emails_sharing_infrastructure(pipeline_instance, phis
 
 # 18. API Integration Test with Full Phase 3 Response
 @pytest.mark.asyncio
-async def test_18_api_integration_phase3_response(phishing_eml_bytes):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+async def test_18_api_integration_phase3_response(phishing_eml_bytes, auth_headers):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         files = {
             "file": ("phishing_test.eml", phishing_eml_bytes, "message/rfc822")
         }

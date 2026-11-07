@@ -55,16 +55,63 @@ class ThreatAnalysisPipeline:
         self.explainer = ThreatExplainer(model_bundle=self.model_bundle)
         self.infra_service = InfrastructureIntelligenceService()
 
-    async def analyze_bytes_async(
+    async def analyze_bytes_async(self, raw_bytes: bytes, filename="uploaded.eml", db_session=None, actor="SYSTEM"):
+        from sqlalchemy import select
+        from sqlalchemy.exc import IntegrityError
+        from backend.app.database.session import AsyncSessionLocal
+        from backend.app.models.entities import ArtifactRecord, CaseRecord, AuditLogRecord, TimelineEventRecord, AlertRecord
+        from backend.app.services.evidence_service import preserve
+        from backend.app.schemas.analysis import EmailAnalysisResponse
+        import hashlib
+        from datetime import datetime, timezone
+        if db_session is None:
+            async with AsyncSessionLocal() as session:
+                return await self.analyze_bytes_async(raw_bytes, filename, session, actor)
+        digest = hashlib.sha256(raw_bytes).hexdigest()
+        async def existing_analysis():
+            artifact = await db_session.scalar(select(ArtifactRecord).where(ArtifactRecord.sha256 == digest))
+            if artifact:
+                case = await db_session.get(CaseRecord, artifact.case_id)
+                return EmailAnalysisResponse.model_validate_json(case.full_analysis_json)
+        existing = await existing_analysis()
+        if existing:
+            return existing
+        metadata, path = preserve(raw_bytes, filename or "uploaded.eml", actor)
+        try:
+            result = await self._analyze(raw_bytes, metadata.filename, db_session, metadata)
+            db_session.add(ArtifactRecord(artifact_id=metadata.artifact_id, case_id=result.case_id, sha256=digest, storage_name=path.name, size_bytes=len(raw_bytes), original_filename=metadata.filename, actor=actor, ingested_at=datetime.fromisoformat(metadata.ingested_at)))
+            db_session.add(AuditLogRecord(case_id=result.case_id, action="ARTIFACT_ANALYZED", actor=actor, details="Original bytes preserved; analysis version " + result.schema_version))
+            db_session.add(TimelineEventRecord(case_id=result.case_id, event_type="ARTIFACT_ANALYZED", title="Original evidence preserved and analyzed", source=actor))
+            if result.security_alert:
+                alert = result.security_alert
+                db_session.add(AlertRecord(alert_id=alert.alert_id, case_id=result.case_id, payload_json=alert.model_dump_json(), status="OPEN", created_at=datetime.now(timezone.utc)))
+            await db_session.commit()
+            return result
+        except Exception as exc:
+            await db_session.rollback()
+            path.unlink(missing_ok=True)
+            if isinstance(exc, IntegrityError):
+                existing = await existing_analysis()
+                if existing:
+                    return existing
+            raise
+
+    async def _analyze(
         self,
         raw_bytes: bytes,
         filename: Optional[str] = "uploaded.eml",
         db_session: Optional[AsyncSession] = None,
+        artifact=None,
     ) -> EmailAnalysisResponse:
         """Execute full asynchronous pipeline across Phase 1, Phase 2, and Phase 3."""
         # 1. Phase 1 Forensic Parsing
         parser = EmailForensicParser(raw_bytes=raw_bytes, filename=filename)
         base_analysis = parser.parse()
+        base_analysis.artifact = artifact
+        from backend.app.services.evidence_service import observations
+        observations(base_analysis)
+        from backend.app.services.auth_verification import verify_authentication
+        base_analysis.authentication.verified = await verify_authentication(raw_bytes, base_analysis.metadata.from_sender.domain)
 
         # 2. Phase 2 Feature Extraction
         structured_features = FeatureExtractor.extract_structured_features(base_analysis)
@@ -107,7 +154,7 @@ class ThreatAnalysisPipeline:
         # Limitations declaration
         limitations = [
             "URL and domain analysis is static; deep sandboxing and dynamic payload execution are disabled for safety.",
-            "ML model trained on standardized multi-class baseline features; continuous domain reputation feed integration planned for subsequent phase.",
+            "Demonstration ML corpus has 21 samples; probabilities are uncalibrated and do not establish operational accuracy.",
             "SHAP explanations approximate local linear feature impact around prediction vector.",
             "Origin assessment and geolocation reflect technical infrastructure observables, not physical human identity.",
             "Attribution support provides technical correlation hypotheses and does not constitute definitive legal attribution."
@@ -126,8 +173,7 @@ class ThreatAnalysisPipeline:
         ]
 
         legacy_class = risk_result.classification
-        if legacy_class == ThreatClass.LEGITIMATE.value:
-            legacy_class = "BENIGN"
+
 
         base_analysis.threat_assessment = InitialThreatAssessment(
             risk_score=risk_result.risk_score,
@@ -139,8 +185,11 @@ class ThreatAnalysisPipeline:
 
         # 8. Alert Evaluation & Real-Time Alert Object Generation
         from backend.app.services.alert_service import AlertService
+        base_analysis.risk_assessment = risk_result
+        base_analysis.observed_evidence = risk_result.indicators
+        base_analysis.content_intelligence = content_intelligence
         alert_eval = AlertService.evaluate_analysis(base_analysis)
-        base_analysis.security_alert = alert_eval.alert
+        base_analysis.security_alert = alert_eval.alert if alert_eval.is_alert_generated else None
 
         # Attach Phase 2 AI, Explainability & Content outputs
         base_analysis.ai_inference = prediction_result
@@ -154,13 +203,15 @@ class ThreatAnalysisPipeline:
 
         # 9. Phase 3: Infrastructure Intelligence & Origin Assessment
         try:
-            intel = await self.infra_service.gather_intelligence(base_analysis)
+            intel = await asyncio.wait_for(self.infra_service.gather_intelligence(base_analysis), timeout=30)
             base_analysis.infrastructure_intelligence = intel
             base_analysis.geolocation = intel.ip_intelligence
             base_analysis.origin_assessment = intel.origin_assessment
         except Exception as e:
-            logger.warning(f"Infrastructure intelligence gathering error: {e}")
+            logger.warning("Infrastructure enrichment failed: %s", type(e).__name__)
             intel = None
+
+        observations(base_analysis)
 
         # 9. Phase 3: Real NetworkX Threat Graph Construction
         try:
@@ -168,20 +219,14 @@ class ThreatAnalysisPipeline:
             graph_data = ThreatGraphBuilder.serialize_graph(G)
             base_analysis.threat_graph = graph_data
         except Exception as e:
-            logger.warning(f"Threat graph generation error: {e}")
+            logger.warning("Graph generation failed: %s", type(e).__name__)
 
-        # 10. Phase 3: Cross-Case Campaign Correlation & Persistence
-        try:
-            matches, campaign, attribution = await CorrelationPersistenceService.correlate_and_persist(
-                analysis=base_analysis,
-                intel=intel,
-                session=db_session,
-            )
-            base_analysis.campaign_correlations = matches
-            base_analysis.active_campaign = campaign
-            base_analysis.attribution_support = attribution
-        except Exception as e:
-            logger.warning(f"Campaign correlation error: {e}")
+        matches, campaign, attribution = await CorrelationPersistenceService.correlate_and_persist(
+            analysis=base_analysis, intel=intel, session=db_session,
+        )
+        base_analysis.campaign_correlations = matches
+        base_analysis.active_campaign = campaign
+        base_analysis.attribution_support = attribution
 
         return base_analysis
 

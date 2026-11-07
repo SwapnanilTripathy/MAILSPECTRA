@@ -4,11 +4,11 @@ import { Copy, Check } from 'lucide-react';
 export default function DefangedIndicator({ value, defangedValue, type = 'generic', className = '' }) {
   const [copied, setCopied] = useState(false);
 
-  const displayVal = defangedValue || value || '';
+  const displayVal = defangedValue || String(value || '').replace(/^https:/i, 'hxxps:').replace(/^http:/i, 'hxxp:').replace(/\./g, '[.]');
 
-  const handleCopy = (e) => {
+  const handleCopy = async (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(value || displayVal);
+    try { await navigator.clipboard.writeText(value || displayVal); } catch { return; }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -22,7 +22,7 @@ export default function DefangedIndicator({ value, defangedValue, type = 'generi
       <button
         onClick={handleCopy}
         className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:text-cyan-400 focus:opacity-100"
-        title="Copy IOC"
+        aria-label="Copy original indicator" title="Copy original indicator"
       >
         {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
       </button>

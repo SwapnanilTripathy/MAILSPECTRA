@@ -1,4 +1,5 @@
 from enum import Enum
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
@@ -16,7 +17,13 @@ class EvidenceSource(str, Enum):
     OFFLINE_FIXTURE = "OFFLINE_FIXTURE"
 
 
-class GeoLocationInfo(BaseModel):
+class ProviderMetadata(BaseModel):
+    looked_up_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    cache_hit: bool = False
+    limitations: List[str] = Field(default_factory=list)
+
+
+class GeoLocationInfo(ProviderMetadata):
     ip: str
     defanged_ip: str
     version: int = 4
@@ -49,7 +56,8 @@ class DNSRecordEntry(BaseModel):
     status: str = "RESOLVED"  # RESOLVED, NXDOMAIN, TIMEOUT, ERROR
 
 
-class DNSIntelligenceResult(BaseModel):
+class DNSIntelligenceResult(ProviderMetadata):
+    source: str = "DNS"
     domain: str
     records: List[DNSRecordEntry] = Field(default_factory=list)
     a_records: List[str] = Field(default_factory=list)
@@ -60,7 +68,7 @@ class DNSIntelligenceResult(BaseModel):
     status: str = "SUCCESS"  # SUCCESS, NO_RECORDS, TIMEOUT, ERROR
 
 
-class RDAPDomainInfo(BaseModel):
+class RDAPDomainInfo(ProviderMetadata):
     domain: str
     registrar: Optional[str] = None
     creation_date: Optional[str] = None
@@ -89,7 +97,8 @@ class DomainIntelligenceResult(BaseModel):
     source: str = "DOMAIN_ANALYSIS"
 
 
-class ThreatReputationInfo(BaseModel):
+class ThreatReputationInfo(ProviderMetadata):
+    context: Dict[str, Any] = Field(default_factory=dict)
     indicator: str
     indicator_type: str  # IP, DOMAIN, URL, HASH
     provider: str = "DeepTrace Intelligence Aggregator"
@@ -98,7 +107,7 @@ class ThreatReputationInfo(BaseModel):
     suspicious_votes: int = 0
     total_engines: int = 0
     blacklist_hits: List[str] = Field(default_factory=list)
-    verdict: str = "CLEAN"  # CLEAN, SUSPICIOUS, MALICIOUS, UNKNOWN
+    verdict: str = "UNKNOWN"  # CLEAN, SUSPICIOUS, MALICIOUS, UNKNOWN
     status: str = "AVAILABLE"  # AVAILABLE, UNAVAILABLE, RATE_LIMITED
     last_checked: str
     source: str = EvidenceSource.THREAT_INTEL.value

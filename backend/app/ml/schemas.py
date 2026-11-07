@@ -62,12 +62,18 @@ class SHAPExplanation(BaseModel):
 
 
 class MLPredictionResult(BaseModel):
+    deployment_status: str = "DEMONSTRATION_ONLY"
+    calibration_status: str = "UNCALIBRATED"
+    production_ready: bool = False
     predicted_class: str
     confidence: float
     probabilities: Dict[str, float] = Field(default_factory=dict)
     is_model_available: bool = True
     model_version: str = "1.0.0"
     model_type: str = "LogisticRegression + TF-IDF"
+    feature_version: str = "structured-v1"
+    confidence_definition: str = "Predicted class probability; uncalibrated demonstration model"
+    limitations: List[str] = Field(default_factory=list)
 
 
 class RiskAssessmentResult(BaseModel):

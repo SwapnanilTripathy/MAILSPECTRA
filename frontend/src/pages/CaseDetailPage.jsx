@@ -1,3 +1,4 @@
+import { useMasked } from '../context/PrivacyContext';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -23,10 +24,14 @@ import DefangedIndicator from '../components/common/DefangedIndicator';
 export default function CaseDetailPage() {
   const { caseId } = useParams();
   const navigate = useNavigate();
-  const [caseData, setCaseData] = useState(null);
+  const [rawcaseData, setCaseData] = useState(null);
+  const caseData = useMasked(rawcaseData);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [integrityStatus, setIntegrityStatus] = useState(null);
   const [verifying, setVerifying] = useState(false);
+  const [evidenceStatus, setEvidenceStatus] = useState(null);
+  const [checkingEvidence, setCheckingEvidence] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
 
   useEffect(() => {
@@ -39,10 +44,17 @@ export default function CaseDetailPage() {
       const res = await api.getCaseDetail(caseId);
       setCaseData(res);
     } catch (err) {
-      console.error('Failed to fetch case:', err);
+      setLoadError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVerifyEvidence = async () => {
+    setCheckingEvidence(true);
+    try { setEvidenceStatus(await api.verifyEvidence(caseId)); }
+    catch (err) { setEvidenceStatus({ integrity_verified: false, status: err.message }); }
+    finally { setCheckingEvidence(false); }
   };
 
   const handleVerifyIntegrity = async () => {
@@ -61,7 +73,7 @@ export default function CaseDetailPage() {
     setGeneratingReport(true);
     try {
       await api.generateReport(caseId);
-      window.open(api.getReportDownloadUrl(caseId), '_blank');
+      await api.downloadReport(caseId);
       fetchCase();
     } catch (err) {
       alert(`Report error: ${err.message}`);
@@ -83,7 +95,7 @@ export default function CaseDetailPage() {
     return (
       <div className="p-12 rounded-xl bg-[#111827] border border-slate-800 text-center text-slate-400 font-mono text-sm space-y-4">
         <AlertTriangle className="w-8 h-8 mx-auto text-amber-400" />
-        <p>Case '{caseId}' not found in the forensic registry.</p>
+        <p role="alert">{loadError || 'Case unavailable'}</p>
         <button
           onClick={() => navigate('/cases')}
           className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono"
@@ -109,7 +121,7 @@ export default function CaseDetailPage() {
         <div className="flex items-center gap-3">
           {caseData.full_analysis && Object.keys(caseData.full_analysis).length > 0 && (
             <button
-              onClick={() => navigate('/investigate', { state: { initialAnalysis: caseData.full_analysis } })}
+              onClick={() => navigate('/investigate', { state: { initialAnalysis: rawcaseData.full_analysis } })}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 text-xs font-semibold transition"
             >
               <Search className="w-4 h-4" />
@@ -120,7 +132,7 @@ export default function CaseDetailPage() {
           <button
             onClick={handleGenerateAndDownload}
             disabled={generatingReport}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-lg shadow-cyan-600/20 transition disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-semibold shadow-lg shadow-cyan-600/20 transition disabled:opacity-50"
           >
             <FileDown className="w-4 h-4" />
             <span>{generatingReport ? 'Generating PDF...' : 'Download PDF Report'}</span>
@@ -172,11 +184,11 @@ export default function CaseDetailPage() {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold font-mono text-white">
+              <h2 className="text-sm font-bold font-mono text-white">
                 Cryptographic Evidence Chain of Custody (SHA-256)
-              </h3>
+              </h2>
               <p className="text-xs text-slate-400 mt-0.5 font-sans">
-                Cryptographic fingerprint guaranteeing evidence integrity verification and tamper detection.
+                Compare original evidence and PDF files with their separately recorded digests. A match does not authenticate the sender.
               </p>
 
             </div>
@@ -188,21 +200,25 @@ export default function CaseDetailPage() {
             className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-400 text-xs font-mono transition disabled:opacity-50"
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{verifying ? 'Verifying Integrity...' : 'Verify Cryptographic Hash'}</span>
+            <span>{verifying ? 'Verifying Integrity...' : 'Verify PDF hash'}</span>
           </button>
         </div>
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-            <span className="text-slate-500 text-[10px] block">ORIGINAL EML ARTIFACT SHA-256</span>
+            <span className="text-slate-400 text-[10px] block">ORIGINAL EML ARTIFACT SHA-256</span>
             <span className="text-slate-200 select-all break-all">{caseData.sha256 || 'Not Recorded'}</span>
           </div>
           <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-            <span className="text-slate-500 text-[10px] block">GENERATED REPORT PDF SHA-256</span>
+            <span className="text-slate-400 text-[10px] block">GENERATED REPORT PDF SHA-256</span>
             <span className="text-cyan-400 select-all break-all">{caseData.report_sha256 || 'Generate report to compute hash'}</span>
           </div>
         </div>
 
+        <button onClick={handleVerifyEvidence} disabled={checkingEvidence} className="mt-4 btn-secondary">
+          {checkingEvidence ? 'Checking original…' : 'Verify original evidence'}
+        </button>
+        {evidenceStatus && <p role="status" className="mt-3 text-sm text-slate-300">{evidenceStatus.integrity_verified ? 'Original evidence matches its recorded SHA-256.' : `Original evidence: ${evidenceStatus.status}`}</p>}
         {integrityStatus && (
           <div
             className={`mt-4 p-3 rounded-lg border text-xs font-mono flex items-center gap-2 ${
@@ -214,7 +230,7 @@ export default function CaseDetailPage() {
             {integrityStatus.integrity_verified ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-red-400" />}
             <span>
               {integrityStatus.integrity_verified
-                ? 'CRYPTOGRAPHIC INTEGRITY VERIFIED: PDF hash matches on-disk SHA-256 fingerprint exactly (Zero Tampering Detected).'
+                ? 'PDF digest matches the recorded SHA-256. This check does not establish sender authenticity.'
                 : `INTEGRITY CHECK ALERT: ${integrityStatus.status}`}
             </span>
           </div>
@@ -232,7 +248,7 @@ export default function CaseDetailPage() {
 
           <div className="mt-4 space-y-4 font-mono text-xs">
             {(!caseData.timeline_events || caseData.timeline_events.length === 0) ? (
-              <p className="text-slate-500 italic">No timeline events recorded yet.</p>
+              <p className="text-slate-400 italic">No timeline events recorded yet.</p>
             ) : (
               <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
                 {caseData.timeline_events.map((evt, i) => (
@@ -241,10 +257,10 @@ export default function CaseDetailPage() {
                     <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-white">{evt.title}</span>
-                        <span className="text-[10px] text-slate-500">{evt.timestamp ? evt.timestamp.substring(11, 19) : ''}</span>
+                        <span className="text-[10px] text-slate-400">{evt.timestamp ? evt.timestamp.substring(11, 19) : ''}</span>
                       </div>
                       <p className="text-slate-300 font-sans text-xs mt-1">{evt.description}</p>
-                      <span className="text-[10px] text-slate-500 mt-1 block">Actor / Source: {evt.source}</span>
+                      <span className="text-[10px] text-slate-400 mt-1 block">Actor / Source: {evt.source}</span>
                     </div>
                   </div>
                 ))}
@@ -262,7 +278,7 @@ export default function CaseDetailPage() {
 
           <div className="mt-4 space-y-2 max-h-96 overflow-y-auto font-mono text-xs">
             {(!caseData.observables || caseData.observables.length === 0) ? (
-              <p className="text-slate-500 italic">No discrete observables cataloged for this case.</p>
+              <p className="text-slate-400 italic">No discrete observables cataloged for this case.</p>
             ) : (
               caseData.observables.map((obs, i) => (
                 <div key={i} className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
@@ -272,7 +288,7 @@ export default function CaseDetailPage() {
                     </span>
                     <DefangedIndicator value={obs.value} defangedValue={obs.defanged_value} type={obs.type} />
                   </div>
-                  <span className="text-[10px] text-slate-500">{obs.source}</span>
+                  <span className="text-[10px] text-slate-400">{obs.source}</span>
                 </div>
               ))
             )}

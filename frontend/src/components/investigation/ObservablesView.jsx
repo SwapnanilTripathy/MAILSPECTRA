@@ -78,12 +78,12 @@ export default function ObservablesView({ observables, attachments }) {
         <div className="rounded-xl bg-[#111827] border border-slate-800 overflow-hidden shadow-md">
           <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/40 flex items-center gap-2">
             <Paperclip className="w-4 h-4 text-cyan-400" />
-            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">
               Extracted Email Attachments & Cryptographic Hashes
-            </h4>
+            </h3>
           </div>
           {(!attachments || attachments.length === 0) ? (
-            <div className="p-8 text-center text-slate-500 font-mono text-xs">
+            <div className="p-8 text-center text-slate-400 font-mono text-xs">
               No binary attachments contained in this email.
             </div>
           ) : (
@@ -92,7 +92,7 @@ export default function ObservablesView({ observables, attachments }) {
                 <div key={i} className="p-5 space-y-3 font-mono text-xs hover:bg-slate-800/20 transition">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-white text-sm">{att.filename || `attachment_${i+1}`}</span>
-                    <span className="text-slate-400">{att.filesize_bytes ? `${(att.filesize_bytes / 1024).toFixed(1)} KB` : 'N/A'}</span>
+                    <span className="text-slate-400">{att.size_bytes ? `${(att.size_bytes / 1024).toFixed(1)} KB` : 'N/A'}</span>
                   </div>
                   <div className="text-slate-400">MIME Type: <span className="text-slate-200">{att.content_type || 'application/octet-stream'}</span></div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">

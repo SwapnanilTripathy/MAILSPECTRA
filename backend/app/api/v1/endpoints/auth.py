@@ -1,99 +1,119 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
-from sqlalchemy import select
+import hashlib
+import secrets
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, Field
+import jwt
+from sqlalchemy import select, func, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from starlette.concurrency import run_in_threadpool
 from backend.app.core.config import settings
+from backend.app.core.security import current_user, hash_password, verify_password
 from backend.app.database.session import get_db
-from backend.app.models.entities import AuditLogRecord, UserRecord
+from backend.app.models.entities import AuditLogRecord, UserRecord, SessionRecord, LoginAttemptRecord, RefreshTokenRecord
 
 router = APIRouter()
-
+# Equal-cost password work for unknown accounts. No usable default account exists.
+_DUMMY_HASH = hash_password(secrets.token_urlsafe(32))
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_.-]+$")
+    password: str = Field(min_length=1, max_length=256)
 
+class UserProfile(BaseModel):
+    username: str
+    full_name: str
+    role: str
 
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    user: dict
+    expires_in: int
+    user: UserProfile
 
 
-# Standard prototype demo analyst credentials for SIH evaluation
-DEFAULT_USERS = {
-    "analyst": {
-        "username": "analyst",
-        "full_name": "Lead Forensic Analyst",
-        "role": "Lead Investigator",
-        "email": "analyst@deeptrace.soc",
-    },
-    "admin": {
-        "username": "admin",
-        "full_name": "SOC Administrator",
-        "role": "Security Admin",
-        "email": "admin@deeptrace.soc",
-    },
-}
+def profile(user):
+    return UserProfile(username=user.username, full_name=user.full_name, role=user.role)
 
 
-@router.post("/login", response_model=LoginResponse, summary="SOC Analyst Login")
-async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
-    """Authenticate SOC analyst and return active session token."""
-    username = payload.username.strip().lower()
-    
-    # Allow default prototype analyst or password verification
-    if username in DEFAULT_USERS and payload.password in ["deeptrace2026", "analyst123", "password", "admin"]:
-        user_info = DEFAULT_USERS[username]
-        
-        # Log audit event
-        db.add(
-            AuditLogRecord(
-                action="USER_LOGIN",
-                actor=user_info["full_name"],
-                details=f"Successful login for user '{username}' ({user_info['role']})",
-            )
-        )
+@router.post("/login", response_model=LoginResponse)
+async def login(payload: LoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=settings.LOGIN_WINDOW_SECONDS)
+    # Ignore forwarded headers: the deployment proxy must enforce its own global limit.
+    bucket = hashlib.sha256((request.client.host if request.client else "unknown").encode()).hexdigest()
+    await db.execute(delete(LoginAttemptRecord).where(LoginAttemptRecord.attempted_at < cutoff))
+    count = await db.scalar(select(func.count()).select_from(LoginAttemptRecord).where(LoginAttemptRecord.bucket == bucket))
+    if count >= settings.LOGIN_ATTEMPT_LIMIT:
+        raise HTTPException(429, "Too many login attempts; try again later", headers={"Retry-After": str(settings.LOGIN_WINDOW_SECONDS)})
+    db.add(LoginAttemptRecord(bucket=bucket, attempted_at=now))
+    await db.commit()
+    user = await db.scalar(select(UserRecord).where(UserRecord.username == payload.username.lower()))
+    valid = await run_in_threadpool(verify_password, payload.password, user.hashed_password if user else _DUMMY_HASH)
+    if not user or not valid or not user.is_active or user.role not in {"admin", "analyst", "viewer"}:
+        raise HTTPException(401, "Invalid credentials")
+    expires = now + timedelta(minutes=settings.ACCESS_TOKEN_MINUTES)
+    session_id = secrets.token_hex(32)
+    db.add(SessionRecord(session_id=session_id, user_id=user.id, expires_at=now + timedelta(days=settings.REFRESH_TOKEN_DAYS)))
+    db.add(AuditLogRecord(action="USER_LOGIN", actor=user.username, details="Session created"))
+    await db.flush()
+    await issue_refresh(response, db, session_id, now + timedelta(days=settings.REFRESH_TOKEN_DAYS))
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    token = jwt.encode({"sub": str(user.id), "jti": session_id, "exp": expires, "iat": now, "iss": settings.TOKEN_ISSUER, "aud": "mailspectra-api", "type": "access"}, settings.SECRET_KEY, algorithm="HS256")
+    return LoginResponse(access_token=token, expires_in=settings.ACCESS_TOKEN_MINUTES*60, user=profile(user))
+
+
+@router.get("/me", response_model=UserProfile)
+async def me(user: UserRecord = Depends(current_user)):
+    return profile(user)
+
+
+@router.post("/logout")
+async def logout(request: Request, response: Response, user: UserRecord = Depends(current_user), db: AsyncSession = Depends(get_db)):
+    session = await db.get(SessionRecord, request.state.session_id)
+    session.revoked = True
+    response.delete_cookie("mailspectra_refresh", path=settings.API_V1_STR+"/auth")
+    db.add(AuditLogRecord(action="USER_LOGOUT", actor=user.username, details="Session revoked"))
+    await db.commit()
+    return {"status": "SUCCESS"}
+
+
+async def issue_refresh(response, db, session_id, expires):
+    token = secrets.token_urlsafe(48)
+    db.add(RefreshTokenRecord(token_hash=hashlib.sha256(token.encode()).hexdigest(),session_id=session_id,consumed=False))
+    response.set_cookie('mailspectra_refresh',token,httponly=True,secure=settings.APP_ENV=='production',samesite='strict',path=settings.API_V1_STR+'/auth',max_age=max(0,int((expires.replace(tzinfo=timezone.utc)-datetime.now(timezone.utc)).total_seconds())))
+
+
+def require_refresh_csrf(request):
+    if request.headers.get('X-Mailspectra-CSRF') != '1' or (request.headers.get('origin') and request.headers['origin'] not in settings.CORS_ORIGINS):
+        raise HTTPException(403,'Refresh origin/header rejected')
+
+
+@router.post('/refresh',response_model=LoginResponse)
+async def refresh(request: Request,response: Response,db: AsyncSession=Depends(get_db)):
+    require_refresh_csrf(request)
+    raw=request.cookies.get('mailspectra_refresh','')
+    if not raw or len(raw)>256: raise HTTPException(401,'Invalid refresh session')
+    digest=hashlib.sha256(raw.encode()).hexdigest()
+    record=await db.get(RefreshTokenRecord,digest)
+    if not record: raise HTTPException(401,'Invalid refresh session')
+    session=await db.scalar(select(SessionRecord).where(SessionRecord.session_id==record.session_id).with_for_update())
+    now=datetime.now(timezone.utc)
+    if not session or session.revoked or session.expires_at.replace(tzinfo=timezone.utc)<=now:
+        raise HTTPException(401,'Invalid refresh session')
+    consumed=await db.execute(update(RefreshTokenRecord).where(RefreshTokenRecord.token_hash==digest,RefreshTokenRecord.consumed==False).values(consumed=True))
+    if consumed.rowcount != 1:
+        session.revoked=True
         await db.commit()
-
-        return LoginResponse(
-            access_token=f"deeptrace-jwt-token-{username}-{int(datetime.now(timezone.utc).timestamp())}",
-            user=user_info,
-        )
-
-    # Demo fallback for evaluation
-    if payload.username and payload.password:
-        user_info = {
-            "username": payload.username,
-            "full_name": "Security Analyst",
-            "role": "SOC Analyst",
-            "email": f"{payload.username}@deeptrace.soc",
-        }
-        return LoginResponse(
-            access_token=f"deeptrace-jwt-token-custom-{int(datetime.now(timezone.utc).timestamp())}",
-            user=user_info,
-        )
-
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid credentials. Use username 'analyst' and password 'deeptrace2026'.",
-    )
-
-
-@router.get("/me", summary="Get current logged in user profile")
-async def get_current_user():
-    return {
-        "username": "analyst",
-        "full_name": "Lead Forensic Analyst",
-        "role": "Lead Investigator",
-        "email": "analyst@deeptrace.soc",
-        "permissions": ["READ", "WRITE", "EXPORT_REPORT", "MANAGE_CASES"],
-    }
-
-
-@router.post("/logout", summary="Logout current session")
-async def logout():
-    return {"status": "SUCCESS", "message": "Successfully logged out."}
+        raise HTTPException(401,'Invalid refresh session')
+    user=await db.get(UserRecord,session.user_id)
+    if not user or not user.is_active or user.role not in {'admin','analyst','viewer'}:
+        session.revoked=True
+        await db.commit()
+        raise HTTPException(401,'Invalid refresh session')
+    await issue_refresh(response,db,session.session_id,session.expires_at)
+    await db.commit()
+    response.headers['Cache-Control']='no-store'
+    token=jwt.encode({'sub':str(user.id),'jti':session.session_id,'exp':now+timedelta(minutes=settings.ACCESS_TOKEN_MINUTES),'iat':now,'iss':settings.TOKEN_ISSUER,'aud':'mailspectra-api','type':'access'},settings.SECRET_KEY,algorithm='HS256')
+    return LoginResponse(access_token=token,expires_in=settings.ACCESS_TOKEN_MINUTES*60,user=profile(user))

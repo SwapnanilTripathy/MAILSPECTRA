@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from backend.app.core.config import settings
 import json
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from sqlalchemy import select
@@ -8,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from backend.app.core.logging import logger
 from backend.app.database.session import AsyncSessionLocal
-from backend.app.graph.campaign_correlator import CampaignCorrelator
+from backend.app.graph.campaign_correlator import CampaignCorrelator, attachment_hashes, utc_timestamp
 from backend.app.graph.schemas import (
     AttributionSupportResult,
     CampaignCorrelationMatch,
@@ -42,13 +43,15 @@ class CorrelationPersistenceService:
             # 1. Fetch historical cases and their observables
             historical_cases: List[Dict[str, Any]] = []
             try:
-                stmt = select(CaseRecord).options(selectinload(CaseRecord.observables)).limit(100)
+                stmt = select(CaseRecord).options(selectinload(CaseRecord.observables)).where(CaseRecord.created_at >= utc_timestamp(analysis.analyzed_at) - timedelta(days=settings.CORRELATION_WINDOW_DAYS)).order_by(CaseRecord.created_at.desc()).limit(500)
                 result = await session.execute(stmt)
                 cases_orm = result.scalars().all()
 
                 for c in cases_orm:
                     case_dict: Dict[str, Any] = {
                         "case_id": c.case_id,
+                        "created_at":c.created_at.isoformat(),
+                        "attachment_hashes":[],
                         "filename": c.filename,
                         "subject": c.subject,
                         "from_address": c.from_address,
@@ -60,6 +63,8 @@ class CorrelationPersistenceService:
                         "urls": [],
                     }
                     for obs in c.observables:
+                        if obs.observable_type == "ATTACHMENT_SHA256":
+                            case_dict["attachment_hashes"].append(obs.value)
                         if obs.observable_type == "IP":
                             case_dict["ips"].append(obs.value)
                         elif obs.observable_type == "DOMAIN":
@@ -69,7 +74,7 @@ class CorrelationPersistenceService:
 
                     historical_cases.append(case_dict)
             except Exception as e:
-                logger.warning(f"Failed to query historical cases from database ({e}). Proceeding in standalone mode.")
+                raise
 
             # 2. Run Campaign Correlator
             matches, campaign_entity, attribution = CampaignCorrelator.correlate_case(
@@ -77,6 +82,11 @@ class CorrelationPersistenceService:
                 historical_cases=historical_cases,
                 intel=intel,
             )
+
+            # Store the complete analysis before any presentation masking is applied.
+            analysis.campaign_correlations = matches
+            analysis.active_campaign = campaign_entity
+            analysis.attribution_support = attribution
 
             # 3. Persist current CaseRecord and Observables
             try:
@@ -95,11 +105,12 @@ class CorrelationPersistenceService:
                     risk_score=analysis.threat_assessment.risk_score,
                     confidence=analysis.threat_assessment.confidence,
                     sha256=analysis.evidence_hashes.sha256,
-                    full_analysis_json=json.dumps(
-                        {"case_id": analysis.case_id, "classification": analysis.threat_assessment.classification}
-                    ),
+                    full_analysis_json=analysis.model_dump_json(),
                 )
                 session.add(case_rec)
+
+                for digest in attachment_hashes(a.sha256 for a in analysis.attachments):
+                    session.add(ObservableRecord(case_id=analysis.case_id, observable_type="ATTACHMENT_SHA256", value=digest, defanged_value=digest, source="MIME_ATTACHMENT"))
 
                 # Add IP observables
                 for ip_item in analysis.ips:
@@ -153,7 +164,7 @@ class CorrelationPersistenceService:
                     existing_camp = (await session.execute(camp_stmt)).scalar_one_or_none()
 
                     if existing_camp:
-                        existing_camp.member_case_ids_json = json.dumps(campaign_entity.member_case_ids)
+                        existing_camp.member_case_ids_json = json.dumps(sorted(set(json.loads(existing_camp.member_case_ids_json)) | set(campaign_entity.member_case_ids)))
                         existing_camp.shared_indicators_json = json.dumps(campaign_entity.shared_infrastructure)
                         existing_camp.confidence = campaign_entity.confidence
                         existing_camp.last_seen = datetime.now(timezone.utc)
@@ -169,10 +180,12 @@ class CorrelationPersistenceService:
                             )
                         )
 
-                await session.commit()
+                await session.flush()
+                if close_session:
+                    await session.commit()
             except Exception as e:
-                logger.warning(f"Database persistence skipped or failed ({e}).")
                 await session.rollback()
+                raise
 
             return matches, campaign_entity, attribution
 

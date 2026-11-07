@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Network, ZoomIn, ZoomOut, Filter, Info, ShieldAlert, Globe, Server, Mail, Link as LinkIcon, Layers } from 'lucide-react';
 import DefangedIndicator from '../common/DefangedIndicator';
 
@@ -7,16 +7,24 @@ export default function ThreatGraphView({ threatGraph }) {
   const [filterType, setFilterType] = useState('ALL');
   const [zoomLevel, setZoomLevel] = useState(1.0);
 
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const drag = useRef(null);
+  const [relationshipFilter, setRelationshipFilter] = useState('ALL');
+  const exportGraph = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(threatGraph, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'mailspectra-graph.json'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
   const nodes = threatGraph?.nodes || [];
   const edges = threatGraph?.edges || [];
-  const metrics = threatGraph?.metrics || {
-    node_count: nodes.length,
-    edge_count: edges.length,
-    density: 0.0,
-    connected_components: 1,
+  const metrics = {
+    node_count: threatGraph?.total_nodes,
+    edge_count: threatGraph?.total_edges,
+    density: threatGraph?.density,
+    connected_components: threatGraph?.connected_components_count,
   };
 
-  const nodeTypes = ['ALL', ...Array.from(new Set(nodes.map((n) => n.type || 'UNKNOWN')))];
+  const nodeTypes = ['ALL', ...Array.from(new Set(nodes.map((n) => n.node_type || 'UNKNOWN')))];
 
   // Color & Icon mapping for node types
   const nodeConfig = {
@@ -41,13 +49,13 @@ export default function ThreatGraphView({ threatGraph }) {
 
     // Place email/case node at center if present, others arranged radially
     return nodes.map((node, index) => {
-      const isCenter = node.type === 'EMAIL' || node.type === 'SENDER';
+      const isCenter = node.node_type === 'EMAIL' || node.node_type === 'SENDER';
       let x = centerX;
       let y = centerY;
 
       if (!isCenter || total > 1) {
         const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-        const dist = node.type === 'EMAIL' ? 0 : node.type === 'SENDER' || node.type === 'DOMAIN' ? radius * 0.55 : radius;
+        const dist = node.node_type === 'EMAIL' ? 0 : node.node_type === 'SENDER' || node.node_type === 'DOMAIN' ? radius * 0.55 : radius;
         x = centerX + dist * Math.cos(angle);
         y = centerY + dist * Math.sin(angle);
       }
@@ -68,7 +76,7 @@ export default function ThreatGraphView({ threatGraph }) {
 
   const filteredNodes = filterType === 'ALL'
     ? renderedNodes
-    : renderedNodes.filter((n) => n.type === filterType);
+    : renderedNodes.filter((n) => n.node_type === filterType);
 
   if (nodes.length === 0) {
     return (
@@ -84,21 +92,21 @@ export default function ThreatGraphView({ threatGraph }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-[#111827] border border-slate-800">
           <span className="text-[10px] font-mono uppercase text-slate-400">GRAPH NODES</span>
-          <p className="text-xl font-bold font-mono text-cyan-400 mt-1">{metrics.node_count || nodes.length}</p>
+          <p className="text-xl font-bold font-mono text-cyan-400 mt-1">{metrics.node_count ?? 'Unavailable'}</p>
         </div>
         <div className="p-4 rounded-xl bg-[#111827] border border-slate-800">
           <span className="text-[10px] font-mono uppercase text-slate-400">RELATIONSHIP EDGES</span>
-          <p className="text-xl font-bold font-mono text-blue-400 mt-1">{metrics.edge_count || edges.length}</p>
+          <p className="text-xl font-bold font-mono text-blue-400 mt-1">{metrics.edge_count ?? 'Unavailable'}</p>
         </div>
         <div className="p-4 rounded-xl bg-[#111827] border border-slate-800">
           <span className="text-[10px] font-mono uppercase text-slate-400">GRAPH DENSITY</span>
           <p className="text-xl font-bold font-mono text-purple-400 mt-1">
-            {metrics.density !== undefined ? Number(metrics.density).toFixed(3) : '0.000'}
+            {metrics.density !== undefined ? Number(metrics.density).toFixed(3) : 'Unavailable'}
           </p>
         </div>
         <div className="p-4 rounded-xl bg-[#111827] border border-slate-800">
           <span className="text-[10px] font-mono uppercase text-slate-400">CONNECTED CLUSTERS</span>
-          <p className="text-xl font-bold font-mono text-emerald-400 mt-1">{metrics.connected_components || 1}</p>
+          <p className="text-xl font-bold font-mono text-emerald-400 mt-1">{metrics.connected_components ?? 'Unavailable'}</p>
         </div>
       </div>
 
@@ -119,6 +127,7 @@ export default function ThreatGraphView({ threatGraph }) {
             <div className="flex items-center gap-1.5">
               <Filter className="w-3.5 h-3.5 text-slate-400" />
               <select
+                aria-label="Filter graph nodes"
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
                 className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300 focus:outline-none focus:border-cyan-500"
@@ -130,6 +139,10 @@ export default function ThreatGraphView({ threatGraph }) {
                 ))}
               </select>
 
+              <select aria-label="Filter graph relationships" className="bg-slate-800 text-xs" value={relationshipFilter} onChange={e => setRelationshipFilter(e.target.value)}>
+                {['ALL', ...new Set(edges.map(e => e.relationship))].map(value => <option key={value}>{value}</option>)}
+              </select>
+              <button onClick={exportGraph} className="text-xs text-cyan-300">Export JSON</button>
               {/* Zoom Controls */}
               <div className="flex items-center ml-2 border-l border-slate-700 pl-2 gap-1">
                 <button
@@ -164,8 +177,14 @@ export default function ThreatGraphView({ threatGraph }) {
 
             <svg
               viewBox="0 0 800 560"
+              role="group" aria-label="Evidence relationship graph; arrow keys pan" tabIndex={0}
+              onPointerDown={e => { if (e.target.closest('[role="button"]')) return; drag.current = { x:e.clientX-pan.x, y:e.clientY-pan.y }; e.currentTarget.setPointerCapture(e.pointerId); }}
+              onPointerMove={e => { if (drag.current) setPan({ x:e.clientX-drag.current.x, y:e.clientY-drag.current.y }); }}
+              onPointerUp={() => { drag.current = null; }}
+              onPointerCancel={() => { drag.current = null; }}
+              onKeyDown={e => { const move = { ArrowLeft:[-20,0], ArrowRight:[20,0], ArrowUp:[0,-20], ArrowDown:[0,20] }[e.key]; if(move) { e.preventDefault(); setPan(p => ({x:p.x+move[0],y:p.y+move[1]})); } }}
               className="w-full h-full cursor-grab active:cursor-grabbing transition-transform duration-200"
-              style={{ transform: `scale(${zoomLevel})` }}
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})` }}
             >
               <defs>
                 <marker
@@ -196,7 +215,7 @@ export default function ThreatGraphView({ threatGraph }) {
               {edges.map((edge, idx) => {
                 const src = nodeMap.get(edge.source);
                 const tgt = nodeMap.get(edge.target);
-                if (!src || !tgt) return null;
+                if (!src || !tgt || !filteredNodes.some(n => n.id === src.id) || !filteredNodes.some(n => n.id === tgt.id) || (relationshipFilter !== 'ALL' && edge.relationship !== relationshipFilter)) return null;
 
                 const isConnectedToSelected =
                   selectedNode && (selectedNode.id === edge.source || selectedNode.id === edge.target);
@@ -235,7 +254,7 @@ export default function ThreatGraphView({ threatGraph }) {
 
               {/* Render Nodes */}
               {filteredNodes.map((node) => {
-                const cfg = nodeConfig[node.type] || { color: '#94a3b8', bg: '#475569', label: node.type };
+                const cfg = nodeConfig[node.node_type] || { color: '#94a3b8', bg: '#475569', label: node.node_type };
                 const isSelected = selectedNode?.id === node.id;
 
                 return (
@@ -243,6 +262,8 @@ export default function ThreatGraphView({ threatGraph }) {
                     key={node.id}
                     transform={`translate(${node.x}, ${node.y})`}
                     onClick={() => setSelectedNode(node)}
+                    role="button" tabIndex={0} aria-label={`Inspect ${node.node_type}: ${node.label}`}
+                    onKeyDown={e => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedNode(node); } }}
                     className="cursor-pointer group"
                   >
                     {/* Selected Halo Pulse */}
@@ -277,7 +298,7 @@ export default function ThreatGraphView({ threatGraph }) {
                       fontFamily="monospace"
                       className="select-none pointer-events-none"
                     >
-                      {(node.type || 'N').substring(0, 2)}
+                      {(node.node_type || 'N').substring(0, 2)}
                     </text>
 
                     {/* Node Label Text Below */}
@@ -310,14 +331,14 @@ export default function ThreatGraphView({ threatGraph }) {
           {selectedNode ? (
             <div className="mt-4 space-y-4 font-mono text-xs flex-1">
               <div>
-                <span className="text-[10px] uppercase text-slate-500 block">ENTITY TYPE</span>
+                <span className="text-[10px] uppercase text-slate-400 block">ENTITY TYPE</span>
                 <span className="inline-block mt-1 px-2.5 py-1 rounded text-xs font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
-                  {selectedNode.type}
+                  {selectedNode.node_type}
                 </span>
               </div>
 
               <div>
-                <span className="text-[10px] uppercase text-slate-500 block">IDENTIFIER / VALUE</span>
+                <span className="text-[10px] uppercase text-slate-400 block">IDENTIFIER / VALUE</span>
                 <div className="mt-1">
                   <DefangedIndicator value={selectedNode.id} className="text-white break-all" />
                 </div>
@@ -325,14 +346,14 @@ export default function ThreatGraphView({ threatGraph }) {
 
               {selectedNode.label && selectedNode.label !== selectedNode.id && (
                 <div>
-                  <span className="text-[10px] uppercase text-slate-500 block">DISPLAY LABEL</span>
+                  <span className="text-[10px] uppercase text-slate-400 block">DISPLAY LABEL</span>
                   <p className="text-slate-200 mt-1 font-sans">{selectedNode.label}</p>
                 </div>
               )}
 
               {/* Connected Relationships */}
               <div className="pt-3 border-t border-slate-800">
-                <span className="text-[10px] uppercase text-slate-500 block mb-2">ASSOCIATED RELATIONSHIPS</span>
+                <span className="text-[10px] uppercase text-slate-400 block mb-2">ASSOCIATED RELATIONSHIPS</span>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {edges
                     .filter((e) => e.source === selectedNode.id || e.target === selectedNode.id)
@@ -344,6 +365,9 @@ export default function ThreatGraphView({ threatGraph }) {
                           <span className="text-cyan-400 font-bold">{isSource ? '→ ' : '← '}</span>
                           <span className="text-slate-400">{edge.relationship}: </span>
                           <span className="text-slate-200">{targetId}</span>
+                          <p>{edge.provenance} — {edge.source_type}</p>
+                          <p>{edge.evidence}</p>
+                          <p className="break-all">{(edge.evidence_refs || []).join(', ')}</p>
                         </div>
                       );
                     })}
@@ -351,7 +375,7 @@ export default function ThreatGraphView({ threatGraph }) {
               </div>
             </div>
           ) : (
-            <div className="mt-8 flex flex-col items-center justify-center text-center text-slate-500 font-mono text-xs space-y-2 flex-1">
+            <div className="mt-8 flex flex-col items-center justify-center text-center text-slate-400 font-mono text-xs space-y-2 flex-1">
               <Network className="w-8 h-8 text-slate-600 animate-pulse" />
               <p>Click any graph node to inspect its technical attributes, associated infrastructure, and relationships.</p>
             </div>

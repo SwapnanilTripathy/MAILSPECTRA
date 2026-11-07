@@ -14,5 +14,6 @@ if __name__ == "__main__":
         port=settings.PORT,
         reload=settings.DEBUG and settings.APP_ENV == "development",
         reload_dirs=["backend"],
+        access_log=False,  # Application logs request IDs without URLs/query strings.
         log_level=settings.LOG_LEVEL.lower(),
     )

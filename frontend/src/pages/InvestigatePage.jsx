@@ -22,6 +22,8 @@ import {
   EyeOff,
 } from 'lucide-react';
 import api from '../api/client';
+import { maskAnalysis } from '../utils/privacy';
+import { usePrivacy } from '../context/PrivacyContext';
 import VerdictBanner from '../components/investigation/VerdictBanner';
 import HeadersForensicsView from '../components/investigation/HeadersForensicsView';
 import RelayHopsView from '../components/investigation/RelayHopsView';
@@ -35,12 +37,14 @@ import ContentIntelligenceView from '../components/investigation/ContentIntellig
 
 export default function InvestigatePage() {
   const location = useLocation();
-  const [analysis, setAnalysis] = useState(location.state?.initialAnalysis || null);
+  const [analysis, setAnalysis] = useState(
+    location.state?.initialAnalysis || null,
+  );
   const [activeTab, setActiveTab] = useState('summary');
   const [loading, setLoading] = useState(false);
   const [rawText, setRawText] = useState('');
   const [inputMode, setInputMode] = useState('file'); // 'file' | 'raw'
-  const [maskPii, setMaskPii] = useState(false);
+  const { masked: maskPii, setMasked: setMaskPii } = usePrivacy();
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
@@ -51,17 +55,19 @@ export default function InvestigatePage() {
     }
   }, [location.state]);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = async (file) => {
     if (!file) return;
     setLoading(true);
     setAlertMessage(null);
     try {
-      const res = await api.analyzeEmailFile(file, maskPii);
+      const res = await api.analyzeEmailFile(file);
       setAnalysis(res);
       setActiveTab('summary');
     } catch (err) {
-      setAlertMessage({ type: 'error', text: err.message || 'Analysis failed.' });
+      setAlertMessage({
+        type: 'error',
+        text: err.message || 'Analysis failed.',
+      });
     } finally {
       setLoading(false);
     }
@@ -72,16 +78,18 @@ export default function InvestigatePage() {
     setLoading(true);
     setAlertMessage(null);
     try {
-      const res = await api.analyzeRawEmail(rawText, 'raw_investigation.eml', maskPii);
+      const res = await api.analyzeRawEmail(rawText, 'raw_investigation.eml');
       setAnalysis(res);
       setActiveTab('summary');
     } catch (err) {
-      setAlertMessage({ type: 'error', text: err.message || 'Analysis failed.' });
+      setAlertMessage({
+        type: 'error',
+        text: err.message || 'Analysis failed.',
+      });
     } finally {
       setLoading(false);
     }
   };
-
 
   const loadSample = async (sampleType) => {
     setLoading(true);
@@ -125,10 +133,16 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
     }
 
     try {
-      const res = await api.analyzeRawEmail(sampleContent, `${sampleType}_demo_sample.eml`);
+      const res = await api.analyzeRawEmail(
+        sampleContent,
+        `${sampleType}_demo_sample.eml`,
+      );
       setAnalysis(res);
       setActiveTab('summary');
-      setAlertMessage({ type: 'success', text: `Loaded and analyzed sample: ${sampleType.toUpperCase()}` });
+      setAlertMessage({
+        type: 'success',
+        text: `Loaded and analyzed sample: ${sampleType.toUpperCase()}`,
+      });
     } catch (err) {
       setAlertMessage({ type: 'error', text: err.message });
     } finally {
@@ -140,24 +154,60 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
     if (!analysis) return;
     setIsSaving(true);
     try {
-      await api.createCase({
-        case_id: analysis.case_id,
-        filename: analysis.filename,
-        subject: analysis.email_metadata?.subject || '',
-        from_address: analysis.email_metadata?.from_sender?.address || '',
-        sender_domain: analysis.email_metadata?.from_sender?.domain || '',
-        origin_ip: analysis.origin_assessment?.earliest_reliable_ip || analysis.relay_path?.origin_ip,
-        classification: analysis.risk_assessment?.classification || analysis.ai_inference?.predicted_class || 'UNKNOWN',
-        risk_score: analysis.risk_assessment?.risk_score || 0.0,
-        confidence: analysis.risk_assessment?.model_confidence || 1.0,
-        status: 'INVESTIGATING',
-        priority: (analysis.risk_assessment?.risk_score || 0) >= 60 ? 'HIGH' : 'MEDIUM',
-        sha256: analysis.evidence_provenance?.sha256 || '',
-        full_analysis: analysis,
+      const saveResult = analysis.privacy_redaction_applied
+        ? { status: 'EXISTS' }
+        : await api.createCase({
+            case_id: analysis.case_id,
+            filename: analysis.filename,
+            subject:
+              (analysis.metadata || analysis.email_metadata)?.subject || '',
+            from_address:
+              (analysis.metadata || analysis.email_metadata)?.from_sender
+                ?.address || '',
+            sender_domain:
+              (analysis.metadata || analysis.email_metadata)?.from_sender
+                ?.domain || '',
+            origin_ip:
+              analysis.origin_assessment?.earliest_reliable_ip ||
+              analysis.relay_path?.origin_ip,
+            classification:
+              analysis.risk_assessment?.classification ||
+              analysis.ai_inference?.predicted_class ||
+              'UNKNOWN',
+            risk_score: analysis.risk_assessment?.risk_score || 0.0,
+            confidence: analysis.risk_assessment?.model_confidence || 1.0,
+            status: 'INVESTIGATING',
+            priority:
+              (analysis.risk_assessment?.risk_score || 0) >= 60
+                ? 'HIGH'
+                : 'MEDIUM',
+            sha256:
+              (analysis.evidence_hashes || analysis.evidence_provenance)
+                ?.sha256 || '',
+            full_analysis: analysis,
+          });
+      if (saveResult.status === 'EXISTS') {
+        const stored = await api.getCaseDetail(analysis.case_id);
+        if (
+          !stored.full_analysis?.metadata ||
+          !stored.full_analysis?.evidence_hashes
+        ) {
+          throw new Error(
+            'This existing case has an incomplete analysis. Re-analyze the original email to create a complete record.',
+          );
+        }
+      }
+      setAlertMessage({
+        type: 'success',
+        text:
+          saveResult.status === 'EXISTS'
+            ? `Case ${analysis.case_id} already exists; its stored record was retained.`
+            : `Case ${analysis.case_id} preserved in investigation database!`,
       });
-      setAlertMessage({ type: 'success', text: `Case ${analysis.case_id} preserved in investigation database!` });
+      return true;
     } catch (err) {
       setAlertMessage({ type: 'error', text: `Save error: ${err.message}` });
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -168,10 +218,13 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
     setIsExporting(true);
     try {
       // First ensure case is saved so report generator has records
-      await handleSaveCase();
-      const reportRes = await api.generateReport(analysis.case_id);
-      window.open(api.getReportDownloadUrl(analysis.case_id), '_blank');
-      setAlertMessage({ type: 'success', text: `Forensic PDF report generated (SHA-256: ${reportRes.sha256.substring(0, 16)}...)` });
+      if (!(await handleSaveCase())) return;
+      const reportRes = await api.generateReport(analysis.case_id, maskPii);
+      await api.downloadReport(analysis.case_id);
+      setAlertMessage({
+        type: 'success',
+        text: `Forensic PDF report generated (SHA-256: ${reportRes.sha256.substring(0, 16)}...)`,
+      });
     } catch (err) {
       setAlertMessage({ type: 'error', text: `Report error: ${err.message}` });
     } finally {
@@ -179,7 +232,25 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
     }
   };
 
+  const displayAnalysis = maskPii ? maskAnalysis(analysis) : analysis;
+  const observables = displayAnalysis?.observables ||
+    displayAnalysis?.extracted_observables || [
+      ...(displayAnalysis?.urls || []).map((url) => ({
+        type: 'URL',
+        value: url.url,
+        defanged_value: url.defanged_url,
+        source: url.source,
+      })),
+      ...(displayAnalysis?.ips || []).map((ip) => ({
+        type: 'IP',
+        value: ip.ip,
+        defanged_value: ip.defanged_ip,
+        source: ip.source,
+      })),
+    ];
+
   const tabs = [
+    { id: 'evidence', label: 'Evidence Manifest', icon: FileText },
     { id: 'summary', label: 'Executive Summary & Headers', icon: FileText },
     { id: 'nlp', label: 'NLP Content Signals', icon: MessageSquare },
     { id: 'relay', label: 'Relay Path & Transit', icon: Radio },
@@ -203,10 +274,19 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
           }`}
         >
           <div className="flex items-center gap-2">
-            {alertMessage.type === 'error' ? <AlertCircle className="w-4 h-4 text-red-400" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+            {alertMessage.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 text-red-400" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            )}
             <span>{alertMessage.text}</span>
           </div>
-          <button onClick={() => setAlertMessage(null)} className="text-slate-400 hover:text-white">✕</button>
+          <button
+            onClick={() => setAlertMessage(null)}
+            className="text-slate-400 hover:text-white"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -214,12 +294,13 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
       <div className="rounded-2xl bg-[#111827] border border-slate-800 p-6 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
+            <h1 className="text-lg font-bold text-white font-mono flex items-center gap-2">
               <Search className="w-5 h-5 text-cyan-400" />
               Forensic Artifact Ingestion
-            </h2>
+            </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Upload raw .EML / .MSG or paste RFC 822 MIME headers for automated forensic deconstruction.
+              Upload raw .EML / .MSG or paste RFC 822 MIME headers for automated
+              forensic deconstruction.
             </p>
           </div>
 
@@ -227,16 +308,25 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setMaskPii(!maskPii)}
+              aria-pressed={maskPii}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-mono transition ${
-                maskPii ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                maskPii
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
               }`}
               title="Toggle PII Masking in presentation view"
             >
-              {maskPii ? <EyeOff className="w-3.5 h-3.5 text-indigo-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+              {maskPii ? (
+                <EyeOff className="w-3.5 h-3.5 text-indigo-400" />
+              ) : (
+                <Eye className="w-3.5 h-3.5 text-slate-400" />
+              )}
               <span>PII Masking: {maskPii ? 'ON' : 'OFF'}</span>
             </button>
 
-            <span className="text-xs font-mono text-slate-400 mr-1">Quick Demos:</span>
+            <span className="text-xs font-mono text-slate-400 mr-1">
+              Quick Demos:
+            </span>
             <button
               onClick={() => loadSample('phishing')}
               disabled={loading}
@@ -261,12 +351,21 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
           </div>
         </div>
 
+        {maskPii && (
+          <p className="text-xs text-slate-300">
+            Masking applies to displayed results; the source input may still
+            contain sensitive data.
+          </p>
+        )}
+
         {/* Input Toggle & Upload Area */}
         <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
           <button
             onClick={() => setInputMode('file')}
             className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition ${
-              inputMode === 'file' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400 hover:text-white'
+              inputMode === 'file'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             File Upload (.EML)
@@ -274,22 +373,43 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
           <button
             onClick={() => setInputMode('raw')}
             className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition ${
-              inputMode === 'raw' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400 hover:text-white'
+              inputMode === 'raw'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Paste RFC 822 Raw MIME
           </button>
         </div>
 
-
         {inputMode === 'file' ? (
-          <label className="border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer bg-slate-900/40 hover:bg-slate-900/60 transition group">
-            <UploadCloud className="w-10 h-10 text-slate-500 group-hover:text-cyan-400 transition" />
+          <label
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              if (!loading) handleFileUpload(event.dataTransfer.files?.[0]);
+            }}
+            className="border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer bg-slate-900/40 hover:bg-slate-900/60 focus-within:ring-2 focus-within:ring-cyan-300 transition group"
+          >
+            <UploadCloud className="w-10 h-10 text-slate-400 group-hover:text-cyan-400 transition" />
             <p className="mt-2 text-sm font-medium text-slate-300">
-              Drag & Drop email artifact or <span className="text-cyan-400 underline">Browse Local File</span>
+              Drag & Drop email artifact or{' '}
+              <span className="text-cyan-400 underline">Browse Local File</span>
             </p>
-            <p className="mt-1 text-xs text-slate-500 font-mono">Supports RFC 822 .eml, .msg, .txt (up to 25MB)</p>
-            <input type="file" accept=".eml,.msg,.txt" onChange={handleFileUpload} disabled={loading} className="hidden" />
+            <p className="mt-1 text-xs text-slate-400 font-mono">
+              Supports RFC 5322 .eml; Outlook .msg is unsupported
+            </p>
+            <input
+              type="file"
+              accept=".eml"
+              onChange={async (event) => {
+                const input = event.target;
+                await handleFileUpload(input.files?.[0]);
+                input.value = '';
+              }}
+              disabled={loading}
+              className="sr-only"
+            />
           </label>
         ) : (
           <div className="space-y-3">
@@ -304,7 +424,7 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
               <button
                 onClick={handleRawAnalyze}
                 disabled={loading || !rawText.trim()}
-                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs shadow-lg shadow-cyan-600/20 transition disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-cyan-700 hover:bg-cyan-800 text-white font-semibold text-xs shadow-lg shadow-cyan-600/20 transition disabled:opacity-50"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>Execute Deep Forensic Pipeline</span>
@@ -319,20 +439,23 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
         <div className="p-12 rounded-2xl bg-[#111827] border border-slate-800 flex flex-col items-center justify-center space-y-4">
           <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
           <div className="text-center font-mono">
-            <p className="text-sm font-bold text-white">DECONSTRUCTING EMAIL ARTIFACT...</p>
+            <p className="text-sm font-bold text-white">
+              DECONSTRUCTING EMAIL ARTIFACT...
+            </p>
             <p className="text-xs text-slate-400 mt-1">
-              Traversing MTA hops • Calculating Linear SHAP attributions • Building NetworkX Threat Graph
+              Traversing MTA hops • Calculating Linear SHAP attributions •
+              Building NetworkX Threat Graph
             </p>
           </div>
         </div>
       )}
 
       {/* Analysis Results View */}
-      {analysis && !loading && (
+      {displayAnalysis && !loading && (
         <div className="space-y-6">
           {/* Verdict Banner */}
           <VerdictBanner
-            analysis={analysis}
+            analysis={displayAnalysis}
             onSaveCase={handleSaveCase}
             onExportReport={handleExportReport}
             isSaving={isSaving}
@@ -363,11 +486,17 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
 
           {/* Tab Panes */}
           <div className="pt-2">
+            {activeTab === 'evidence' && <section className="space-y-3"><h2 className="text-xl">Evidence manifest</h2><p>Original bytes and derived analysis are stored separately. Hash verification compares the current artifact with its stored digest.</p><pre className="whitespace-pre-wrap break-all text-xs">{JSON.stringify(displayAnalysis.evidence_manifest || { status: 'Unavailable for this legacy case' }, null, 2)}</pre></section>}
             {activeTab === 'summary' && (
               <div className="space-y-6">
                 <HeadersForensicsView
-                  metadata={analysis.email_metadata || analysis.metadata}
-                  authentication={analysis.authentication_results || analysis.authentication}
+                  metadata={
+                    displayAnalysis.email_metadata || displayAnalysis.metadata
+                  }
+                  authentication={
+                    displayAnalysis.authentication_results ||
+                    displayAnalysis.authentication
+                  }
                 />
               </div>
             )}
@@ -375,58 +504,61 @@ Please execute urgent transfer of $450,000 for foreign acquisition before COB. S
             {activeTab === 'nlp' && (
               <div className="space-y-6">
                 <ContentIntelligenceView
-                  contentIntelligence={analysis.content_intelligence}
-                  bodyContent={analysis.body}
+                  contentIntelligence={displayAnalysis.content_intelligence}
+                  bodyContent={displayAnalysis.body}
                 />
               </div>
             )}
 
             {activeTab === 'relay' && (
               <RelayHopsView
-                relayPath={analysis.relay_path || analysis.relay_chain}
-                originAssessment={analysis.origin_assessment}
+                relayPath={
+                  displayAnalysis.relay_path || displayAnalysis.relay_chain
+                }
+                originAssessment={displayAnalysis.origin_assessment}
               />
             )}
 
-
             {activeTab === 'geo' && (
               <GeoIntelligenceView
-                infrastructureIntel={analysis.infrastructure_intelligence}
-                originAssessment={analysis.origin_assessment}
+                infrastructureIntel={
+                  displayAnalysis.infrastructure_intelligence
+                }
+                originAssessment={displayAnalysis.origin_assessment}
               />
             )}
 
             {activeTab === 'dns' && (
               <DnsRdapView
-                infrastructureIntel={analysis.infrastructure_intelligence}
+                infrastructureIntel={
+                  displayAnalysis.infrastructure_intelligence
+                }
               />
             )}
 
             {activeTab === 'graph' && (
-              <ThreatGraphView
-                threatGraph={analysis.threat_graph}
-              />
+              <ThreatGraphView threatGraph={displayAnalysis.threat_graph} />
             )}
 
             {activeTab === 'shap' && (
               <ShapExplainerView
-                shapExplanation={analysis.shap_explanation}
-                aiInference={analysis.ai_inference}
+                shapExplanation={displayAnalysis.shap_explanation}
+                aiInference={displayAnalysis.ai_inference}
               />
             )}
 
             {activeTab === 'observables' && (
               <ObservablesView
-                observables={analysis.observables || analysis.extracted_observables}
-                attachments={analysis.attachments}
+                observables={observables}
+                attachments={displayAnalysis.attachments}
               />
             )}
 
             {activeTab === 'campaign' && (
               <CampaignAttributionView
-                activeCampaign={analysis.active_campaign}
-                campaignCorrelations={analysis.campaign_correlations}
-                attributionSupport={analysis.attribution_support}
+                activeCampaign={displayAnalysis.active_campaign}
+                campaignCorrelations={displayAnalysis.campaign_correlations}
+                attributionSupport={displayAnalysis.attribution_support}
               />
             )}
           </div>

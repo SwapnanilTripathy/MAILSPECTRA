@@ -129,30 +129,12 @@ class FeatureExtractor:
         attachments = analysis.attachments
         body = analysis.body
 
-        # 1. Authentication signals (both pass and fail)
-        if auth.spf_result == "pass":
-            features["auth_spf_pass"] = 1.0
-        elif auth.spf_result == "fail":
-            features["auth_spf_fail"] = 1.0
-        elif auth.spf_result == "softfail":
-            features["auth_spf_fail"] = 0.5
-
-        if auth.dkim_result == "pass":
-            features["auth_dkim_pass"] = 1.0
-        elif auth.dkim_result == "fail":
-            features["auth_dkim_fail"] = 1.0
-
-        if auth.dmarc_result == "pass":
-            features["auth_dmarc_pass"] = 1.0
-        elif auth.dmarc_result == "fail":
-            features["auth_dmarc_fail"] = 1.0
-
-        if auth.spf_result == "pass" and auth.dkim_result == "pass" and auth.dmarc_result == "pass":
-            features["auth_all_pass"] = 1.0
-
-        if auth.spf_result == "none" and auth.dkim_result == "none" and auth.dmarc_result == "none":
-            features["auth_results_missing"] = 1.0
-
+        # Only independently established results may affect model features.
+        for mechanism in ('spf','dkim','dmarc'):
+            result = auth.verified.get(mechanism, {}).get('result', 'UNKNOWN')
+            if result in {'pass','fail'}:
+                features[f'auth_{mechanism}_{result}'] = 1.0
+        features['auth_all_pass'] = float(all(auth.verified.get(k,{}).get('result')=='pass' for k in ('spf','dkim','dmarc')))
 
         # 2. Identity signals
         from_domain = (meta.from_sender.domain or "").lower()

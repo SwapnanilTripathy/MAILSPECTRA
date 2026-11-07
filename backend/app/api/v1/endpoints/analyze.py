@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Request, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,16 @@ class RawEmailAnalyzeRequest(BaseModel):
     mask_pii: bool = False
 
 
+def validate_message(content: bytes):
+    from email.parser import BytesParser
+    from email import policy
+    if len(content) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise HTTPException(413, "Message exceeds maximum allowed size")
+    message = BytesParser(policy=policy.default).parsebytes(content, headersonly=True)
+    if not message.keys() or not any(message.get(key) for key in ("From", "To", "Subject", "Received")) or message.defects:
+        raise HTTPException(400, "Malformed RFC 5322 email message")
+
+
 @router.post(
     "/analyze/email",
     response_model=EmailAnalysisResponse,
@@ -26,22 +36,23 @@ class RawEmailAnalyzeRequest(BaseModel):
     description="Upload a raw .eml file to extract forensic metadata, calculate AI threat classification, compute transparent risk score, build threat graph, and correlate campaigns.",
 )
 async def analyze_email_file(
+    request: Request,
     file: UploadFile = File(..., description="The .eml email artifact file to analyze"),
     mask_pii: bool = Query(False, description="Optionally mask email addresses and IP addresses in presentation view"),
     db: AsyncSession = Depends(get_db),
 ) -> EmailAnalysisResponse:
     # Validate extension / file
     filename = file.filename or "uploaded.eml"
-    if not (filename.lower().endswith(".eml") or filename.lower().endswith(".msg") or filename.lower().endswith(".txt")):
-        logger.warning(f"File uploaded with non-standard extension: {filename}")
+    if not filename.lower().endswith(".eml"):
+        raise HTTPException(415, "Only RFC 5322 .eml files are supported")
 
     try:
-        content = await file.read()
+        content = await file.read(settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024 + 1)
     except Exception as e:
-        logger.error(f"Failed to read uploaded file: {e}")
+        logger.error("Upload read failed: %s", type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Could not read uploaded file: {str(e)}",
+            detail="Could not read uploaded file",
         )
 
     # Size limit validation
@@ -58,20 +69,21 @@ async def analyze_email_file(
             detail="The uploaded file is empty.",
         )
 
-    logger.info(f"Analyzing uploaded email artifact: '{filename}' ({len(content)} bytes)")
+    validate_message(content)
     try:
-        analysis_result = await pipeline.analyze_bytes_async(raw_bytes=content, filename=filename, db_session=db)
+        analysis_result = await pipeline.analyze_bytes_async(raw_bytes=content, filename=filename, db_session=db, actor=request.state.user.username)
         if mask_pii or settings.PRIVACY_MASKING_ENABLED:
             analysis_result = PrivacyService.apply_to_response(analysis_result)
+            analysis_result.privacy_redaction_applied = True
         pred_cls = analysis_result.ai_inference.predicted_class if analysis_result.ai_inference else "UNKNOWN"
         risk_sc = analysis_result.risk_assessment.risk_score if analysis_result.risk_assessment else 0.0
         logger.info(f"Analysis completed: Case ID {analysis_result.case_id} | AI Class: {pred_cls} | Risk: {risk_sc}/100")
         return analysis_result
     except Exception as e:
-        logger.error(f"Error during email forensic & AI analysis: {e}", exc_info=True)
+        logger.error("Email analysis failed (%s)", type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Forensic & AI analysis error: {str(e)}",
+            detail="Analysis failed; no partial case was saved",
         )
 
 
@@ -82,6 +94,7 @@ async def analyze_email_file(
     description="Analyze raw RFC 822 / MIME text content sent in JSON payload with full forensic and threat intelligence.",
 )
 async def analyze_raw_email(
+    request: Request,
     payload: RawEmailAnalyzeRequest,
     db: AsyncSession = Depends(get_db),
 ) -> EmailAnalysisResponse:
@@ -92,18 +105,19 @@ async def analyze_raw_email(
         )
 
     raw_bytes = payload.raw_content.encode("utf-8", errors="replace")
-    logger.info(f"Analyzing raw email payload ({len(raw_bytes)} bytes)")
+    validate_message(raw_bytes)
 
     try:
-        res = await pipeline.analyze_bytes_async(raw_bytes=raw_bytes, filename=payload.filename, db_session=db)
+        res = await pipeline.analyze_bytes_async(raw_bytes=raw_bytes, filename=payload.filename, db_session=db, actor=request.state.user.username)
         if payload.mask_pii or settings.PRIVACY_MASKING_ENABLED:
             res = PrivacyService.apply_to_response(res)
+            res.privacy_redaction_applied = True
         return res
     except Exception as e:
-        logger.error(f"Error during raw email parsing: {e}", exc_info=True)
+        logger.error("Raw analysis failed (%s)", type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Forensic & AI analysis error: {str(e)}",
+            detail="Analysis failed; no partial case was saved",
         )
 
 

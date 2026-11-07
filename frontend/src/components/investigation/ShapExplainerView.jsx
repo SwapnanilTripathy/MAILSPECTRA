@@ -31,16 +31,16 @@ export default function ShapExplainerView({ shapExplanation, aiInference }) {
           {shapExplanation.explanation_summary || 'SHAP linear attribution highlights the key positive and negative signals that drove the threat classification.'}
         </p>
         <div className="mt-3 flex items-center gap-4 text-xs font-mono text-slate-400">
-          <span>Method: <strong className="text-slate-200">{shapExplanation.method || 'SHAP LinearExplainer'}</strong></span>
+          <span>Method: <strong className="text-slate-200">{shapExplanation.method || 'Unavailable'}</strong></span>
           <span>Target Class: <strong className="text-cyan-300">{shapExplanation.predicted_class}</strong></span>
         </div>
       </div>
 
       {/* SHAP Contribution Bar Chart */}
       <div className="p-5 rounded-xl bg-[#111827] border border-slate-800 shadow-md">
-        <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-4">
-          Local Feature Contribution (SHAP Margin Impact)
-        </h4>
+        <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-4">
+          Local Feature Contributions (see method above)
+        </h3>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 140, bottom: 5 }}>
@@ -80,9 +80,9 @@ export default function ShapExplainerView({ shapExplanation, aiInference }) {
       {/* Feature Attribution Table */}
       <div className="rounded-xl bg-[#111827] border border-slate-800 overflow-hidden shadow-md">
         <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/40">
-          <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400">
+          <h3 className="text-xs font-mono uppercase tracking-wider text-slate-400">
             Attribution Feature Breakdown
-          </h4>
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
@@ -90,7 +90,7 @@ export default function ShapExplainerView({ shapExplanation, aiInference }) {
               <tr>
                 <th className="px-4 py-3">Feature Name</th>
                 <th className="px-4 py-3">Observed Value</th>
-                <th className="px-4 py-3">SHAP Value</th>
+                <th className="px-4 py-3">Contribution</th>
                 <th className="px-4 py-3">Risk Impact</th>
                 <th className="px-4 py-3 font-sans">Analyst Explanation</th>
               </tr>

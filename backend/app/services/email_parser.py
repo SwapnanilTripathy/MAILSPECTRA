@@ -11,6 +11,8 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 import tldextract
+from backend.app.core.config import settings
+_TLD = tldextract.TLDExtract(suffix_list_urls=())
 
 from backend.app.core.logging import logger
 from backend.app.schemas.analysis import (
@@ -76,7 +78,7 @@ class EmailForensicParser:
         try:
             self.msg = email.message_from_bytes(self.raw_bytes, policy=policy.default)
         except Exception as e:
-            logger.warning(f"Default policy parsing failed ({e}), falling back to compat policy")
+            logger.warning("Default parsing policy failed: %s; using compatibility policy", type(e).__name__)
             self.msg = email.message_from_bytes(self.raw_bytes, policy=policy.compat32)
 
     def _decode_header_str(self, header_value: Any) -> str:
@@ -180,8 +182,8 @@ class EmailForensicParser:
             date_raw=self._decode_header_str(date_raw),
             date_iso=date_iso,
             from_sender=self._parse_address_entity(self.msg.get("From")),
-            to_recipients=self._parse_address_list(self.msg.get("To")),
-            cc_recipients=self._parse_address_list(self.msg.get("Cc")),
+            to_recipients=self._parse_address_list(", ".join(self.msg.get_all("To", []))),
+            cc_recipients=self._parse_address_list(", ".join(self.msg.get_all("Cc", []))),
             bcc_recipients=self._parse_address_list(self.msg.get("Bcc")),
             reply_to=self._parse_address_list(self.msg.get("Reply-To")),
             return_path=return_path,
@@ -189,6 +191,7 @@ class EmailForensicParser:
             user_agent=self._decode_header_str(self.msg.get("User-Agent")),
             content_type_header=self.msg.get_content_type() if hasattr(self.msg, "get_content_type") else self.msg.get("Content-Type"),
             all_headers=all_headers_dict,
+            raw_headers=[{"name":k,"value":v} for k,v in self.msg.raw_items()],
         )
 
     def extract_authentication(self) -> AuthenticationSummary:
@@ -304,6 +307,7 @@ class EmailForensicParser:
             timestamp_raw = None
             timestamp_iso = None
             delay_sec = None
+            anomalies = []
 
             # Extract date (everything after last semicolon)
             if ";" in header_clean:
@@ -312,13 +316,18 @@ class EmailForensicParser:
                 timestamp_raw = date_part
                 try:
                     dt = parsedate_to_datetime(date_part)
+                    if dt.tzinfo is None:
+                        raise ValueError("Missing timezone")
                     timestamp_iso = dt.astimezone(timezone.utc).isoformat()
                     if prev_dt:
                         delay = (dt - prev_dt).total_seconds()
-                        delay_sec = max(0.0, delay)
+                        delay_sec = delay
+                        if delay < 0 or delay > 86400:
+                            anomalies.append("Timestamp sequence is negative or exceeds one day; supplied headers may be inaccurate")
                     prev_dt = dt
                 except Exception:
-                    pass
+                    anomalies.append("Unparseable timestamp or missing timezone")
+                    prev_dt = None
                 main_part = parts[0]
             else:
                 main_part = header_clean
@@ -361,6 +370,8 @@ class EmailForensicParser:
             hops.append(
                 RelayHop(
                     hop_index=idx,
+                    anomalies=anomalies,
+                    trust_status="CONFIGURED_RECEIVER_CLAIM" if by_host in settings.TRUSTED_RECEIVERS else "UNTRUSTED_SUPPLIED_HEADER",
                     from_host=from_host,
                     from_ip=from_ip,
                     defanged_from_ip=defang_ip(from_ip) if from_ip else None,
@@ -456,6 +467,7 @@ class EmailForensicParser:
 
                 attachments.append(
                     AttachmentMetadata(
+                        mime_part_index=part_idx - 1,
                         filename=att_name,
                         content_type=ctype,
                         size_bytes=len(payload_bytes),
@@ -463,6 +475,8 @@ class EmailForensicParser:
                         sha1=hashes["sha1"],
                         sha256=hashes["sha256"],
                         extension=ext,
+                        signature_type="PE_EXECUTABLE" if payload_bytes.startswith(b"MZ") else "ZIP_CONTAINER" if payload_bytes.startswith(b"PK\x03\x04") else "PDF" if payload_bytes.startswith(b"%PDF") else "UNKNOWN",
+                        double_extension=len(att_name.split(".")) > 2,
                         is_suspicious_extension=is_suspicious,
                         content_disposition=cdisp or None,
                     )
@@ -507,7 +521,12 @@ class EmailForensicParser:
 
         def process_url(raw_url: str, source: str) -> None:
             clean_url = raw_url.strip(" <>\"'()[]")
-            if not clean_url or clean_url in seen_urls:
+            if not clean_url:
+                return
+            if clean_url in seen_urls:
+                for item in extracted:
+                    if item.url == clean_url and source not in item.source_locations:
+                        item.source_locations.append(source)
                 return
             if clean_url.startswith(("mailto:", "javascript:", "tel:", "#")):
                 return
@@ -517,8 +536,8 @@ class EmailForensicParser:
             seen_urls.add(clean_url)
 
             parsed = urlparse(clean_url)
-            host = parsed.netloc.split(":")[0].lower()
-            ext = tldextract.extract(clean_url)
+            host = (parsed.hostname or "").lower()
+            ext = _TLD(clean_url)
             reg_domain = ext.registered_domain
             tld = ext.suffix
             subdomain = ext.subdomain
@@ -540,6 +559,7 @@ class EmailForensicParser:
                     is_ip_host=is_ip,
                     is_shortener=is_short,
                     source=source,
+                    source_locations=[source],
                 )
             )
 
@@ -554,7 +574,7 @@ class EmailForensicParser:
                 for form in soup.find_all("form", action=True):
                     process_url(form["action"], "body_html")
             except Exception as e:
-                logger.warning(f"HTML parsing for URLs encountered error: {e}")
+                logger.warning("URL parsing failed: %s", type(e).__name__)
 
         # 2. Extract from plain text
         if body.has_plain_text:
@@ -571,8 +591,13 @@ class EmailForensicParser:
         extracted: List[ExtractedIP] = []
 
         def add_ip(ip_str: str, source: str) -> None:
-            clean = ip_str.strip("[].,;: ")
-            if not clean or clean in seen_ips or not is_valid_ip(clean):
+            clean = ip_str.strip("[].,; ")
+            if not clean or not is_valid_ip(clean):
+                return
+            if clean in seen_ips:
+                for item in extracted:
+                    if item.ip == clean and source not in item.source_locations:
+                        item.source_locations.append(source)
                 return
             seen_ips.add(clean)
             classification = classify_ip(clean)
@@ -588,6 +613,7 @@ class EmailForensicParser:
                     is_multicast=classification.get("is_multicast", False),
                     is_bogon=classification.get("is_bogon", False),
                     source=source,
+                    source_locations=[source],
                 )
             )
 
@@ -632,7 +658,7 @@ class EmailForensicParser:
                 ThreatIndicator(
                     category="HEADER",
                     feature="SPF_FAIL",
-                    description="Sender Policy Framework (SPF) validation failed. The sending IP is not authorized by the domain's SPF record.",
+                    description="UNVERIFIED supplied header reports SPF failure; no independent sending-IP authorization has been established.",
                     severity="HIGH",
                     observed_value=auth.spf_result,
                 )
@@ -643,7 +669,7 @@ class EmailForensicParser:
                 ThreatIndicator(
                     category="HEADER",
                     feature="SPF_SOFTFAIL",
-                    description="SPF softfail detected. The domain administrator marked this sending server as questionable.",
+                    description="UNVERIFIED supplied header reports SPF softfail; this is an attacker-controlled claim.",
                     severity="MEDIUM",
                     observed_value=auth.spf_result,
                 )
@@ -655,7 +681,7 @@ class EmailForensicParser:
                 ThreatIndicator(
                     category="HEADER",
                     feature="DKIM_FAIL",
-                    description="DKIM cryptographic signature verification failed. The email may have been altered in transit.",
+                    description="UNVERIFIED supplied header reports DKIM failure; no independent cryptographic verification is implied.",
                     severity="HIGH",
                     observed_value=auth.dkim_result,
                 )
@@ -667,7 +693,7 @@ class EmailForensicParser:
                 ThreatIndicator(
                     category="HEADER",
                     feature="DMARC_FAIL",
-                    description="DMARC alignment policy failed. The domain owner's DMARC policy rejects or quarantees this message.",
+                    description="UNVERIFIED supplied header reports DMARC failure; independent alignment and policy verification are unavailable here.",
                     severity="CRITICAL",
                     observed_value=auth.dmarc_result,
                 )
@@ -774,7 +800,7 @@ class EmailForensicParser:
             classification = "BENIGN"
 
         explanation = (
-            f"Risk score of {final_score:.1f}/100 calculated from {len(indicators)} observable forensic indicators. "
+            f"LEGACY / PRELIMINARY UNVERIFIED assessment; submitted authentication claims are not independently verified. Risk score of {final_score:.1f}/100 calculated from {len(indicators)} observable forensic indicators. "
             f"Classification: {classification}."
         )
 

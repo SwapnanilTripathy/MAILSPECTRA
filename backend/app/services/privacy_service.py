@@ -1,6 +1,7 @@
 from __future__ import annotations
 import copy
 import re
+import ipaddress
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
@@ -58,99 +59,31 @@ class PrivacyService:
     @classmethod
     def apply_to_response(cls, analysis: EmailAnalysisResponse) -> EmailAnalysisResponse:
         """Apply PII masking directly onto EmailAnalysisResponse object for privacy-safe presentation."""
-        # 1. Mask metadata addresses
-        if analysis.metadata.from_sender.address:
-            analysis.metadata.from_sender.address = cls.mask_email(analysis.metadata.from_sender.address)
-        if analysis.metadata.from_sender.display_name:
-            analysis.metadata.from_sender.display_name = cls.mask_name(analysis.metadata.from_sender.display_name)
-        if analysis.metadata.from_sender.raw:
-            analysis.metadata.from_sender.raw = cls.mask_email(analysis.metadata.from_sender.raw)
-
-        for to_r in analysis.metadata.to_recipients:
-            to_r.address = cls.mask_email(to_r.address)
-            if to_r.display_name:
-                to_r.display_name = cls.mask_name(to_r.display_name)
-
-        for cc_r in analysis.metadata.cc_recipients:
-            cc_r.address = cls.mask_email(cc_r.address)
-
-        for reply_r in analysis.metadata.reply_to:
-            reply_r.address = cls.mask_email(reply_r.address)
-
-        if analysis.metadata.return_path:
-            analysis.metadata.return_path = cls.mask_email(analysis.metadata.return_path)
-
-        # 2. Mask relay chain IPs
-        if analysis.relay_chain.origin_ip:
-            analysis.relay_chain.origin_ip = cls.mask_ip(analysis.relay_chain.origin_ip)
-            analysis.relay_chain.defanged_origin_ip = cls.mask_ip(analysis.relay_chain.defanged_origin_ip)
-
-        for hop in analysis.relay_chain.hops:
-            if hop.from_ip:
-                hop.from_ip = cls.mask_ip(hop.from_ip)
-                hop.defanged_from_ip = cls.mask_ip(hop.defanged_from_ip)
-
-        # 3. Mask extracted IPs
-        for ip_item in analysis.ips:
-            ip_item.ip = cls.mask_ip(ip_item.ip)
-            ip_item.defanged_ip = cls.mask_ip(ip_item.defanged_ip)
-
-        return analysis
+        from backend.app.schemas.analysis import EmailAnalysisResponse
+        return EmailAnalysisResponse.model_validate(cls.redact_analysis(analysis.model_dump(mode="json")))
 
     @classmethod
     def redact_analysis(cls, analysis_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a redacted presentation view dictionary without modifying underlying stored evidence."""
-        redacted = copy.deepcopy(analysis_data)
-
-        # 1. Redact Metadata
-        if "metadata" in redacted and isinstance(redacted["metadata"], dict):
-            meta = redacted["metadata"]
-            if "from_sender" in meta and isinstance(meta["from_sender"], dict):
-                sender = meta["from_sender"]
-                if sender.get("address"):
-                    sender["address"] = cls.mask_email(sender["address"])
-                if sender.get("display_name"):
-                    sender["display_name"] = cls.mask_name(sender["display_name"])
-                if sender.get("raw"):
-                    sender["raw"] = cls.mask_email(sender["raw"])
-
-            if "to_recipients" in meta and isinstance(meta["to_recipients"], list):
-                for r in meta["to_recipients"]:
-                    if isinstance(r, dict):
-                        if r.get("address"):
-                            r["address"] = cls.mask_email(r["address"])
-                        if r.get("display_name"):
-                            r["display_name"] = cls.mask_name(r["display_name"])
-
-            if "reply_to" in meta and isinstance(meta["reply_to"], list):
-                for r in meta["reply_to"]:
-                    if isinstance(r, dict) and r.get("address"):
-                        r["address"] = cls.mask_email(r["address"])
-
-            if "return_path" in meta and meta["return_path"]:
-                meta["return_path"] = cls.mask_email(meta["return_path"])
-
-        # 2. Redact Relay Chain IP details
-        if "relay_chain" in redacted and isinstance(redacted["relay_chain"], dict):
-            rc = redacted["relay_chain"]
-            if rc.get("origin_ip"):
-                rc["origin_ip"] = cls.mask_ip(rc["origin_ip"])
-            if rc.get("defanged_origin_ip"):
-                rc["defanged_origin_ip"] = cls.mask_ip(rc["defanged_origin_ip"])
-            if "hops" in rc and isinstance(rc["hops"], list):
-                for hop in rc["hops"]:
-                    if isinstance(hop, dict):
-                        if hop.get("from_ip"):
-                            hop["from_ip"] = cls.mask_ip(hop["from_ip"])
-                        if hop.get("defanged_from_ip"):
-                            hop["defanged_from_ip"] = cls.mask_ip(hop["defanged_from_ip"])
-
-        # 3. Redact Extracted IPs
-        if "ips" in redacted and isinstance(redacted["ips"], list):
-            for ip_entry in redacted["ips"]:
-                if isinstance(ip_entry, dict) and ip_entry.get("ip"):
-                    ip_entry["ip"] = cls.mask_ip(ip_entry["ip"])
-                    ip_entry["defanged_ip"] = cls.mask_ip(ip_entry.get("defanged_ip", ""))
-
-        redacted["privacy_redaction_applied"] = True
+        names = set()
+        def find_names(value):
+            if isinstance(value, dict):
+                if isinstance(value.get("display_name"), str) and value["display_name"]: names.add(value["display_name"])
+                for child in value.values(): find_names(child)
+            elif isinstance(value,list):
+                for child in value: find_names(child)
+        find_names(analysis_data)
+        def text(value):
+            for name in sorted(names,key=len,reverse=True): value=value.replace(name,cls.mask_name(name))
+            value=re.sub(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",lambda m:cls.mask_email(m[0]),value)
+            value=re.sub(r"\b(\d{1,3})(?:\.|\[\.\])(\d{1,3})(?:\.|\[\.\])\d{1,3}(?:\.|\[\.\])\d{1,3}\b",r"\1.\2.***.***",value)
+            value=re.sub(r"(?<![a-zA-Z0-9:])(?:[a-fA-F0-9]{0,4}:){2,}[a-fA-F0-9]{0,4}(?![a-zA-Z0-9:])", lambda m: "[masked IPv6]" if ("::" in m[0] or m[0].count(":") >= 7) else m[0],value)
+            return value
+        def visit(value):
+            if isinstance(value,str):return text(value)
+            if isinstance(value,list):return [visit(item) for item in value]
+            if isinstance(value,dict):return {text(key):visit(item) for key,item in value.items()}
+            return value
+        redacted=visit(analysis_data)
+        redacted["privacy_redaction_applied"]=True
         return redacted

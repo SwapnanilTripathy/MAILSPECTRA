@@ -2,6 +2,9 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import uuid
+from html import escape
+from backend.app.core.assessment import severity_for_score
 from typing import Any, Dict, List, Optional
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -25,12 +28,20 @@ class ForensicReportGenerator:
         output_dir: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Generate PDF report for a case, calculate its SHA-256 hash, and return file metadata."""
+        # Escape all untrusted strings before interpolating ReportLab paragraph markup.
+        def safe(value):
+            if isinstance(value,str): return escape(value)
+            if isinstance(value,list): return [safe(item) for item in value]
+            if isinstance(value,dict): return {key:safe(item) for key,item in value.items()}
+            return value
+        raw_case_data = case_data
+        case_data = safe(case_data)
         reports_dir = output_dir or settings.REPORTS_DIR
         os.makedirs(reports_dir, exist_ok=True)
 
         case_id = case_data.get("case_id", f"CASE-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
         clean_case_id = case_id.replace(":", "_").replace("/", "_")
-        filename = f"DEEPTRACE_FORENSIC_REPORT_{clean_case_id}.pdf"
+        filename = f"MAILSPECTRA_REPORT_{uuid.uuid4().hex}.pdf"
         filepath = os.path.join(reports_dir, filename)
 
         doc = SimpleDocTemplate(
@@ -110,7 +121,7 @@ class ForensicReportGenerator:
         # ----------------------------------------------------
         header_table_data = [
             [
-                Paragraph("<b>DEEPTRACE</b> | Digital Forensics & Threat Intelligence", title_style),
+                Paragraph("<b>MAILSPECTRA</b> | Digital Forensics & Threat Intelligence", title_style),
                 Paragraph(f"<b>CONFIDENTIAL</b><br/>Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}", ParagraphStyle("RightH", parent=body_style, alignment=2)),
             ]
         ]
@@ -124,27 +135,38 @@ class ForensicReportGenerator:
         # ----------------------------------------------------
         elements.append(Paragraph("1. Executive Threat Summary & Verdict", section_heading))
 
-        classification = case_data.get("classification") or case_data.get("threat_assessment", {}).get("classification", "UNKNOWN")
-        risk_score = case_data.get("risk_score") or case_data.get("threat_assessment", {}).get("risk_score", 0.0)
-        confidence = case_data.get("confidence") or case_data.get("threat_assessment", {}).get("confidence", 1.0)
-        
-        # Color coding for severity
-        if risk_score >= 80:
+        canonical = case_data.get("risk_assessment")
+        if canonical is not None:
+            classification = canonical.get("classification") or "UNKNOWN"
+            risk_score = canonical.get("risk_score")
+            confidence = canonical.get("model_confidence")
+            verdict_source = "Canonical assessment; uncalibrated decision support"
+        else:
+            legacy = case_data.get("threat_assessment") or {}
+            classification = legacy.get("classification") or case_data.get("classification") or "UNKNOWN"
+            risk_score = legacy.get("risk_score")
+            if risk_score is None:
+                risk_score = case_data.get("risk_score")
+            confidence = None
+            verdict_source = "LEGACY / PRELIMINARY UNVERIFIED; supplied authentication claims are not independent verification" if risk_score is not None else "Canonical assessment unavailable"
+        elements.append(Paragraph(verdict_source, body_style))
+        severity_label = severity_for_score(risk_score) if canonical is not None and risk_score is not None else "UNKNOWN"
+        if severity_label == "CRITICAL":
             badge_bg = colors.HexColor("#fee2e2")
             badge_txt = colors.HexColor("#991b1b")
             severity_label = "CRITICAL"
-        elif risk_score >= 60:
+        elif severity_label == "HIGH":
             badge_bg = colors.HexColor("#ffedd5")
             badge_txt = colors.HexColor("#9a3412")
             severity_label = "HIGH"
-        elif risk_score >= 40:
+        elif severity_label == "MEDIUM":
             badge_bg = colors.HexColor("#fef9c3")
             badge_txt = colors.HexColor("#854d0e")
             severity_label = "MEDIUM"
         else:
             badge_bg = colors.HexColor("#dcfce7")
             badge_txt = colors.HexColor("#166534")
-            severity_label = "LOW / BENIGN"
+
 
         overview_data = [
             [
@@ -153,11 +175,11 @@ class ForensicReportGenerator:
             ],
             [
                 Paragraph("<b>Filename:</b>", body_style), Paragraph(str(case_data.get("filename", "email.eml")), body_style),
-                Paragraph("<b>Risk Score:</b>", body_style), Paragraph(f"<b>{risk_score}/100</b> ({severity_label})", body_style),
+                Paragraph("<b>Risk Score:</b>", body_style), Paragraph(f"<b>{risk_score if risk_score is not None else 'Unavailable'}/100</b> ({severity_label})", body_style),
             ],
             [
                 Paragraph("<b>Subject:</b>", body_style), Paragraph(str(case_data.get("subject") or case_data.get("metadata", {}).get("subject", "N/A")), body_style),
-                Paragraph("<b>Model Confidence:</b>", body_style), Paragraph(f"{round(confidence * 100, 1)}%", body_style),
+                Paragraph("<b>Model Confidence:</b>", body_style), Paragraph(f"{round(confidence * 100, 1)}%" if confidence is not None else "Unavailable", body_style),
             ],
             [
                 Paragraph("<b>From Sender:</b>", body_style), Paragraph(str(case_data.get("from_address") or case_data.get("metadata", {}).get("from_sender", {}).get("raw", "N/A")), body_style),
@@ -191,7 +213,7 @@ class ForensicReportGenerator:
             [Paragraph("<b>SHA-256 Hash</b>", body_bold), Paragraph(str(hash_sha256), code_style)],
             [Paragraph("<b>SHA-1 Hash</b>", body_bold), Paragraph(str(hash_sha1), code_style)],
             [Paragraph("<b>MD5 Hash</b>", body_bold), Paragraph(str(hash_md5), code_style)],
-            [Paragraph("<b>Integrity Status</b>", body_bold), Paragraph("VERIFIED (Bit-level preservation active)", ParagraphStyle("G", parent=body_style, textColor=colors.HexColor("#166534")))],
+            [Paragraph("<b>Integrity Status</b>", body_bold), Paragraph("Digest recorded. Reverification is a separate operation.", ParagraphStyle("G", parent=body_style, textColor=colors.HexColor("#166534")))],
         ]
         t_hashes = Table(hash_table_data, colWidths=[130, 410])
         t_hashes.setStyle(TableStyle([
@@ -212,9 +234,9 @@ class ForensicReportGenerator:
 
         auth_table_data = [
             [Paragraph("<b>Protocol</b>", body_bold), Paragraph("<b>Status</b>", body_bold), Paragraph("<b>Observed Alignment & Details</b>", body_bold)],
-            [Paragraph("<b>SPF</b>", body_style), Paragraph(str(auth.get("spf_result", "none")).upper(), body_bold), Paragraph(str(auth.get("spf_details") or "Sender Policy Framework validation"), body_style)],
-            [Paragraph("<b>DKIM</b>", body_style), Paragraph(str(auth.get("dkim_result", "none")).upper(), body_bold), Paragraph(str(auth.get("dkim_details") or "Cryptographic signature validation"), body_style)],
-            [Paragraph("<b>DMARC</b>", body_style), Paragraph(str(auth.get("dmarc_result", "none")).upper(), body_bold), Paragraph(str(auth.get("dmarc_details") or "Domain-based Message Authentication alignment"), body_style)],
+            [Paragraph("<b>SPF</b>", body_style), Paragraph(str(auth.get("spf_result", "none")).upper(), body_bold), Paragraph(str(auth.get("spf_details") or "Reported SPF claim (untrusted)"), body_style)],
+            [Paragraph("<b>DKIM</b>", body_style), Paragraph(str(auth.get("dkim_result", "none")).upper(), body_bold), Paragraph(str(auth.get("dkim_details") or "Reported DKIM claim (untrusted)"), body_style)],
+            [Paragraph("<b>DMARC</b>", body_style), Paragraph(str(auth.get("dmarc_result", "none")).upper(), body_bold), Paragraph(str(auth.get("dmarc_details") or "Reported DMARC claim (untrusted)"), body_style)],
         ]
         t_auth = Table(auth_table_data, colWidths=[70, 70, 400])
         t_auth.setStyle(TableStyle([
@@ -230,7 +252,7 @@ class ForensicReportGenerator:
         # 4. EXPLAINABLE AI & SHAP ATTRIBUTION
         # ----------------------------------------------------
         elements.append(Paragraph("4. AI Threat Detection & SHAP Feature Explanations", section_heading))
-        shap_exp = case_data.get("shap_explanation", {})
+        shap_exp = (case_data.get("shap_explanation") or {})
         top_feats = shap_exp.get("top_features", [])
 
         if top_feats:
@@ -266,7 +288,7 @@ class ForensicReportGenerator:
         # 5. ORIGIN & INFRASTRUCTURE INTELLIGENCE
         # ----------------------------------------------------
         elements.append(Paragraph("5. Origin Assessment & Infrastructure Telemetry", section_heading))
-        origin = case_data.get("origin_assessment", {})
+        origin = (case_data.get("origin_assessment") or {})
         infra = case_data.get("infrastructure_intelligence", {})
         earliest_ip = origin.get("earliest_reliable_ip") or case_data.get("origin_ip", "N/A")
         
@@ -279,7 +301,7 @@ class ForensicReportGenerator:
                 Paragraph("<b>Earliest Observable Source IP:</b>", body_style),
                 Paragraph(str(earliest_ip), code_style),
                 Paragraph("<b>Assessment Confidence:</b>", body_style),
-                Paragraph(f"{round(origin.get('confidence', 0.8) * 100, 1)}%", body_style),
+                Paragraph(f"{round(origin.get('confidence', 0) * 100, 1)}%", body_style),
             ],
             [
                 Paragraph("<b>Probable GeoLocation:</b>", body_style),
@@ -308,9 +330,9 @@ class ForensicReportGenerator:
         # 6. THREAT GRAPH & CAMPAIGN CORRELATION
         # ----------------------------------------------------
         elements.append(Paragraph("6. Threat Graph Infrastructure & Campaign Clustering", section_heading))
-        graph = case_data.get("threat_graph", {})
-        camp = case_data.get("active_campaign", {})
-        attr = case_data.get("attribution_support", {})
+        graph = (case_data.get("threat_graph") or {})
+        camp = (case_data.get("active_campaign") or {})
+        attr = (case_data.get("attribution_support") or {})
 
         graph_summary_data = [
             [
@@ -344,8 +366,23 @@ class ForensicReportGenerator:
         elements.append(Paragraph(disclaimer_text, disclaimer_style))
         elements.append(Spacer(1, 10))
 
+        elements.append(Paragraph("8. Evidence manifest, verification and analysis details", section_heading))
+        elements.append(Paragraph("MAILSPECTRA derives from DEEPTRACE / SIH26106; upstream attribution and license are retained. The PDF digest is supplied in the accompanying manifest because a file cannot contain its own final digest. Original artifact and PDF hashes serve different purposes.", body_style))
+        for key in ("artifact", "evidence_manifest", "risk_assessment", "authentication", "ai_inference", "relay_chain", "urls", "ips", "attachments", "content_intelligence", "infrastructure_intelligence", "campaign_correlations", "timeline", "limitations"):
+            value = raw_case_data.get(key)
+            if value is None: continue
+            elements.append(Paragraph(key.replace("_", " ").title(), body_bold))
+            rendered = json.dumps(value,ensure_ascii=True,indent=2)
+            # Bound the PDF; the complete snapshot remains available through the case API.
+            if len(rendered) > 16000: rendered = rendered[:16000] + "\n[Section truncated; consult persisted case evidence]"
+            for line in rendered.splitlines():
+                for start in range(0,max(1,len(line)),100):
+                    elements.append(Paragraph(escape(line[start:start+100]) or " ",code_style))
+        elements.append(Paragraph("Model probabilities are uncalibrated demonstration results. Masking is best-effort presentation redaction, not guaranteed anonymization. Supplied authentication and relay headers may be forged.", disclaimer_style))
+
         # Build Document
         doc.build(elements)
+        os.chmod(filepath, 0o600)
 
         # Compute SHA-256 hash of the generated PDF report
         with open(filepath, "rb") as f:

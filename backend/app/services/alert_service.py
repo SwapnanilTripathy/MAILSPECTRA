@@ -5,6 +5,7 @@ import uuid
 from pydantic import BaseModel, Field
 
 from backend.app.core.config import settings
+from backend.app.core.assessment import severity_for_score
 from backend.app.core.logging import logger
 
 if TYPE_CHECKING:
@@ -23,6 +24,8 @@ class SecurityAlert(BaseModel):
     recommended_actions: List[str] = Field(default_factory=list)
     requires_immediate_action: bool = False
     details: Dict[str, Any] = Field(default_factory=dict)
+    status: str = "OPEN"
+    assigned_to: Optional[str] = None
 
 
 class AlertEvaluationResult(BaseModel):
@@ -33,17 +36,14 @@ class AlertEvaluationResult(BaseModel):
     configured_critical_threshold: float
 
 
-# In-memory recent alerts buffer for real-time dashboard notification feed
-_RECENT_ALERTS: List[SecurityAlert] = []
-
-
 class AlertService:
     """Evaluates risk score thresholds and observable evidence to dispatch structured security alerts."""
 
     @classmethod
     def evaluate_analysis(cls, analysis: EmailAnalysisResponse) -> AlertEvaluationResult:
-        score = analysis.threat_assessment.risk_score
-        classification = analysis.threat_assessment.classification
+        assessment = analysis.risk_assessment if analysis.risk_assessment is not None else analysis.threat_assessment
+        score = assessment.risk_score
+        classification = assessment.classification or "UNKNOWN"
         now_iso = datetime.now(timezone.utc).isoformat()
         
         crit_thresh = settings.CRITICAL_ALERT_SCORE
@@ -52,22 +52,10 @@ class AlertService:
         triggers: List[str] = []
         recommendations: List[str] = []
 
-        # 1. Determine Severity Band
-        if score >= crit_thresh:
-            severity = "CRITICAL"
-            requires_action = True
-        elif score >= high_thresh:
-            severity = "HIGH"
-            requires_action = True
-        elif score >= 40.0:
-            severity = "MEDIUM"
-            requires_action = False
-        elif score >= 20.0:
-            severity = "LOW"
-            requires_action = False
-        else:
-            severity = "INFORMATIONAL"
-            requires_action = False
+        severity = severity_for_score(score)
+        requires_action = severity in {"HIGH", "CRITICAL"}
+        if severity not in {"MEDIUM", "HIGH", "CRITICAL"}:
+            return AlertEvaluationResult(is_alert_generated=False, alert=None, evaluation_timestamp=now_iso, configured_high_threshold=high_thresh, configured_critical_threshold=crit_thresh)
 
         # 2. Extract specific triggers from evidence
         if analysis.observed_evidence:
@@ -82,11 +70,11 @@ class AlertService:
         # Add auth triggers if failed
         auth = analysis.authentication
         if auth.dmarc_result == "fail":
-            triggers.append("[AUTHENTICATION] DMARC alignment validation failed.")
+            triggers.append("[AUTHENTICATION] Supplied header reports DMARC failure (unverified).")
         if auth.spf_result == "fail":
-            triggers.append("[AUTHENTICATION] SPF sender authorization failed.")
+            triggers.append("[AUTHENTICATION] Supplied header reports SPF failure (unverified).")
         if auth.dkim_result == "fail":
-            triggers.append("[AUTHENTICATION] DKIM cryptographic signature verification failed.")
+            triggers.append("[AUTHENTICATION] Supplied header reports DKIM failure (unverified).")
 
         # Add content triggers
         if hasattr(analysis, "content_intelligence") and analysis.content_intelligence:
@@ -135,12 +123,6 @@ class AlertService:
             },
         )
 
-        # Buffer recent high/critical alerts
-        if severity in ["CRITICAL", "HIGH", "MEDIUM"]:
-            _RECENT_ALERTS.insert(0, alert)
-            if len(_RECENT_ALERTS) > 50:
-                _RECENT_ALERTS.pop()
-
         logger.info(f"Generated {severity} alert {alert_id} for case {analysis.case_id} (Score: {score})")
 
         return AlertEvaluationResult(
@@ -150,7 +132,3 @@ class AlertService:
             configured_high_threshold=high_thresh,
             configured_critical_threshold=crit_thresh,
         )
-
-    @classmethod
-    def get_recent_alerts(cls, limit: int = 20) -> List[SecurityAlert]:
-        return _RECENT_ALERTS[:limit]

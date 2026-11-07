@@ -23,9 +23,22 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 async def init_db() -> None:
-    """Initialize database tables."""
+    """Migrate development databases; production requires explicit operator migration."""
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import text
+    from pathlib import Path
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        if settings.APP_ENV == "production":
+            revision = (await conn.execute(text("SELECT version_num FROM alembic_version"))).scalar()
+            if revision != "0003":
+                raise RuntimeError("Database migration required: run alembic upgrade head")
+        else:
+            def migrate(connection):
+                config = Config(str(Path(__file__).resolve().parents[3] / "alembic.ini"))
+                config.attributes["connection"] = connection
+                command.upgrade(config, "head")
+            await conn.run_sync(migrate)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

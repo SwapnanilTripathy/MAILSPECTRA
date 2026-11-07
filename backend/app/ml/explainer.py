@@ -73,7 +73,7 @@ class ThreatExplainer:
         try:
             return self._compute_shap_explanation(predicted_class, X, structured_features)
         except Exception as e:
-            logger.warning(f"SHAP explanation computation failed ({e}). Using feature contribution fallback.")
+            logger.warning("SHAP failed: %s; using heuristic contributions", type(e).__name__)
             return self._fallback_explanation(predicted_class, structured_features)
 
     def _compute_shap_explanation(

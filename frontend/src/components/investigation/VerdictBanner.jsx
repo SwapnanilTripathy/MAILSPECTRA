@@ -5,33 +5,37 @@ import SeverityBadge from '../common/SeverityBadge';
 export default function VerdictBanner({ analysis, onSaveCase, onExportReport, isSaving = false, isExporting = false }) {
   if (!analysis) return null;
 
-  const threatClass = analysis.risk_assessment?.classification || analysis.ai_inference?.predicted_class || analysis.threat_assessment?.classification || 'UNKNOWN';
-  const riskScore = analysis.risk_assessment?.risk_score ?? analysis.threat_assessment?.risk_score ?? 0;
-  const severity = analysis.risk_assessment?.severity || 'LOW';
-  const confidence = analysis.risk_assessment?.model_confidence ?? analysis.ai_inference?.confidence ?? analysis.threat_assessment?.confidence ?? 1.0;
+  const canonical = analysis.risk_assessment;
+  const hasCanonical = canonical != null;
+  const threatClass = (hasCanonical ? canonical.classification : analysis.threat_assessment?.classification) || 'UNKNOWN';
+  const riskScore = hasCanonical ? (canonical.risk_score ?? null) : (analysis.threat_assessment?.risk_score ?? null);
+  const severity = hasCanonical ? (canonical.severity || 'UNKNOWN') : 'UNKNOWN';
+  const confidence = hasCanonical ? (canonical.model_confidence ?? null) : null;
+  const verdictSource = hasCanonical ? 'Canonical assessment; uncalibrated decision support' : riskScore != null ? 'LEGACY / PRELIMINARY UNVERIFIED — supplied header claims are not independent verification' : 'Canonical assessment unavailable';
   const indicators = analysis.observed_evidence || analysis.risk_assessment?.indicators || [];
 
   const isThreat = riskScore >= 40 || (threatClass !== 'LEGITIMATE' && threatClass !== 'BENIGN');
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-[#111827] border border-slate-800 p-6 shadow-xl">
+    <div className="relative overflow-clip rounded-2xl bg-[#111827] border border-slate-800 p-6 shadow-xl">
       {/* Background Accent Glow */}
       <div className={`absolute -right-16 -top-16 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none ${isThreat ? 'bg-red-500' : 'bg-emerald-500'}`} />
 
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
         {/* Left Verdict Section */}
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 min-w-0">
           <div className={`p-4 rounded-xl border ${isThreat ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
             {isThreat ? <ShieldAlert className="w-8 h-8" /> : <CheckCircle className="w-8 h-8" />}
           </div>
-          <div>
-            <div className="flex items-center gap-3">
+          <div className="min-w-0 break-words">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs font-mono uppercase tracking-widest text-slate-400">THREAT VERDICT</span>
               <SeverityBadge severity={severity} size="sm" />
             </div>
-            <h2 className="text-3xl font-bold font-mono tracking-tight text-white mt-1">
+            <h2 className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-white mt-1">
               {threatClass.replace(/_/g, ' ')}
             </h2>
+            <p className="text-xs text-amber-300 mt-1" role="note">{verdictSource}</p>
             <p className="text-xs text-slate-400 mt-1 font-mono">
               Artifact: <span className="text-slate-200">{analysis.filename}</span> • Case Reference: <span className="text-cyan-400">{analysis.case_id}</span>
             </p>
@@ -39,33 +43,33 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
         </div>
 
         {/* Center Gauges (Risk & Confidence) */}
-        <div className="flex items-center gap-8 w-full lg:w-auto justify-between lg:justify-start border-t lg:border-t-0 lg:border-l border-slate-800 pt-4 lg:pt-0 lg:pl-8">
+        <div className="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-start border-t lg:border-t-0 lg:border-l border-slate-800 pt-4 lg:pt-0 lg:pl-8">
           {/* Risk Score */}
           <div>
             <div className="text-xs font-mono text-slate-400 uppercase">RISK SCORE</div>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className={`text-4xl font-extrabold font-mono ${riskScore >= 70 ? 'text-red-400' : riskScore >= 40 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                {riskScore}
+              <span className={`text-4xl font-extrabold font-mono ${['CRITICAL', 'HIGH'].includes(analysis.risk_assessment?.severity) ? 'text-red-400' : riskScore >= 40 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {riskScore ?? "Unavailable"}
               </span>
-              <span className="text-slate-500 font-mono text-sm">/100</span>
+              <span className="text-slate-400 font-mono text-sm">/100</span>
             </div>
             <div className="w-28 h-2 bg-slate-800 rounded-full mt-2 overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${riskScore >= 70 ? 'bg-red-500' : riskScore >= 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                style={{ width: `${Math.min(100, Math.max(5, riskScore))}%` }}
+                className={`h-full rounded-full transition-all duration-500 ${['CRITICAL', 'HIGH'].includes(analysis.risk_assessment?.severity) ? 'bg-red-500' : riskScore >= 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                style={{ width: `${Math.min(100, Math.max(0, riskScore ?? 0))}%` }}
               />
             </div>
           </div>
 
           {/* Model Confidence */}
-          <div>
+          <div className="min-w-0">
             <div className="text-xs font-mono text-slate-400 uppercase">AI CONFIDENCE</div>
             <div className="flex items-baseline gap-1 mt-1">
               <span className="text-3xl font-bold font-mono text-cyan-400">
-                {Math.round(confidence * 100)}%
+                {analysis.ai_inference?.is_model_available && confidence != null ? `${Math.round(confidence * 100)}%` : 'N/A'}
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-2 font-mono">Multi-class L2 Model</p>
+            <p className="text-[10px] text-slate-400 mt-2 font-mono">{analysis.ai_inference?.is_model_available ? 'Demonstration-only model; uncalibrated' : 'Model unavailable; rule fallback'}</p>
           </div>
         </div>
 
@@ -85,7 +89,7 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
             <button
               onClick={onExportReport}
               disabled={isExporting}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition shadow-lg shadow-cyan-600/20 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-medium transition shadow-lg shadow-cyan-600/20 disabled:opacity-50"
             >
               <FileDown className="w-4 h-4" />
               <span>{isExporting ? 'Generating...' : 'Export PDF Report'}</span>
@@ -100,7 +104,7 @@ export default function VerdictBanner({ analysis, onSaveCase, onExportReport, is
           <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
           <div className="text-xs font-mono">
             <span className="font-bold text-red-300 uppercase">
-              HIGH-PRIORITY SECURITY ALERT DISPATCHED ({analysis.security_alert.alert_id}):
+              HIGH-PRIORITY INVESTIGATION ALERT RECORDED ({analysis.security_alert.alert_id}):
             </span>
             <span className="text-slate-300 ml-1.5">{analysis.security_alert.title}</span>
             {analysis.security_alert.recommended_actions && analysis.security_alert.recommended_actions.length > 0 && (

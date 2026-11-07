@@ -4,6 +4,7 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 const apiClient = axios.create({
   baseURL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,17 +13,35 @@ const apiClient = axios.create({
 
 // Interceptor for attaching auth token
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('deeptrace_token');
+  const token = sessionStorage.getItem('deeptrace_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
+let refreshFlight = null;
 // Interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response.data,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+    if (error.response?.status === 401 && config && !config._retried && !config.url.includes("/auth/login") && !config.url.includes("/auth/refresh")) {
+      config._retried = true;
+      try {
+        if (!refreshFlight) refreshFlight = axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true, headers: { "X-Mailspectra-CSRF": "1" } }).then(({data}) => {
+          sessionStorage.setItem("deeptrace_token", data.access_token);
+          return data;
+        }).finally(() => { refreshFlight = null; });
+        await refreshFlight;
+        return apiClient(config);
+      } catch { /* Fall through to local session cleanup. */ }
+    }
+    if (error.response?.status === 401) {
+      sessionStorage.removeItem('deeptrace_token');
+      sessionStorage.removeItem('deeptrace_user');
+      window.dispatchEvent(new Event('session-expired'));
+    }
     const errorMsg = error.response?.data?.detail || error.message || 'API request failed';
     return Promise.reject(new Error(errorMsg));
   }
@@ -48,6 +67,7 @@ export const api = {
 
   // Real-Time Threat Alerts
   getAlerts: (limit = 20) => apiClient.get('/alerts', { params: { limit } }),
+  updateAlert: (id, status) => apiClient.patch(`/alerts/${id}`, { status }),
   getAlertConfig: () => apiClient.get('/alerts/config'),
 
   // Dashboard Metrics
@@ -66,10 +86,20 @@ export const api = {
   getCampaignDetail: (campaignId) => apiClient.get(`/campaigns/${campaignId}`),
 
   // Reports
-  generateReport: (caseId) => apiClient.post(`/reports/generate/${caseId}`),
+  generateReport: (caseId, maskPii = sessionStorage.getItem("mailspectra_mask") === "true") => apiClient.post(`/reports/generate/${caseId}`, null, { params: { mask_pii: maskPii } }),
+  verifyEvidence: (caseId) => apiClient.get(`/cases/${caseId}/evidence/verify`),
   verifyReport: (caseId) => apiClient.get(`/reports/${caseId}/verify`),
   listReports: () => apiClient.get('/reports'),
+  downloadReport: async (caseId) => {
+    if (sessionStorage.getItem("mailspectra_mask") === "true") await api.generateReport(caseId, true);
+    const blob = await apiClient.get(`/reports/${caseId}/download`, { responseType: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a'); link.href = url; link.download = `${caseId}.pdf`; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
   getReportDownloadUrl: (caseId) => `${baseURL}/reports/${caseId}/download`,
+
+  lookupIndicator: (indicator, indicator_type, provider = "auto") => apiClient.post("/intelligence/lookup", { indicator, indicator_type, provider }),
 
   // System & Health
   getSystemStatus: () => apiClient.get('/system/status'),

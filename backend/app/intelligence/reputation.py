@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 import httpx
 
 from backend.app.core.config import settings
+from backend.app.utils.network import classify_ip
 from backend.app.core.logging import logger
 from backend.app.intelligence.schemas import EvidenceSource, ThreatReputationInfo
 
@@ -76,7 +77,7 @@ class OfflineThreatIntelProvider(BaseThreatIntelProvider):
                 total_engines=f["total"],
                 blacklist_hits=f["blacklist"],
                 verdict=f["verdict"],
-                status="AVAILABLE",
+                status="FIXTURE",
                 last_checked=now_iso,
                 source=EvidenceSource.OFFLINE_FIXTURE.value,
             )
@@ -90,8 +91,8 @@ class OfflineThreatIntelProvider(BaseThreatIntelProvider):
             suspicious_votes=0,
             total_engines=0,
             blacklist_hits=[],
-            verdict="CLEAN",
-            status="AVAILABLE",
+            verdict="UNKNOWN",
+            status="UNAVAILABLE",
             last_checked=now_iso,
             source=EvidenceSource.OFFLINE_FIXTURE.value,
         )
@@ -108,36 +109,44 @@ class LiveAbuseIPDBProvider(BaseThreatIntelProvider):
         clean_ind = indicator.strip()
         now_iso = datetime.now(timezone.utc).isoformat()
 
+        if indicator_type != "IP":
+            return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="UNSUPPORTED", last_checked=now_iso, limitations=["AbuseIPDB supports IP lookups only"])
+        if indicator_type == "IP" and not classify_ip(clean_ind).get("is_public"):
+            return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="Local IP classification", verdict="UNKNOWN", status="SPECIAL_USE_IP", last_checked=now_iso)
         if indicator_type == "IP" and self.api_key:
             try:
                 headers = {"Key": self.api_key, "Accept": "application/json"}
                 url = f"https://api.abuseipdb.com/api/v2/check?ipAddress={clean_ind}&maxAgeInDays=90"
-                async with httpx.AsyncClient(timeout=self.timeout) as client:
-                    resp = await client.get(url, headers=headers)
-                    if resp.status_code == 200:
-                        data = resp.json().get("data", {})
-                        score = float(data.get("abuseConfidenceScore", 0))
-                        verdict = "MALICIOUS" if score >= 60 else ("SUSPICIOUS" if score >= 20 else "CLEAN")
-                        return ThreatReputationInfo(
-                            indicator=clean_ind,
-                            indicator_type="IP",
-                            provider="AbuseIPDB Threat Feed",
-                            reputation_score=score,
-                            malicious_votes=int(data.get("totalReports", 0)),
-                            total_engines=100,
-                            blacklist_hits=[f"AbuseScore: {score}%", f"Reports: {data.get('totalReports', 0)}"],
-                            verdict=verdict,
-                            status="AVAILABLE",
-                            last_checked=now_iso,
-                            source=EvidenceSource.THREAT_INTEL.value,
-                        )
-                    else:
-                        logger.warning(f"AbuseIPDB returned status {resp.status_code} for {clean_ind}")
+                from backend.app.intelligence.http_client import provider_json
+                code, payload = await provider_json(url, headers, allow_redirects=False)
+                if code == 200:
+                    data = payload.get("data", {})
+                    score = data.get("abuseConfidenceScore")
+                    if type(score) not in (int,float) or not 0 <= score <= 100 or type(data.get("totalReports")) is not int or data["totalReports"] < 0:
+                        raise ValueError("Invalid provider statistics")
+                    score = float(score)
+                    verdict = "MALICIOUS" if score >= 60 else ("SUSPICIOUS" if score >= 20 else "NO_KNOWN_MATCH")
+                    return ThreatReputationInfo(
+                        indicator=clean_ind,
+                        indicator_type="IP",
+                        provider="AbuseIPDB Threat Feed",
+                        reputation_score=score,
+                        malicious_votes=int(data.get("totalReports", 0)),
+                        total_engines=1,
+                        blacklist_hits=[f"AbuseScore: {score}%", f"Reports: {data.get('totalReports', 0)}"],
+                        verdict=verdict,
+                        status="AVAILABLE",
+                        last_checked=now_iso,
+                        source=EvidenceSource.THREAT_INTEL.value,
+                    )
+                elif code == 429:
+                    return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="RATE_LIMITED", last_checked=now_iso)
+                else:
+                    return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="AUTH_ERROR" if code in (401,403) else "ERROR", last_checked=now_iso)
             except Exception as e:
-                logger.warning(f"AbuseIPDB live lookup exception for {clean_ind}: {e}")
+                return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="ERROR", last_checked=now_iso)
 
-        # Fallback to offline provider
-        return await OfflineThreatIntelProvider().query_indicator(clean_ind, indicator_type)
+        return ThreatReputationInfo(indicator=clean_ind, indicator_type=indicator_type, provider="AbuseIPDB", verdict="UNKNOWN", status="UNAVAILABLE", last_checked=now_iso, limitations=["Provider unavailable or indicator type unsupported"])
 
 
 class ThreatIntelAdapter:
@@ -146,7 +155,7 @@ class ThreatIntelAdapter:
     @staticmethod
     def get_provider(mode: Optional[str] = None) -> BaseThreatIntelProvider:
         active_mode = (mode or settings.INTELLIGENCE_MODE).lower()
-        if active_mode == "live" and settings.ABUSEIPDB_API_KEY:
+        if active_mode == "live":
             return LiveAbuseIPDBProvider()
         return OfflineThreatIntelProvider()
 
@@ -163,8 +172,8 @@ class ThreatReputationService:
         try:
             return await self.provider.query_indicator(indicator, indicator_type)
         except Exception as e:
-            logger.warning(f"Threat reputation provider error for {indicator} ({e}); falling back to offline.")
-            return await OfflineThreatIntelProvider().query_indicator(indicator, indicator_type)
+            logger.warning("Threat reputation unavailable: %s", type(e).__name__)
+            return ThreatReputationInfo(indicator=indicator, indicator_type=indicator_type, verdict="UNKNOWN", status="ERROR", last_checked=datetime.now(timezone.utc).isoformat())
 
     async def enrich_observables(self, analysis: EmailAnalysisResponse) -> Dict[str, ThreatReputationInfo]:
         """Query threat intelligence for key observables in email."""

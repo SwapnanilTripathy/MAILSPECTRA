@@ -3,9 +3,9 @@ import { Network, ShieldAlert, GitBranch, Database, CheckCircle2, AlertCircle, I
 import DefangedIndicator from '../common/DefangedIndicator';
 
 export default function CampaignAttributionView({ activeCampaign, campaignCorrelations, attributionSupport }) {
-  const correlations = campaignCorrelations?.correlations || [];
-  const hypothesis = attributionSupport?.hypothesis || 'INSUFFICIENT_EVIDENCE';
-  const confidence = attributionSupport?.confidence ?? 0.5;
+  const correlations = campaignCorrelations || [];
+  const hypothesis = attributionSupport?.assessment || 'INSUFFICIENT_EVIDENCE';
+  const confidence = attributionSupport?.confidence ?? 0;
 
   const hypothesisColors = {
     DIRECT_MALICIOUS_INFRASTRUCTURE: 'bg-red-500/20 text-red-300 border-red-500/40',
@@ -39,7 +39,7 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
           </div>
 
           <div className="sm:text-right">
-            <span className="text-[10px] font-mono uppercase text-slate-400 block">HYPOTHESIS CONFIDENCE</span>
+            <span className="text-[10px] font-mono uppercase text-slate-400 block">RULE SUPPORT (NOT PROBABILITY)</span>
             <span className="text-2xl font-extrabold font-mono text-cyan-400">
               {Math.round(confidence * 100)}%
             </span>
@@ -48,19 +48,19 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
 
         {/* Evidentiary Basis */}
         <div className="mt-5 p-4 rounded-lg bg-slate-900/80 border border-slate-800">
-          <h5 className="text-xs font-mono font-semibold text-slate-300 uppercase">Technical Evidentiary Basis</h5>
+          <h3 className="text-xs font-mono font-semibold text-slate-300 uppercase">Technical Evidentiary Basis</h3>
           <p className="mt-2 text-xs text-slate-300 leading-relaxed font-sans">
             {attributionSupport?.technical_justification ||
               attributionSupport?.evidentiary_basis ||
-              'Attribution hypothesis formulated via cross-correlation of SPF/DKIM authentication state, relay origin IP provenance, domain registration age, and shared infrastructure indicators.'}
+              'No supporting evidence is available.'}
           </p>
         </div>
 
         {/* Forensic Limitations */}
-        {attributionSupport?.forensic_limitations && (
+        {attributionSupport?.limitations && (
           <div className="mt-3 text-[11px] font-mono text-amber-400/90 flex items-start gap-2">
             <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            <span>Forensic Disclaimer: {attributionSupport.forensic_limitations}</span>
+            <span>Forensic Disclaimer: {attributionSupport.limitations}</span>
           </div>
         )}
       </div>
@@ -71,9 +71,9 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
           <div className="px-5 py-4 border-b border-slate-800 bg-cyan-950/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Network className="w-4 h-4 text-cyan-400" />
-              <h4 className="text-xs font-mono uppercase tracking-wider text-white">
+              <h3 className="text-xs font-mono uppercase tracking-wider text-white">
                 Active Threat Campaign Cluster: {activeCampaign.name || activeCampaign.campaign_id}
-              </h4>
+              </h3>
             </div>
             <span className="px-2.5 py-0.5 rounded text-xs font-bold font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
               {activeCampaign.primary_threat_type || 'PHISHING'}
@@ -83,19 +83,19 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
           <div className="p-5 space-y-4 font-mono text-xs">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <span className="text-slate-500 block text-[10px]">CAMPAIGN ID</span>
+                <span className="text-slate-400 block text-[10px]">CAMPAIGN ID</span>
                 <span className="text-slate-200 font-semibold">{activeCampaign.campaign_id}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px]">MEMBER CASES</span>
+                <span className="text-slate-400 block text-[10px]">MEMBER CASES</span>
                 <span className="text-cyan-400 font-bold">{activeCampaign.member_count || (activeCampaign.member_case_ids || []).length} Cases</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px]">FIRST OBSERVED</span>
+                <span className="text-slate-400 block text-[10px]">FIRST OBSERVED</span>
                 <span className="text-slate-300">{activeCampaign.first_seen ? activeCampaign.first_seen.substring(0, 10) : 'N/A'}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[10px]">LAST OBSERVED</span>
+                <span className="text-slate-400 block text-[10px]">LAST OBSERVED</span>
                 <span className="text-slate-300">{activeCampaign.last_seen ? activeCampaign.last_seen.substring(0, 10) : 'N/A'}</span>
               </div>
             </div>
@@ -104,19 +104,19 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
             {activeCampaign.shared_infrastructure && (
               <div className="pt-3 border-t border-slate-800">
                 <span className="text-slate-400 text-xs font-semibold block mb-2">
-                  Shared Attack Infrastructure In Cluster:
+                  Shared Observed Infrastructure In Cluster:
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="p-3 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-500 text-[10px] block">SHARED IPS</span>
+                    <span className="text-slate-400 text-[10px] block">SHARED IPS</span>
                     <span className="text-white font-bold">{(activeCampaign.shared_infrastructure.ips || []).length}</span>
                   </div>
                   <div className="p-3 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-500 text-[10px] block">SHARED DOMAINS</span>
+                    <span className="text-slate-400 text-[10px] block">SHARED DOMAINS</span>
                     <span className="text-white font-bold">{(activeCampaign.shared_infrastructure.domains || []).length}</span>
                   </div>
                   <div className="p-3 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-500 text-[10px] block">SHARED URL TARGETS</span>
+                    <span className="text-slate-400 text-[10px] block">SHARED URL TARGETS</span>
                     <span className="text-white font-bold">{(activeCampaign.shared_infrastructure.urls || []).length}</span>
                   </div>
                 </div>
@@ -131,14 +131,14 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
         <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-cyan-400" />
-            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-300">
+            <h3 className="text-xs font-mono uppercase tracking-wider text-slate-300">
               Cross-Case Database Infrastructure Correlations ({correlations.length})
-            </h4>
+            </h3>
           </div>
         </div>
 
         {correlations.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 font-mono text-xs">
+          <div className="p-8 text-center text-slate-400 font-mono text-xs">
             No cross-case infrastructure matches found in the historical threat database for this email.
           </div>
         ) : (
@@ -147,12 +147,13 @@ export default function CampaignAttributionView({ activeCampaign, campaignCorrel
               <div key={idx} className="p-4 hover:bg-slate-800/30 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-cyan-400">{corr.matched_case_id}</span>
-                    <span className="text-slate-400">• Match Score: <strong className="text-slate-200">{Math.round((corr.score || 0.8) * 100)}%</strong></span>
+                    <span className="font-bold text-cyan-400">{corr.related_case_id}</span>
+                    <span className="text-slate-400">• Match Score: <strong className="text-slate-200">{Math.round((corr.correlation_score ?? 0) * 100)}%</strong></span>
                   </div>
                   <p className="text-slate-300 font-sans text-xs">
-                    Linked via shared {corr.shared_type || 'infrastructure'}: <DefangedIndicator value={corr.shared_indicator || corr.indicator} />
+                    Linked via shared technical evidence: <DefangedIndicator value={Object.values(corr.shared_values || {}).flat().join(', ')} />
                   </p>
+                  <p className="text-xs text-slate-400">{corr.temporal_context?.elapsed_days != null ? `${corr.temporal_context.elapsed_days.toFixed(2)} days apart; ${corr.temporal_context.window_days}-day window. Temporal context adds no score.` : 'Temporal context unavailable for this record.'}</p>
                 </div>
                 <div className="text-slate-400 text-[11px] shrink-0">
                   Relationship: <span className="text-purple-400 font-bold">{corr.relationship || 'SHARED_INFRASTRUCTURE'}</span>

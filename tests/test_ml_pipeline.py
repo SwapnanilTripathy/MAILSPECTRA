@@ -58,7 +58,9 @@ def test_3_bec_style_email(pipeline_instance):
     )
     result = pipeline_instance.analyze_bytes(bec_raw, filename="bec_urgent.eml")
     assert result.success is True
-    assert result.risk_assessment.risk_score >= 60.0
+    assert result.risk_assessment.risk_score == pytest.approx(sum(result.risk_assessment.evidence_breakdown.values()))
+    assert result.risk_assessment.classification == "BUSINESS_EMAIL_COMPROMISE"
+    assert result.risk_assessment.evidence_breakdown["authentication_evidence"] > 0
     assert any("BEC" in ind.indicator or "PAYMENT" in ind.indicator or "REPLY_TO" in ind.indicator for ind in result.observed_evidence)
 
 

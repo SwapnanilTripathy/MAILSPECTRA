@@ -31,7 +31,7 @@ class IPIntelligenceService:
                 candidate_ips.append(hop.from_ip)
 
         for raw_ip in candidate_ips:
-            clean = raw_ip.strip("[].,;: ")
+            clean = raw_ip.strip("[].,; ")
             if not clean or clean in seen_ips or not is_valid_ip(clean):
                 continue
             seen_ips.add(clean)
@@ -115,18 +115,13 @@ class IPIntelligenceService:
                     )
                     break
 
-        # Factor in SPF and Authentication verification
-        auth = analysis.authentication
-        if auth.spf_result == "pass":
-            confidence = min(0.95, confidence + 0.10)
-            evidentiary_basis.append("SPF record validation passed for sending infrastructure.")
-        elif auth.spf_result == "fail":
-            evidentiary_basis.append("SPF record validation failed, indicating possible unaligned relay or spoofed client.")
-
+        # Uploaded headers do not establish a trusted receiving boundary.
+        confidence = 0.0
+        limitations.append("Supplied Received headers are untrusted. Confidence is unavailable without trusted acquisition; any configured receiver match is an assumption.")
         # Attach Geo/ASN context if available
         if ip_intel_map and earliest_reliable_ip in ip_intel_map:
             geo = ip_intel_map[earliest_reliable_ip]
-            if geo.country and geo.asn:
+            if geo.country and geo.asn and geo.source != "OFFLINE_FIXTURE":
                 evidentiary_basis.append(
                     f"Probable originating infrastructure geolocates to {geo.city or geo.region or geo.country} ({geo.country}) under ASN {geo.asn} ({geo.isp or geo.organization})."
                 )

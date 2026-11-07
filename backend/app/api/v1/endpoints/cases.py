@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 import json
-from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Any, Dict, List, Optional, Literal
+from fastapi import APIRouter, Request, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.app.core.logging import logger
+from backend.app.core.assessment import severity_for_score
 from backend.app.database.session import get_db
 from backend.app.models.entities import AuditLogRecord, CaseRecord, ObservableRecord, TimelineEventRecord
 
@@ -33,8 +34,8 @@ class CreateCaseRequest(BaseModel):
 
 
 class UpdateCaseStatusRequest(BaseModel):
-    status: str  # OPEN, INVESTIGATING, RESOLVED, ARCHIVED
-    priority: Optional[str] = None
+    status: Literal["OPEN", "INVESTIGATING", "RESOLVED", "ARCHIVED"]
+    priority: Optional[Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]] = None
     assigned_to: Optional[str] = None
     actor: str = "SOC Analyst"
     comment: Optional[str] = None
@@ -62,6 +63,7 @@ async def list_cases(
             | (CaseRecord.subject.ilike(search_pattern))
             | (CaseRecord.from_address.ilike(search_pattern))
             | (CaseRecord.filename.ilike(search_pattern))
+            | (CaseRecord.sha256.ilike(search_pattern))
         )
 
     stmt = stmt.offset(offset).limit(limit)
@@ -72,6 +74,16 @@ async def list_cases(
     count_stmt = select(func.count(CaseRecord.case_id))
     if status_filter:
         count_stmt = count_stmt.where(CaseRecord.status == status_filter.upper())
+    if classification_filter:
+        count_stmt = count_stmt.where(CaseRecord.classification == classification_filter.upper())
+    if search:
+        count_stmt = count_stmt.where(
+            (CaseRecord.case_id.ilike(search_pattern))
+            | (CaseRecord.subject.ilike(search_pattern))
+            | (CaseRecord.from_address.ilike(search_pattern))
+            | (CaseRecord.filename.ilike(search_pattern))
+            | (CaseRecord.sha256.ilike(search_pattern))
+        )
     total_count = (await db.execute(count_stmt)).scalar() or 0
 
     return {
@@ -86,6 +98,7 @@ async def list_cases(
                 "origin_ip": c.origin_ip,
                 "classification": c.classification,
                 "risk_score": c.risk_score,
+                "severity": severity_for_score(c.risk_score),
                 "confidence": c.confidence,
                 "status": c.status,
                 "priority": c.priority,
@@ -131,12 +144,13 @@ async def get_case_detail(case_id: str, db: AsyncSession = Depends(get_db)):
         "origin_ip": case_rec.origin_ip,
         "classification": case_rec.classification,
         "risk_score": case_rec.risk_score,
+        "severity": severity_for_score(case_rec.risk_score),
         "confidence": case_rec.confidence,
         "status": case_rec.status,
         "priority": case_rec.priority,
         "assigned_to": case_rec.assigned_to,
         "sha256": case_rec.sha256,
-        "report_path": case_rec.report_path,
+
         "report_sha256": case_rec.report_sha256,
         "report_generated_at": case_rec.report_generated_at.isoformat() if case_rec.report_generated_at else None,
         "created_at": case_rec.created_at.isoformat() if case_rec.created_at else None,
@@ -222,6 +236,7 @@ async def create_case(payload: CreateCaseRequest, db: AsyncSession = Depends(get
 async def update_case_status(
     case_id: str,
     payload: UpdateCaseStatusRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     case_rec = (await db.execute(select(CaseRecord).where(CaseRecord.case_id == case_id))).scalar_one_or_none()
@@ -242,7 +257,7 @@ async def update_case_status(
             event_type="CASE_STATUS_CHANGED",
             title=f"Case Status Updated to {case_rec.status}",
             description=f"Status changed from {old_status} to {case_rec.status}. {payload.comment or ''}".strip(),
-            source=payload.actor,
+            source=request.state.user.username,
         )
     )
 
@@ -251,10 +266,35 @@ async def update_case_status(
         AuditLogRecord(
             case_id=case_id,
             action="CASE_STATUS_CHANGED",
-            actor=payload.actor,
+            actor=request.state.user.username,
             details=f"Changed status from {old_status} to {case_rec.status}",
         )
     )
 
     await db.commit()
     return {"status": "UPDATED", "case_id": case_id, "new_status": case_rec.status}
+
+
+@router.get("/{case_id}/evidence/verify")
+async def verify_evidence(case_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    from pathlib import Path
+    import hashlib
+    from backend.app.core.config import settings
+    from backend.app.models.entities import ArtifactRecord
+    artifact = await db.scalar(select(ArtifactRecord).where(ArtifactRecord.case_id == case_id))
+    if not artifact:
+        raise HTTPException(404, "Original artifact unavailable for this case")
+    path = Path(settings.UPLOAD_DIR).resolve() / artifact.storage_name
+    if not path.is_file():
+        raise HTTPException(404, "Original artifact storage is unavailable")
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    db.add(AuditLogRecord(case_id=case_id, action="EVIDENCE_VERIFIED", actor=request.state.user.username, details="Digest comparison performed"))
+    await db.commit()
+    return {"artifact_id":artifact.artifact_id, "expected_sha256":artifact.sha256, "actual_sha256":actual, "integrity_verified":actual == artifact.sha256}
+
+
+@router.get("/{case_id}/audit")
+async def case_audit(case_id: str, db: AsyncSession = Depends(get_db)):
+    if not await db.get(CaseRecord,case_id): raise HTTPException(404,"Case not found")
+    rows=(await db.scalars(select(AuditLogRecord).where(AuditLogRecord.case_id==case_id).order_by(AuditLogRecord.id))).all()
+    return {"items":[{"id":row.id,"action":row.action,"actor":row.actor,"details":row.details,"timestamp":row.created_at.isoformat()} for row in rows]}

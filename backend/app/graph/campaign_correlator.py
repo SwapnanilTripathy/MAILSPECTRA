@@ -1,5 +1,9 @@
 from __future__ import annotations
 import hashlib
+import re
+from datetime import datetime, timezone
+from backend.app.core.config import settings
+from backend.app.utils.network import classify_ip
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 
 from backend.app.graph.schemas import (
@@ -14,6 +18,13 @@ if TYPE_CHECKING:
     from backend.app.schemas.analysis import EmailAnalysisResponse
 
 
+
+def attachment_hashes(values):
+    return {v.lower() for v in values if isinstance(v,str) and re.fullmatch(r'[0-9a-fA-F]{64}',v)}
+
+def utc_timestamp(value):
+    parsed = datetime.fromisoformat(str(value).replace('Z','+00:00'))
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
 
 class CampaignCorrelator:
     """Performs cross-case observable correlation, campaign clustering, and attribution support analysis."""
@@ -32,10 +43,10 @@ class CampaignCorrelator:
         # 1. Extract current observables for comparison
         curr_ips: Set[str] = {ip.ip for ip in analysis.ips if ip.is_public}
         for hop in analysis.relay_chain.hops:
-            if hop.from_ip:
+            if hop.from_ip and classify_ip(hop.from_ip).get("is_public"):
                 curr_ips.add(hop.from_ip)
         for u in analysis.urls:
-            if u.is_ip_host and u.host:
+            if u.is_ip_host and u.host and classify_ip(u.host).get("is_public"):
                 curr_ips.add(u.host)
 
         curr_domains: Set[str] = set()
@@ -45,6 +56,7 @@ class CampaignCorrelator:
             if u.registered_domain:
                 curr_domains.add(u.registered_domain.lower())
 
+        curr_hashes = attachment_hashes(a.sha256 for a in analysis.attachments)
         curr_urls: Set[str] = {u.url for u in analysis.urls}
 
         curr_sender = analysis.metadata.from_sender.address.lower()
@@ -56,10 +68,23 @@ class CampaignCorrelator:
             if hist_id == current_case_id:
                 continue
 
+            temporal = {"window_days":settings.CORRELATION_WINDOW_DAYS, "current_analyzed_at":analysis.analyzed_at, "historical_created_at":hist.get('created_at'), "elapsed_days":None}
+            if hist.get('created_at'):
+                try:
+                    elapsed=(utc_timestamp(analysis.analyzed_at)-utc_timestamp(hist['created_at'])).total_seconds()/86400
+                except (ValueError,TypeError):
+                    continue
+                if elapsed < 0 or elapsed > settings.CORRELATION_WINDOW_DAYS: continue
+                temporal['elapsed_days']=elapsed
             shared_inds: List[str] = []
             evidence_lines: List[str] = []
             score = 0.0
 
+            common_hashes=curr_hashes & attachment_hashes(hist.get('attachment_hashes',[]))
+            if common_hashes:
+                shared_inds.append('SHARED_ATTACHMENT_SHA256')
+                evidence_lines.append('Identical attachment SHA-256: '+', '.join(sorted(common_hashes)))
+                score += 0.45  # Exact payload reuse, same heuristic weight as identical URL.
             # Compare IP overlap
             hist_ips = set(hist.get("ips", []))
             common_ips = curr_ips.intersection(hist_ips)
@@ -98,16 +123,18 @@ class CampaignCorrelator:
                 score += 0.10
 
             final_score = min(1.0, round(score, 2))
-            if final_score >= 0.35 and shared_inds:
+            if final_score >= settings.CORRELATION_MATCH_THRESHOLD and shared_inds:
                 matches.append(
                     CampaignCorrelationMatch(
+                        temporal_context=temporal,
                         related_case_id=hist_id,
                         related_case_filename=hist.get("filename", ""),
                         related_case_subject=hist.get("subject", ""),
                         related_case_classification=hist_class,
                         correlation_score=final_score,
                         shared_indicators=shared_inds,
-                        evidence=evidence_lines,
+                        shared_values={"attachment_hashes":sorted(common_hashes), "ips": sorted(common_ips), "domains":sorted(common_domains), "urls":sorted(common_urls), "senders":[curr_sender] if hist_sender == curr_sender else []},
+                        evidence=evidence_lines + ([f"Elapsed days: {temporal['elapsed_days']:.3f}; window: {settings.CORRELATION_WINDOW_DAYS} days (context only)"] if temporal["elapsed_days"] is not None else ["Historical timestamp unavailable"]),
                     )
                 )
 
@@ -116,19 +143,20 @@ class CampaignCorrelator:
 
         # 3. Dynamic Campaign Entity Clustering
         campaign_entity: Optional[CampaignEntity] = None
-        high_conf_matches = [m for m in matches if m.correlation_score >= 0.60]
+        high_conf_matches = [m for m in matches if m.correlation_score >= settings.CORRELATION_CLUSTER_THRESHOLD]
         if high_conf_matches:
             member_ids = [current_case_id] + [m.related_case_id for m in high_conf_matches]
             member_ids = sorted(list(set(member_ids)))
 
             # Deterministic campaign ID from member set
-            cid_hash = hashlib.sha256("".join(member_ids).encode("utf-8")).hexdigest()[:8].upper()
+            cid_hash = hashlib.sha256("|".join(sorted({v for m in high_conf_matches for values in m.shared_values.values() for v in values})).encode()).hexdigest()[:12].upper()
             campaign_id = f"CAMPAIGN-{cid_hash}"
 
             shared_infra: Dict[str, List[str]] = {
-                "ips": list(curr_ips),
-                "domains": list(curr_domains),
-                "urls": list(curr_urls)[:3],
+                "attachment_hashes":sorted({v for match in high_conf_matches for v in match.shared_values.get("attachment_hashes",[])}),
+                "ips": sorted({v for match in high_conf_matches for v in match.shared_values["ips"]}),
+                "domains": sorted({v for match in high_conf_matches for v in match.shared_values["domains"]}),
+                "urls": sorted({v for match in high_conf_matches for v in match.shared_values["urls"]}),
             }
 
             campaign_entity = CampaignEntity(
@@ -169,63 +197,19 @@ class CampaignCorrelator:
         from_sender = analysis.metadata.from_sender
         risk_score = analysis.threat_assessment.risk_score
 
-        # Check Spoofed Identity
-        is_spoofed = (
-            auth.spf_result == "fail"
-            or auth.dmarc_result == "fail"
-            or (analysis.metadata.return_path and from_sender.domain and from_sender.domain not in analysis.metadata.return_path)
-        )
-
-        # Check Anonymized Infrastructure (VPN, Tor, Proxy)
-        is_anonymized = False
-        if intel and intel.ip_intelligence:
-            for ip_info in intel.ip_intelligence.values():
-                if ip_info.proxy_or_vpn:
-                    is_anonymized = True
-                    evidence.append(
-                        f"MTA relay IP '{ip_info.ip}' resolves to known VPN/Tor/Proxy exit node ({ip_info.isp or 'Anonymous'})."
-                    )
-
-        # Determine Assessment Category
-        if is_spoofed:
-            assessment = "SPOOFED_IDENTITY"
-            confidence = 0.88
-            evidence.append(
-                f"Sender domain '{from_sender.domain}' was unauthorized on sending host (SPF/DMARC alignment failed)."
-            )
-            if campaign:
-                evidence.append(
-                    f"Infrastructure matches active threat cluster '{campaign.campaign_id}' with {len(campaign.member_case_ids)} related cases."
-                )
-
-        elif is_anonymized:
-            assessment = "ANONYMIZED_INFRASTRUCTURE"
-            confidence = 0.82
-            evidence.append("Traffic routed through anonymization network obscuring direct origin.")
-
-        elif campaign and len(campaign.member_case_ids) > 1:
+        limitations.append("Reported authentication headers are untrusted; rule support is not a calibrated probability.")
+        if campaign:
             assessment = "SHARED_CAMPAIGN_INFRASTRUCTURE"
             confidence = campaign.confidence
-            evidence.append(
-                f"Direct observable overlap detected with Campaign '{campaign.campaign_id}' across multiple cases."
-            )
-
-        elif risk_score >= 70.0:
-            assessment = "DIRECT_MALICIOUS_INFRASTRUCTURE"
-            confidence = 0.75
-            evidence.append(
-                f"Observed malicious payload hosted directly on unaligned network infrastructure."
-            )
-
-        elif risk_score < 40.0:
-            assessment = "LEGITIMATE_AUTHENTICATED_SENDER"
-            confidence = 0.90
-            evidence.append("Cryptographic authentication (SPF/DKIM/DMARC) aligned with authentic domain owner.")
-
+            evidence = [line for match in matches for line in match.evidence]
+        elif auth.spf_result == "fail" or auth.dmarc_result == "fail":
+            assessment = "POSSIBLE_IDENTITY_INCONSISTENCY"
+            confidence = 0.0
+            evidence = ["Supplied headers report authentication failure; independent verification is required."]
         else:
             assessment = "INSUFFICIENT_EVIDENCE"
-            confidence = 0.40
-            evidence.append("Observables present insufficient distinctive overlap for cluster attribution.")
+            confidence = 0.0
+            evidence = ["No verified evidence establishes sender authenticity or an actor identity."]
 
         return AttributionSupportResult(
             assessment=assessment,
