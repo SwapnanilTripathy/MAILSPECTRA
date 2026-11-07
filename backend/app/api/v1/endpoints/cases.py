@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import json
-from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Any, Dict, List, Optional, Literal
+from fastapi import APIRouter, Request, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,8 +33,8 @@ class CreateCaseRequest(BaseModel):
 
 
 class UpdateCaseStatusRequest(BaseModel):
-    status: str  # OPEN, INVESTIGATING, RESOLVED, ARCHIVED
-    priority: Optional[str] = None
+    status: Literal["OPEN", "INVESTIGATING", "RESOLVED", "ARCHIVED"]
+    priority: Optional[Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]] = None
     assigned_to: Optional[str] = None
     actor: str = "SOC Analyst"
     comment: Optional[str] = None
@@ -147,7 +147,7 @@ async def get_case_detail(case_id: str, db: AsyncSession = Depends(get_db)):
         "priority": case_rec.priority,
         "assigned_to": case_rec.assigned_to,
         "sha256": case_rec.sha256,
-        "report_path": case_rec.report_path,
+
         "report_sha256": case_rec.report_sha256,
         "report_generated_at": case_rec.report_generated_at.isoformat() if case_rec.report_generated_at else None,
         "created_at": case_rec.created_at.isoformat() if case_rec.created_at else None,
@@ -233,6 +233,7 @@ async def create_case(payload: CreateCaseRequest, db: AsyncSession = Depends(get
 async def update_case_status(
     case_id: str,
     payload: UpdateCaseStatusRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     case_rec = (await db.execute(select(CaseRecord).where(CaseRecord.case_id == case_id))).scalar_one_or_none()
@@ -253,7 +254,7 @@ async def update_case_status(
             event_type="CASE_STATUS_CHANGED",
             title=f"Case Status Updated to {case_rec.status}",
             description=f"Status changed from {old_status} to {case_rec.status}. {payload.comment or ''}".strip(),
-            source=payload.actor,
+            source=request.state.user.username,
         )
     )
 
@@ -262,10 +263,28 @@ async def update_case_status(
         AuditLogRecord(
             case_id=case_id,
             action="CASE_STATUS_CHANGED",
-            actor=payload.actor,
+            actor=request.state.user.username,
             details=f"Changed status from {old_status} to {case_rec.status}",
         )
     )
 
     await db.commit()
     return {"status": "UPDATED", "case_id": case_id, "new_status": case_rec.status}
+
+
+@router.get("/{case_id}/evidence/verify")
+async def verify_evidence(case_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    from pathlib import Path
+    import hashlib
+    from backend.app.core.config import settings
+    from backend.app.models.entities import ArtifactRecord
+    artifact = await db.scalar(select(ArtifactRecord).where(ArtifactRecord.case_id == case_id))
+    if not artifact:
+        raise HTTPException(404, "Original artifact unavailable for this case")
+    path = Path(settings.UPLOAD_DIR).resolve() / artifact.storage_name
+    if not path.is_file():
+        raise HTTPException(404, "Original artifact storage is unavailable")
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    db.add(AuditLogRecord(case_id=case_id, action="EVIDENCE_VERIFIED", actor=request.state.user.username, details="Digest comparison performed"))
+    await db.commit()
+    return {"artifact_id":artifact.artifact_id, "expected_sha256":artifact.sha256, "actual_sha256":actual, "integrity_verified":actual == artifact.sha256}

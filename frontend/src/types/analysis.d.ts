@@ -5,6 +5,15 @@ export type AddressEntity = {
   "domain"?: string;
   "raw"?: string;
 };
+export type ArtifactMetadata = {
+  "artifact_id": string;
+  "sha256": string;
+  "size_bytes": number;
+  "filename": string;
+  "ingested_at": string;
+  "actor": string;
+  "parser_version"?: string;
+};
 export type AttachmentMetadata = {
   "filename": string;
   "content_type": string;
@@ -123,6 +132,16 @@ export type EvidenceHashes = {
   "md5": string;
   "sha1": string;
   "sha256": string;
+};
+export type EvidenceObservation = {
+  "observation_id": string;
+  "observation_type": string;
+  "value": string;
+  "source_artifact_id": string;
+  "source_location": Record<string, unknown>;
+  "observed_at": string;
+  "verification_status"?: string;
+  "parser_version"?: string;
 };
 export type ExtractedIP = {
   "ip": string;
@@ -339,6 +358,9 @@ export type ThreatReputationInfo = {
 };
 export type EmailAnalysisResponse = {
   "schema_version"?: string;
+  "artifact"?: ArtifactMetadata | null;
+  "observations"?: Array<EvidenceObservation>;
+  "evidence_manifest"?: Record<string, unknown>;
   "success"?: boolean;
   "privacy_redaction_applied"?: boolean;
   "case_id": string;

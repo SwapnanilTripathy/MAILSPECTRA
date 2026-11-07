@@ -56,8 +56,32 @@ class InitialThreatAssessment(BaseModel):
     explanation: str = ""
 
 
+class ArtifactMetadata(BaseModel):
+    artifact_id: str
+    sha256: str
+    size_bytes: int
+    filename: str
+    ingested_at: str
+    actor: str
+    parser_version: str = "mailspectra-parser-1.1"
+
+
+class EvidenceObservation(BaseModel):
+    observation_id: str
+    observation_type: str
+    value: str
+    source_artifact_id: str
+    source_location: Dict[str, Any]
+    observed_at: str
+    verification_status: str = "OBSERVED_UNTRUSTED"
+    parser_version: str = "mailspectra-parser-1.1"
+
+
 class EmailAnalysisResponse(BaseModel):
     schema_version: str = "1.1"
+    artifact: Optional[ArtifactMetadata] = None
+    observations: List[EvidenceObservation] = Field(default_factory=list)
+    evidence_manifest: Dict[str, Any] = Field(default_factory=dict)
     success: bool = True
     privacy_redaction_applied: bool = False
     case_id: str

@@ -134,3 +134,25 @@ class LoginAttemptRecord(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     bucket: Mapped[str] = mapped_column(String(64), index=True)
     attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class ArtifactRecord(Base):
+    __tablename__ = 'artifacts'
+    artifact_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey('cases.case_id'), unique=True)
+    sha256: Mapped[str] = mapped_column(String(64), unique=True)
+    storage_name: Mapped[str] = mapped_column(String(128), unique=True)
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    original_filename: Mapped[str] = mapped_column(String(255))
+    ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    actor: Mapped[str] = mapped_column(String(128))
+
+
+class AlertRecord(Base):
+    __tablename__ = 'alerts'
+    alert_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    case_id: Mapped[str] = mapped_column(ForeignKey('cases.case_id'), index=True)
+    payload_json: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(32), default='OPEN')
+    assigned_to: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

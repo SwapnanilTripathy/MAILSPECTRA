@@ -16,14 +16,8 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown events."""
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION}...")
     logger.info(f"Team: {settings.TEAM_NAME} | Problem Statement: {settings.PROBLEM_STATEMENT}")
-    logger.info(f"Database URL: {settings.DATABASE_URL.split('@')[-1] if '@' in settings.DATABASE_URL else settings.DATABASE_URL}")
-    
-    # Initialize database tables
-    try:
-        await init_db()
-        logger.info("Database initialized successfully.")
-    except Exception as e:
-        logger.error(f"Database initialization warning: {e}")
+    await init_db()
+    logger.info("Database ready")
 
     yield
 

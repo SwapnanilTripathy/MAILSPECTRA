@@ -42,7 +42,7 @@ class CorrelationPersistenceService:
             # 1. Fetch historical cases and their observables
             historical_cases: List[Dict[str, Any]] = []
             try:
-                stmt = select(CaseRecord).options(selectinload(CaseRecord.observables)).limit(100)
+                stmt = select(CaseRecord).options(selectinload(CaseRecord.observables)).order_by(CaseRecord.created_at.desc()).limit(100)
                 result = await session.execute(stmt)
                 cases_orm = result.scalars().all()
 
@@ -69,7 +69,7 @@ class CorrelationPersistenceService:
 
                     historical_cases.append(case_dict)
             except Exception as e:
-                logger.warning(f"Failed to query historical cases from database ({e}). Proceeding in standalone mode.")
+                raise
 
             # 2. Run Campaign Correlator
             matches, campaign_entity, attribution = CampaignCorrelator.correlate_case(
@@ -172,10 +172,12 @@ class CorrelationPersistenceService:
                             )
                         )
 
-                await session.commit()
+                await session.flush()
+                if close_session:
+                    await session.commit()
             except Exception as e:
-                logger.warning(f"Database persistence skipped or failed ({e}).")
                 await session.rollback()
+                raise
 
             return matches, campaign_entity, attribution
 
