@@ -123,6 +123,20 @@ The workflow is designed to preserve the distinction between the original messag
 
 MAILSPECTRA includes three reproducible synthetic `.eml` scenarios: a benign newsletter, a credential-harvesting lure, and an executive payment-diversion message. The Investigate page's **Quick Demos** buttons load these same committed files from `frontend/public/demo-samples/`; the downloadable files and UI therefore share one source of truth.
 
+Before running migrations or starting the backend, use a **disposable demo database and evidence-storage directories**. The Quick Demo endpoint preserves the submitted artifact and analysis as part of ingestion, so demo records can be written before you explicitly choose **Save Case**. Never point this walkthrough at a database or upload/report directory containing real investigations.
+
+Set these values in your local, uncommitted `.env` file (after copying `.env.example`):
+
+```dotenv
+DATABASE_URL=sqlite+aiosqlite:///./mailspectra-demo.db
+UPLOAD_DIR=./demo-data/uploads
+REPORTS_DIR=./demo-data/reports
+INTELLIGENCE_MODE=offline
+VERIFY_AUTHENTICATION_DNS=false
+```
+
+Keep these paths separate from any normal development or production instance. Apply migrations and create the demo analyst only after configuring the isolated paths.
+
 Run locally with `INTELLIGENCE_MODE=offline`, sign in with a provisioned analyst account, and open **Investigate → Quick Demos**. Review the evidence, save a case, generate a PDF report, and verify both the original artifact and report digests. All sample domains use `.test`, and sample IP literals use RFC 5737 documentation ranges. Do not click message URLs. Embedded `Authentication-Results` fields remain untrusted message claims, not independent verification. The sample model output is illustrative and has no prescribed score or verdict.
 
 See the complete [Demo walkthrough](docs/DEMO_WALKTHROUGH.md) and [synthetic sample manifest](data/demo/manifest.json).

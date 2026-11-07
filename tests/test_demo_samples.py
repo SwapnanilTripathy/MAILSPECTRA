@@ -12,6 +12,26 @@ DEMO_FILES = (
     "credential_harvest.eml",
     "executive_payment_request.eml",
 )
+EMAIL_HOST_PATTERN = re.compile(r"@([a-z0-9.-]+\.[a-z]{2,63})", re.IGNORECASE)
+URL_HOST_PATTERN = re.compile(
+    r"https?://([a-z0-9.-]+\.[a-z]{2,63})(?=[:/?#\s]|$)",
+    re.IGNORECASE,
+)
+RECEIVED_HOST_PATTERN = re.compile(
+    r"\b(?:from|by)\s+([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9-]+)*\.[a-z]{2,63})\b",
+    re.IGNORECASE,
+)
+
+
+def extract_hostnames(raw: str) -> set[str]:
+    """Extract hostnames from email addresses, URLs, and Received relay fields."""
+    hosts = (
+        EMAIL_HOST_PATTERN.findall(raw)
+        + URL_HOST_PATTERN.findall(raw)
+        + RECEIVED_HOST_PATTERN.findall(raw)
+    )
+    return {hostname.lower() for hostname in hosts}
+
 DOCUMENTATION_NETWORKS = (
     IPv4Network("192.0.2.0/24"),
     IPv4Network("198.51.100.0/24"),
@@ -20,6 +40,7 @@ DOCUMENTATION_NETWORKS = (
 
 
 def test_bundled_demo_emails_parse_without_mime_defects():
+    """Ensure each bundled scenario parses as a well-formed RFC 5322/MIME message."""
     for filename in DEMO_FILES:
         raw = (DEMO_DIRECTORY / filename).read_bytes()
         message = BytesParser(policy=policy.default).parsebytes(raw)
@@ -33,9 +54,15 @@ def test_bundled_demo_emails_parse_without_mime_defects():
 
 
 def test_demo_emails_use_only_reserved_test_domains_and_documentation_ips():
+    """Require every hostname and IPv4 literal to use reserved demonstration ranges."""
     for filename in DEMO_FILES:
         raw = (DEMO_DIRECTORY / filename).read_text(encoding="utf-8")
-        assert ".test" in raw.lower()
+        hostnames = set(extract_hostnames(raw))
+        assert hostnames, f"{filename} should contain at least one hostname"
+        for hostname in hostnames:
+            assert hostname.lower().endswith(".test"), (
+                f"{filename} contains a non-reserved hostname: {hostname}"
+            )
 
         for literal in re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", raw):
             address = IPv4Address(literal)
@@ -45,6 +72,7 @@ def test_demo_emails_use_only_reserved_test_domains_and_documentation_ips():
 
 
 def test_demo_attachments_are_plain_text_only():
+    """Keep the demonstration attachment inert and restricted to plain text."""
     message = BytesParser(policy=policy.default).parsebytes(
         (DEMO_DIRECTORY / "executive_payment_request.eml").read_bytes()
     )

@@ -15,12 +15,17 @@ The canonical sample inventory and limitations are in [data/demo/manifest.json](
 
 ## 1. Start a local instance
 
-Follow the complete prerequisite and installation instructions in the [main README](../README.md#12-local-development-setup). In particular, copy `.env.example` to `.env` and retain its offline intelligence setting:
+Follow the complete prerequisite and installation instructions in the [main README](../README.md#12-local-development-setup). Copy `.env.example` to `.env`, then configure dedicated demo-only database and evidence-storage paths **before applying migrations or starting the backend**:
 
 ```dotenv
+DATABASE_URL=sqlite+aiosqlite:///./mailspectra-demo.db
+UPLOAD_DIR=./demo-data/uploads
+REPORTS_DIR=./demo-data/reports
 INTELLIGENCE_MODE=offline
 VERIFY_AUTHENTICATION_DNS=false
 ```
+
+The Quick Demo analysis request preserves the uploaded artifact and analysis during ingestion, before the separate **Save Case** action. Use a disposable database and storage directories; do not mix synthetic demo cases with real investigations or point the demo at an existing evidence store. Keep this local `.env` uncommitted.
 
 Apply migrations and provision an administrator, then create an analyst account:
 

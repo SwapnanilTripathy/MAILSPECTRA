@@ -92,6 +92,7 @@ export default function InvestigatePage() {
     }
   };
 
+  /** Load and analyze the canonical bundled synthetic email for a Quick Demo. */
   const loadSample = async (sampleType) => {
     const sampleFilename = DEMO_SAMPLE_FILES[sampleType];
     if (!sampleFilename) {

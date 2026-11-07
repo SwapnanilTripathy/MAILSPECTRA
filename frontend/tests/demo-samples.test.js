@@ -7,6 +7,23 @@ import { DEMO_SAMPLE_FILES } from '../src/demoSamples.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sampleDirectory = resolve(here, '../public/demo-samples');
+const hostnamePatterns = [
+  /@([a-z0-9.-]+\.[a-z]{2,63})/gi,
+  /https?:\/\/([a-z0-9.-]+\.[a-z]{2,63})(?=[:/?#\s]|$)/gi,
+  /\b(?:from|by)\s+([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9-]+)*\.[a-z]{2,63})\b/gi,
+];
+
+/**
+ * Extract email-address, URL, and Received-header hostnames.
+ * Restricting extraction to hostname contexts avoids treating auth tokens such as
+ * "smtp.mailfrom" and "header.from" as actual DNS names.
+ */
+function extractHostnames(raw) {
+  const matches = hostnamePatterns.flatMap((pattern) =>
+    [...raw.matchAll(pattern)].map((match) => match[1].toLowerCase()),
+  );
+  return [...new Set(matches)];
+}
 
 test('Quick Demo mapping contains the three documented scenarios', () => {
   assert.deepEqual(Object.keys(DEMO_SAMPLE_FILES).sort(), ['benign', 'phishing', 'spoofed']);
@@ -25,7 +42,15 @@ for (const [scenario, filename] of Object.entries(DEMO_SAMPLE_FILES)) {
     assert.match(raw, /^Date:/m);
     assert.match(raw, /^Message-ID:/m);
     assert.match(raw, /^MIME-Version:/m);
-    assert.match(raw, /\.test\b/i, 'domains should use the reserved .test namespace');
+    const hostnames = extractHostnames(raw);
+    assert.ok(hostnames.length > 0, 'sample should contain at least one hostname');
+    for (const hostname of hostnames) {
+      assert.match(
+        hostname,
+        /\.test$/i,
+        `hostname ${hostname} must use the reserved .test namespace`,
+      );
+    }
 
     const ipLiterals = [...raw.matchAll(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g)].map(([ip]) => ip);
     for (const ip of ipLiterals) {
