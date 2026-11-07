@@ -39,6 +39,21 @@ DOCUMENTATION_NETWORKS = (
 )
 
 
+def test_hostname_extraction_detects_non_reserved_domains_in_supported_contexts():
+    """Ensure the extractor finds non-reserved hosts so fixture checks reject them."""
+    raw = (
+        "From: sender@outside.example.org\n"
+        "Received: from relay.example.test by mx.example.test\n"
+        "Open https://links.example.net/path\n"
+    )
+    assert extract_hostnames(raw) == {
+        "outside.example.org",
+        "relay.example.test",
+        "mx.example.test",
+        "links.example.net",
+    }
+
+
 def test_bundled_demo_emails_parse_without_mime_defects():
     """Ensure each bundled scenario parses as a well-formed RFC 5322/MIME message."""
     for filename in DEMO_FILES:
