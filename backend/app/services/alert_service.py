@@ -41,8 +41,9 @@ class AlertService:
 
     @classmethod
     def evaluate_analysis(cls, analysis: EmailAnalysisResponse) -> AlertEvaluationResult:
-        score = analysis.threat_assessment.risk_score
-        classification = analysis.threat_assessment.classification
+        assessment = analysis.risk_assessment if analysis.risk_assessment is not None else analysis.threat_assessment
+        score = assessment.risk_score
+        classification = assessment.classification or "UNKNOWN"
         now_iso = datetime.now(timezone.utc).isoformat()
         
         crit_thresh = settings.CRITICAL_ALERT_SCORE
@@ -53,6 +54,8 @@ class AlertService:
 
         severity = severity_for_score(score)
         requires_action = severity in {"HIGH", "CRITICAL"}
+        if severity not in {"MEDIUM", "HIGH", "CRITICAL"}:
+            return AlertEvaluationResult(is_alert_generated=False, alert=None, evaluation_timestamp=now_iso, configured_high_threshold=high_thresh, configured_critical_threshold=crit_thresh)
 
         # 2. Extract specific triggers from evidence
         if analysis.observed_evidence:

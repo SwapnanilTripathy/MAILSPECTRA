@@ -189,7 +189,7 @@ class ThreatAnalysisPipeline:
         base_analysis.observed_evidence = risk_result.indicators
         base_analysis.content_intelligence = content_intelligence
         alert_eval = AlertService.evaluate_analysis(base_analysis)
-        base_analysis.security_alert = alert_eval.alert
+        base_analysis.security_alert = alert_eval.alert if alert_eval.is_alert_generated else None
 
         # Attach Phase 2 AI, Explainability & Content outputs
         base_analysis.ai_inference = prediction_result
