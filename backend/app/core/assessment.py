@@ -1,6 +1,6 @@
 """Versioned, uncalibrated decision-support policy shared by all consumers."""
 from backend.app.core.config import settings
-ASSESSMENT_VERSION = "mailspectra-risk-3.0"
+ASSESSMENT_VERSION = "mailspectra-risk-3.1"
 CAPS = {"model_threat_probability":40.0, "authentication_evidence":15.0, "identity_evidence":15.0, "url_evidence":15.0, "attachment_evidence":10.0, "content_evidence":5.0}
 
 def severity_for_score(score):

@@ -57,62 +57,21 @@ class ThreatRiskEngine:
                 )
             )
 
-        # 2. Authentication & Protocol Evidence (Up to 30 points)
-        auth = analysis.authentication
+        # Reported passes contribute zero. Independently verified failures
+        # contribute at most the existing 15-point authentication cap; passes
+        # never subtract from the risk score.
         auth_points = 0.0
-
-        if auth.dmarc_result == "fail":
-            auth_points += 15.0
-            indicators.append(
-                SecurityIndicator(
-                    indicator="DMARC_ALIGNMENT_FAILURE",
-                    category=IndicatorCategory.AUTHENTICATION.value,
-                    severity=IndicatorSeverity.CRITICAL.value,
-                    observed=True,
-                    evidence="Supplied header reports DMARC failure; this claim is not independently verified.",
-                    weight=15.0,
-                )
-            )
-
-        if auth.spf_result == "fail":
-            auth_points += 10.0
-            indicators.append(
-                SecurityIndicator(
-                    indicator="SPF_VALIDATION_FAILURE",
-                    category=IndicatorCategory.AUTHENTICATION.value,
-                    severity=IndicatorSeverity.HIGH.value,
-                    observed=True,
-                    evidence=f"Supplied header reports SPF {auth.spf_result}; not independently verified.",
-                    weight=10.0,
-                )
-            )
-        elif auth.spf_result == "softfail":
-            auth_points += 5.0
-            indicators.append(
-                SecurityIndicator(
-                    indicator="SPF_SOFTFAIL",
-                    category=IndicatorCategory.AUTHENTICATION.value,
-                    severity=IndicatorSeverity.MEDIUM.value,
-                    observed=True,
-                    evidence="SPF softfail detected. Sending host is questionable under domain policy.",
-                    weight=5.0,
-                )
-            )
-
-        if auth.dkim_result == "fail":
-            auth_points += 10.0
-            indicators.append(
-                SecurityIndicator(
-                    indicator="DKIM_SIGNATURE_FAILURE",
-                    category=IndicatorCategory.AUTHENTICATION.value,
-                    severity=IndicatorSeverity.HIGH.value,
-                    observed=True,
-                    evidence="Supplied header reports DKIM failure; not independently verified.",
-                    weight=10.0,
-                )
-            )
-
-        breakdown["authentication_evidence"] = round(min(30.0, auth_points), 1)
+        for mechanism, points in [('spf',10.0),('dkim',10.0),('dmarc',15.0)]:
+            verification = analysis.authentication.verified.get(mechanism,{})
+            if verification.get('result') == 'fail':
+                auth_points += points
+                indicators.append(SecurityIndicator(indicator=f'VERIFIED_{mechanism.upper()}_FAILURE',category='AUTHENTICATION',severity='HIGH',evidence=f'Independent {mechanism.upper()} verification failed; current verification context may differ from delivery time.',weight=points,details=verification))
+        reported_points = 0.0
+        for mechanism in ('spf','dkim','dmarc'):
+            if getattr(analysis.authentication,mechanism+'_result') in {'fail','softfail'}:
+                reported_points += 5.0
+                indicators.append(SecurityIndicator(indicator=f'REPORTED_{mechanism.upper()}_FAILURE',category='AUTHENTICATION',severity='LOW',evidence=f'Supplied header reports {mechanism.upper()} failure: UNVERIFIED attacker-controlled claim, not a protocol verification.',weight=5.0,details={'trust':'UNVERIFIED','scoring':'Reported-failure heuristic:5 per mechanism,15 total; no additive double-counting with verified failures'}))
+        breakdown['authentication_evidence'] = min(15.0,max(auth_points,reported_points))
 
         # 3. Identity & Spoofing Evidence (Up to 25 points)
         meta = analysis.metadata
@@ -274,7 +233,7 @@ class ThreatRiskEngine:
 
         # Normalize each old rule bucket to its explicit allocation. Categories are capped;
         # correlated model/rule signals remain a documented limitation, not independent probabilities.
-        old_caps = {"authentication_evidence":30, "identity_evidence":25, "url_evidence":25, "attachment_evidence":30, "content_evidence":20}
+        old_caps = {"authentication_evidence":15, "identity_evidence":25, "url_evidence":25, "attachment_evidence":30, "content_evidence":20}
         for key, old_cap in old_caps.items():
             breakdown[key] = round(breakdown[key] * CAPS[key] / old_cap, 2)
         final_score = round(sum(breakdown.values()), 2)

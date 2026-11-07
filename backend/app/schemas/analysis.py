@@ -1,6 +1,6 @@
 from backend.app.core.versions import PARSER_VERSION
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from backend.app.graph.schemas import (
     AttributionSupportResult,
@@ -79,6 +79,16 @@ class EvidenceObservation(BaseModel):
 
 
 class EmailAnalysisResponse(BaseModel):
+    @computed_field
+    @property
+    def reported_authentication(self) -> Dict[str, Any]:
+        return {"status":"UNVERIFIED", "claims":{k:getattr(self.authentication,k+"_result") for k in ('spf','dkim','dmarc','arc')}, "raw_headers":self.authentication.raw_authentication_results}
+
+    @computed_field
+    @property
+    def verified_authentication(self) -> Dict[str, Any]:
+        return self.authentication.verified
+
     schema_version: str = "1.1"
     artifact: Optional[ArtifactMetadata] = None
     observations: List[EvidenceObservation] = Field(default_factory=list)

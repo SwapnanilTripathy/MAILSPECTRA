@@ -430,4 +430,6 @@ export type EmailAnalysisResponse = {
   "campaign_correlations"?: Array<CampaignCorrelationMatch>;
   "active_campaign"?: CampaignEntity | null;
   "attribution_support"?: AttributionSupportResult | null;
+  "reported_authentication": Record<string, unknown>;
+  "verified_authentication": Record<string, unknown>;
 };
