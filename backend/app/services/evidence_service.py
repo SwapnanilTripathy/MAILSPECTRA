@@ -48,6 +48,9 @@ def observations(analysis):
             if kind == 'ATTACHMENT_SHA256':
                 location.update(mime_part_index=value.mime_part_index, filename=value.filename)
             add(kind, getattr(value,field), f'/{collection}/{index}', **location)
+    for mechanism, verification in analysis.authentication.verified.items():
+        status = 'CRYPTOGRAPHICALLY_VERIFIED' if mechanism in {'dkim','arc'} and verification.get('result')=='pass' else 'UNAVAILABLE' if verification.get('result')=='UNAVAILABLE' else 'OBSERVED_UNVERIFIED'
+        add('AUTHENTICATION_VERIFICATION', verification.get('result','UNAVAILABLE'), f'/authentication/verified/{mechanism}', status, mechanism=mechanism, verification_details=verification, limitation='Verification applies to this mechanism only; it does not establish sender identity or trusted acquisition')
     intel = analysis.infrastructure_intelligence
     if intel:
         for collection in ('ip_intelligence','domain_intelligence','reputation_intelligence'):
