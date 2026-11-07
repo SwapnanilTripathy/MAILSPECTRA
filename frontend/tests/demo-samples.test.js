@@ -25,6 +25,21 @@ function extractHostnames(raw) {
   return [...new Set(matches)];
 }
 
+/**
+ * Assert that every hostname discovered in a sample belongs to the reserved .test namespace.
+ */
+function assertReservedHostnames(raw) {
+  const hostnames = extractHostnames(raw);
+  assert.ok(hostnames.length > 0, 'sample should contain at least one hostname');
+  for (const hostname of hostnames) {
+    assert.match(
+      hostname,
+      /\.test$/i,
+      `hostname ${hostname} must use the reserved .test namespace`,
+    );
+  }
+}
+
 test('hostname extraction detects non-reserved domains in all supported contexts', () => {
   const raw = [
     'From: Sender <sender@outside.example.org>',
@@ -35,6 +50,10 @@ test('hostname extraction detects non-reserved domains in all supported contexts
   assert.deepEqual(
     new Set(extractHostnames(raw)),
     new Set(['outside.example.org', 'relay.example.test', 'mx.example.test', 'links.example.net']),
+  );
+  assert.throws(
+    () => assertReservedHostnames(raw),
+    /hostname outside\.example\.org must use the reserved \.test namespace/,
   );
 });
 
@@ -55,15 +74,7 @@ for (const [scenario, filename] of Object.entries(DEMO_SAMPLE_FILES)) {
     assert.match(raw, /^Date:/m);
     assert.match(raw, /^Message-ID:/m);
     assert.match(raw, /^MIME-Version:/m);
-    const hostnames = extractHostnames(raw);
-    assert.ok(hostnames.length > 0, 'sample should contain at least one hostname');
-    for (const hostname of hostnames) {
-      assert.match(
-        hostname,
-        /\.test$/i,
-        `hostname ${hostname} must use the reserved .test namespace`,
-      );
-    }
+    assertReservedHostnames(raw);
 
     const ipLiterals = [...raw.matchAll(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g)].map(([ip]) => ip);
     for (const ip of ipLiterals) {

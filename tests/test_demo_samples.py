@@ -4,6 +4,8 @@ from ipaddress import IPv4Address, IPv4Network
 from pathlib import Path
 import re
 
+import pytest
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 DEMO_DIRECTORY = REPOSITORY_ROOT / "frontend" / "public" / "demo-samples"
@@ -32,6 +34,17 @@ def extract_hostnames(raw: str) -> set[str]:
     )
     return {hostname.lower() for hostname in hosts}
 
+
+def assert_reserved_hostnames(raw: str) -> None:
+    """Require all extracted hostnames to use the reserved .test namespace."""
+    hostnames = extract_hostnames(raw)
+    assert hostnames, "sample should contain at least one hostname"
+    for hostname in hostnames:
+        assert hostname.lower().endswith(".test"), (
+            f"hostname {hostname} must use the reserved .test namespace"
+        )
+
+
 DOCUMENTATION_NETWORKS = (
     IPv4Network("192.0.2.0/24"),
     IPv4Network("198.51.100.0/24"),
@@ -52,6 +65,8 @@ def test_hostname_extraction_detects_non_reserved_domains_in_supported_contexts(
         "mx.example.test",
         "links.example.net",
     }
+    with pytest.raises(AssertionError, match=r"hostname outside\.example\.org must use"):
+        assert_reserved_hostnames(raw)
 
 
 def test_bundled_demo_emails_parse_without_mime_defects():
@@ -72,12 +87,7 @@ def test_demo_emails_use_only_reserved_test_domains_and_documentation_ips():
     """Require every hostname and IPv4 literal to use reserved demonstration ranges."""
     for filename in DEMO_FILES:
         raw = (DEMO_DIRECTORY / filename).read_text(encoding="utf-8")
-        hostnames = set(extract_hostnames(raw))
-        assert hostnames, f"{filename} should contain at least one hostname"
-        for hostname in hostnames:
-            assert hostname.lower().endswith(".test"), (
-                f"{filename} contains a non-reserved hostname: {hostname}"
-            )
+        assert_reserved_hostnames(raw)
 
         for literal in re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", raw):
             address = IPv4Address(literal)
