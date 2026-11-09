@@ -17,6 +17,10 @@ def test_normalized_components_and_fallback(phishing_eml_bytes):
     assert sum(CAPS.values()) == 100
     assert prediction.probabilities == {} and prediction.confidence == 0
     assert result.evidence_breakdown['model_threat_probability'] == 0
+    assert not any(
+        indicator.indicator == "ML_HIGH_THREAT_PROBABILITY"
+        for indicator in result.indicators
+    )
     assert result.risk_score == pytest.approx(sum(result.evidence_breakdown.values()))
     assert all(0 <= value <= CAPS[key] for key,value in result.evidence_breakdown.items())
     analysis.threat_assessment.risk_score = result.risk_score

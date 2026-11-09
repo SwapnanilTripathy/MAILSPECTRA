@@ -45,7 +45,10 @@ class ThreatRiskEngine:
         model_points = threat_prob * 40.0 if prediction.is_model_available else 0.0
         breakdown["model_threat_probability"] = round(model_points, 1)
 
-        if threat_prob >= 0.7:
+        # Only emit an ML indicator when a real model prediction exists.
+        # Rule fallback classifications are not probabilities and must never
+        # be presented as ML evidence.
+        if prediction.is_model_available and threat_prob >= 0.7:
             indicators.append(
                 SecurityIndicator(
                     indicator="ML_HIGH_THREAT_PROBABILITY",
