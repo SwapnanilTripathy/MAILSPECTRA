@@ -251,12 +251,12 @@ def test_malformed_structured_header_uses_compatibility_parser():
     # The default email policy may defer parsing this malformed Message-ID
     # until header access. The parser should fall back instead of crashing.
     raw = (
-        b"From: sender@example.test\\n"
-        b"To: analyst@example.test\\n"
-        b"Message-ID: <@example.test>\\n"
-        b"Subject: malformed header regression\\n"
-        b"\\n"
-        b"Please review this message.\\n"
+        b"From: sender@example.test\n"
+        b"To: analyst@example.test\n"
+        b"Message-ID: <@example.test>\n"
+        b"Subject: malformed header regression\n"
+        b"\n"
+        b"Please review this message.\n"
     )
 
     result = EmailForensicParser(raw_bytes=raw, filename="malformed_header.eml").parse()
