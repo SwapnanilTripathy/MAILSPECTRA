@@ -76,9 +76,25 @@ class EmailForensicParser:
     def _parse_raw_message(self) -> None:
         """Parse raw bytes into Python EmailMessage object with default policy."""
         try:
-            self.msg = email.message_from_bytes(self.raw_bytes, policy=policy.default)
+            parsed = email.message_from_bytes(self.raw_bytes, policy=policy.default)
+            # EmailMessage headers are decoded lazily. A malformed structured
+            # header can therefore raise here during later metadata extraction
+            # even when message_from_bytes itself succeeded. Force header
+            # decoding now so we can switch to the tolerant compatibility
+            # policy before the forensic pipeline starts.
+            for header_name, header_value in parsed.items():
+                try:
+                    str(header_value)
+                except Exception as header_error:
+                    raise ValueError(
+                        f"Unable to decode header {header_name!r}"
+                    ) from header_error
+            self.msg = parsed
         except Exception as e:
-            logger.warning("Default parsing policy failed: %s; using compatibility policy", type(e).__name__)
+            logger.warning(
+                "Default email parsing/header decoding failed: %s; using compatibility policy",
+                type(e).__name__,
+            )
             self.msg = email.message_from_bytes(self.raw_bytes, policy=policy.compat32)
 
     def _decode_header_str(self, header_value: Any) -> str:
