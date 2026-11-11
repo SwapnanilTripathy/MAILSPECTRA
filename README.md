@@ -590,7 +590,7 @@ The application reads environment variables and, in local development, values fr
 | `CACHE_TTL_HOURS` | Intelligence cache lifetime | `24` |
 | `VIRUSTOTAL_API_KEY` | Optional VirusTotal access | Empty |
 | `ABUSEIPDB_API_KEY` | Optional AbuseIPDB access | Empty |
-| `GEOIP_PROVIDER` | Live GeoIP adapter (`ipapi.is` or legacy `ipinfo`) | `ipapi.is` |
+| `GEOIP_PROVIDER` | Live GeoIP adapter (`ipapi.is` or legacy `ipinfo`) | `ipinfo` if omitted; `.env.example` selects `ipapi.is` |
 | `IPAPI_IS_KEY` | Server-side ipapi.is API key (required for full security flags) | Empty |
 | `IPINFO_TOKEN` | Optional IPInfo access when `GEOIP_PROVIDER=ipinfo` | Empty |
 | `SHODAN_API_KEY` | Optional Shodan access | Empty |
