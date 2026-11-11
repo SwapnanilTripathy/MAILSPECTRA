@@ -19,7 +19,7 @@ The adapter accepts only globally routable addresses. Private, loopback, link-lo
 
 `is_vpn`, `is_proxy`, `is_tor`, `is_datacenter`, and `is_abuser` are preserved as separate provider observations. `proxy_or_vpn` is only a convenience aggregate; `is_abuser` is not a definitive maliciousness verdict. The adapter does not assign a calibrated location-confidence score, so `confidence` remains `0.0` and limitations explain that geolocation describes infrastructure/registration context, not a person's physical location or identity. Location may be absent or approximate, and residential proxies may not be detected by provider datasets.
 
-To retain the legacy provider, set `GEOIP_PROVIDER=ipinfo` and configure `IPINFO_TOKEN`. The default provider selection is `ipapi.is`, but external lookups remain disabled unless `INTELLIGENCE_MODE=live` is explicitly enabled.
+To retain the legacy provider, set `GEOIP_PROVIDER=ipinfo` and configure `IPINFO_TOKEN`. The repository `.env.example` opts into `ipapi.is`. Existing deployments that omit `GEOIP_PROVIDER` retain the legacy `ipinfo` selection for compatibility. External lookups remain disabled unless `INTELLIGENCE_MODE=live` is explicitly enabled.
 
 HTTP requests are HTTPS-only to allowlisted provider hosts, with timeouts, at most two redirects, credentials stripped on redirect, and a 1 MiB response cap. RDAP registries outside the explicit allowlist return unavailable/error rather than following arbitrary hosts. DNS queries are bounded; infrastructure enrichment has a 30-second total budget. TTL caching in the IOC workbench preserves lookup timestamps and exposes cache hits; unavailable/error/rate-limit outcomes are not cached as successful results.
 
