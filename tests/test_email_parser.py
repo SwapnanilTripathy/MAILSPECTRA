@@ -1,4 +1,5 @@
 import pytest
+import backend.app.services.email_parser as email_parser_module
 from backend.app.services.email_parser import EmailForensicParser
 from backend.app.utils.crypto import calculate_hashes, defang_ip, defang_url
 from backend.app.utils.network import classify_ip, extract_ips_from_text, is_valid_ip
@@ -247,20 +248,47 @@ def test_large_email_within_limit():
     assert result.file_size_bytes == len(raw)
     assert len(result.body.text_plain) == len(large_body)
 
-def test_malformed_structured_header_uses_compatibility_parser():
-    # The default email policy may defer parsing this malformed Message-ID
-    # until header access. The parser should fall back instead of crashing.
+def test_header_decoding_failure_falls_back_to_compat32(monkeypatch):
     raw = (
-        b"From: sender@example.test\n"
-        b"To: analyst@example.test\n"
-        b"Message-ID: <@example.test>\n"
-        b"Subject: malformed header regression\n"
-        b"\n"
-        b"Please review this message.\n"
+        b"From: sender@example.test\\n"
+        b"To: analyst@example.test\\n"
+        b"Subject: compatibility fallback regression\\n"
+        b"\\n"
+        b"Please review this message.\\n"
     )
 
-    result = EmailForensicParser(raw_bytes=raw, filename="malformed_header.eml").parse()
+    original_message_from_bytes = email_parser_module.email.message_from_bytes
+    attempted_policies = []
 
+    class HeaderThatCannotBeDecoded:
+        def __str__(self):
+            raise ValueError("simulated structured-header decoding failure")
+
+    class MessageWithUndecodableHeader:
+        def items(self):
+            return [("X-Malformed", HeaderThatCannotBeDecoded())]
+
+    def message_from_bytes_with_failure(message_bytes, *, policy):
+        attempted_policies.append(policy)
+        if policy is email_parser_module.policy.default:
+            return MessageWithUndecodableHeader()
+        return original_message_from_bytes(message_bytes, policy=policy)
+
+    monkeypatch.setattr(
+        email_parser_module.email,
+        "message_from_bytes",
+        message_from_bytes_with_failure,
+    )
+
+    parser = EmailForensicParser(raw_bytes=raw, filename="malformed_header.eml")
+    result = parser.parse()
+
+    assert attempted_policies == [
+        email_parser_module.policy.default,
+        email_parser_module.policy.compat32,
+    ]
+    assert parser.msg is not None
+    assert parser.msg.policy is email_parser_module.policy.compat32
     assert result.success is True
     assert result.evidence_hashes.sha256
     assert result.metadata.from_sender.address == "sender@example.test"
