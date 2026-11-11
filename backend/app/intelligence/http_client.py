@@ -7,7 +7,7 @@ from backend.app.core.config import settings
 ALLOWED_HOSTS = {'www.virustotal.com','api.shodan.io','ipinfo.io','api.ipapi.is','api.abuseipdb.com','rdap.org','rdap.verisign.com','rdap.publicinterestregistry.org','rdap.nic.org','rdap.nic.xyz','rdap.namecheap.com'}
 
 async def provider_json(url, headers=None, *, allow_redirects=True, method='GET', json_body=None):
-    \"\"\"Fetch a bounded JSON response from an explicitly allowlisted HTTPS provider.\"\"\"
+    """Fetch a bounded JSON response from an explicitly allowlisted HTTPS provider."""
     if method not in {'GET', 'POST'}:
         raise ValueError('Unsupported provider HTTP method')
     request_headers = dict(headers or {})
