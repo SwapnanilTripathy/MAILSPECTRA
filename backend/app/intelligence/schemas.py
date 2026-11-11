@@ -48,7 +48,7 @@ class GeoLocationInfo(ProviderMetadata):
     provider: Optional[str] = None
     confidence: float = 0.0
     source: str = EvidenceSource.GEOIP.value
-    status: str = "SUCCESS"  # SUCCESS, UNAVAILABLE, PRIVATE_IP, ERROR
+    status: str = "SUCCESS"  # SUCCESS, UNAVAILABLE, PRIVATE_IP, SPECIAL_USE_IP, RATE_LIMITED, AUTH_ERROR, TIMEOUT, ERROR
 
 
 class DNSRecordEntry(BaseModel):
