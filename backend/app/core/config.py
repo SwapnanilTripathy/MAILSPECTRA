@@ -62,6 +62,8 @@ class Settings(BaseSettings):
     VIRUSTOTAL_API_KEY: str = ""
     ABUSEIPDB_API_KEY: str = ""
     IPINFO_TOKEN: str = ""
+    IPAPI_IS_KEY: str = ""
+    GEOIP_PROVIDER: str = "ipinfo"  # Preserve existing live deployments unless explicitly changed
     SHODAN_API_KEY: str = ""
 
 

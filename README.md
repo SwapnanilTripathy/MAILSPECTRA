@@ -590,7 +590,9 @@ The application reads environment variables and, in local development, values fr
 | `CACHE_TTL_HOURS` | Intelligence cache lifetime | `24` |
 | `VIRUSTOTAL_API_KEY` | Optional VirusTotal access | Empty |
 | `ABUSEIPDB_API_KEY` | Optional AbuseIPDB access | Empty |
-| `IPINFO_TOKEN` | Optional IPInfo access | Empty |
+| `GEOIP_PROVIDER` | Live GeoIP adapter (`ipapi.is` or legacy `ipinfo`) | `ipinfo` if omitted; `.env.example` selects `ipapi.is` |
+| `IPAPI_IS_KEY` | Server-side ipapi.is API key (required for full security flags) | Empty |
+| `IPINFO_TOKEN` | Optional IPInfo access when `GEOIP_PROVIDER=ipinfo` | Empty |
 | `SHODAN_API_KEY` | Optional Shodan access | Empty |
 
 ### Database configuration
@@ -826,8 +828,10 @@ MAILSPECTRA includes useful forensic and analyst workflows, but the following li
 
 ### Live intelligence is unavailable
 
-- Offline mode is the default.
-- Check that live mode and the necessary provider credentials have been explicitly configured.
+- Offline mode is the default. Set `INTELLIGENCE_MODE=live` to enable external lookups.
+- `GEOIP_PROVIDER=ipapi.is` selects the ipapi.is adapter; set `IPAPI_IS_KEY` in the server environment. The key is sent in a POST body and must never be exposed to the frontend.
+- Set `GEOIP_PROVIDER=ipinfo` to retain the legacy IPinfo adapter and configure `IPINFO_TOKEN`.
+- Non-global, private, reserved, and documentation IPs are never sent to a live GeoIP provider. Provider errors, timeouts, and rate limits do not fall back to offline fixtures.
 - Review the returned state (unavailable, error, rate-limited, no known match) rather than interpreting every missing result as a clean indicator.
 - Remember that provider lookup discloses the submitted indicator to that provider.
 

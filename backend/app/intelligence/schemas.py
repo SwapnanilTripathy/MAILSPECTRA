@@ -40,9 +40,15 @@ class GeoLocationInfo(ProviderMetadata):
     organization: Optional[str] = None
     hosting_provider: Optional[str] = None
     proxy_or_vpn: Optional[bool] = None
+    is_datacenter: Optional[bool] = None
+    is_vpn: Optional[bool] = None
+    is_proxy: Optional[bool] = None
+    is_tor: Optional[bool] = None
+    is_abuser: Optional[bool] = None
+    provider: Optional[str] = None
     confidence: float = 0.0
     source: str = EvidenceSource.GEOIP.value
-    status: str = "SUCCESS"  # SUCCESS, UNAVAILABLE, PRIVATE_IP, ERROR
+    status: str = "SUCCESS"  # SUCCESS, UNAVAILABLE, PRIVATE_IP, SPECIAL_USE_IP, RATE_LIMITED, AUTH_ERROR, TIMEOUT, ERROR
 
 
 class DNSRecordEntry(BaseModel):
