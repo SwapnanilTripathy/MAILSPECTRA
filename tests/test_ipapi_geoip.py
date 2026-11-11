@@ -173,3 +173,50 @@ def test_geoip_factory_uses_explicit_provider_selection(monkeypatch):
 
     monkeypatch.setattr(settings, "GEOIP_PROVIDER", "unknown-provider")
     assert isinstance(get_geoip_provider(), OfflineGeoIPProvider)
+
+
+
+def test_ipapi_host_is_explicitly_allowlisted():
+    from backend.app.intelligence.http_client import ALLOWED_HOSTS
+    assert "api.ipapi.is" in ALLOWED_HOSTS
+
+
+@pytest.mark.asyncio
+async def test_provider_http_client_supports_post_json_body_without_redirects(monkeypatch):
+    from contextlib import asynccontextmanager
+    from backend.app.intelligence import http_client
+
+    class FakeResponse:
+        status_code = 200
+
+        async def aiter_bytes(self):
+            yield b'{"ip":"8.8.8.8"}'
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.options = kwargs
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        @asynccontextmanager
+        async def stream(self, method, url, **kwargs):
+            assert method == "POST"
+            assert url == "https://api.ipapi.is"
+            assert kwargs["json"] == {"q": "8.8.8.8", "key": "secret"}
+            assert kwargs["headers"]["Content-Type"] == "application/json"
+            yield FakeResponse()
+
+    monkeypatch.setattr(http_client.httpx, "AsyncClient", FakeClient)
+    status, payload = await http_client.provider_json(
+        "https://api.ipapi.is",
+        headers={"Accept": "application/json"},
+        method="POST",
+        json_body={"q": "8.8.8.8", "key": "secret"},
+        allow_redirects=False,
+    )
+    assert status == 200
+    assert payload == {"ip": "8.8.8.8"}
