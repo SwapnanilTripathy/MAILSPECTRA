@@ -210,6 +210,12 @@ export type GeoLocationInfo = {
   "organization"?: string | null;
   "hosting_provider"?: string | null;
   "proxy_or_vpn"?: boolean | null;
+  "is_datacenter"?: boolean | null;
+  "is_vpn"?: boolean | null;
+  "is_proxy"?: boolean | null;
+  "is_tor"?: boolean | null;
+  "is_abuser"?: boolean | null;
+  "provider"?: string | null;
   "confidence"?: number;
   "source"?: string;
   "status"?: string;
