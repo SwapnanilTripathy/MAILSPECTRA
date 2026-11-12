@@ -29,6 +29,12 @@ services:
         value: mailspectra-evidence
       - key: STORAGE_TIMEOUT_SECONDS
         value: "30"
+      - key: SHAP_ENABLED
+        value: "false"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
       - key: UPLOAD_DIR
         value: /tmp/mailspectra/uploads
       - key: REPORTS_DIR
