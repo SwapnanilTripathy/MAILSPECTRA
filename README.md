@@ -879,7 +879,8 @@ The inherited training samples have separately unresolved authorship and redistr
 | [Intelligence providers](docs/INTELLIGENCE_PROVIDERS.md) | Provider integrations, disclosure, and limitations |
 | [Threat model](docs/THREAT_MODEL.md) | Assets, trust boundaries, threats, and residual risks |
 | [Security hardening](docs/SECURITY_HARDENING.md) | Authentication trust, refresh-token lifecycle, and deployment requirements |
-| [Deployment](docs/DEPLOYMENT.md) | Docker, Render, migrations, backup, restore, and retention |\n| [Free-tier deployment](docs/FREE_TIER_DEPLOYMENT.md) | $0 demo deployment with Render Free and Supabase Free; quotas and evidence-storage caveats |
+| [Deployment](docs/DEPLOYMENT.md) | Docker, Render, migrations, backup, restore, and retention 
+| [Free-tier deployment](docs/FREE_TIER_DEPLOYMENT.md) | $0 demo deployment with Render Free and Supabase Free; quotas and evidence-storage caveats |
 | [Testing](docs/TESTING.md) | Test commands and validation coverage |
 | [Dependency licenses](docs/DEPENDENCY_LICENSES.md) | Dependency inventory and licensing notes |
 | [Demo walkthrough](docs/DEMO_WALKTHROUGH.md) | Reproducible synthetic email scenarios and end-to-end analyst workflow |
