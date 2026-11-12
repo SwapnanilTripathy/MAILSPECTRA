@@ -250,15 +250,15 @@ def test_large_email_within_limit():
 
 def test_header_decoding_failure_falls_back_to_compat32(monkeypatch):
     raw = (
-        b"From: sender@example.test\\n"
-        b"To: analyst@example.test\\n"
-        b"Subject: compatibility fallback regression\\n"
-        b"\\n"
-        b"Please review this message.\\n"
+        b"From: sender@example.test\n"
+        b"To: analyst@example.test\n"
+        b"Subject: compatibility fallback regression\n"
+        b"\n"
+        b"Please review this message.\n"
     )
 
     original_message_from_bytes = email_parser_module.email.message_from_bytes
-    attempted_policies = []
+    attempted_calls = []
 
     class HeaderThatCannotBeDecoded:
         def __str__(self):
@@ -269,7 +269,7 @@ def test_header_decoding_failure_falls_back_to_compat32(monkeypatch):
             return [("X-Malformed", HeaderThatCannotBeDecoded())]
 
     def message_from_bytes_with_failure(message_bytes, *, policy):
-        attempted_policies.append(policy)
+        attempted_calls.append((policy, message_bytes))
         if policy is email_parser_module.policy.default:
             return MessageWithUndecodableHeader()
         return original_message_from_bytes(message_bytes, policy=policy)
@@ -283,9 +283,9 @@ def test_header_decoding_failure_falls_back_to_compat32(monkeypatch):
     parser = EmailForensicParser(raw_bytes=raw, filename="malformed_header.eml")
     result = parser.parse()
 
-    assert attempted_policies == [
-        email_parser_module.policy.default,
-        email_parser_module.policy.compat32,
+    assert attempted_calls == [
+        (email_parser_module.policy.default, raw),
+        (email_parser_module.policy.compat32, raw),
     ]
     assert parser.msg is not None
     assert parser.msg.policy is email_parser_module.policy.compat32
