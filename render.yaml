@@ -7,9 +7,8 @@ services:
     region: singapore
     autoDeployTrigger: off
     healthCheckPath: /api/v1/ready
-    # Keep evidence and reports in the configured private Supabase Storage bucket.
-    # The Render free filesystem is ephemeral; no persistent disk is attached.
-    dockerCommand: sh -c 'python -m alembic upgrade head && python backend/run.py'
+    # Invoke one script instead of an inline shell expression; Render overrides Docker CMD.
+    dockerCommand: sh scripts/start.sh
     envVars:
       - key: APP_ENV
         value: production
