@@ -77,7 +77,7 @@ class ThreatExplainer:
     def _compute_shap_explanation(
         self,
         predicted_class: str,
-        X: sparse.csr_matrix,
+        X: Any,
         structured_features: Dict[str, float],
     ) -> SHAPExplanation:
         import numpy as np
