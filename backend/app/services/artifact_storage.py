@@ -151,3 +151,24 @@ def delete_object(key: str) -> None:
             raise ArtifactStorageError(f"Remote evidence cleanup failed (HTTP {status or 'network error'})") from exc
     else:
         _local_path(key).unlink(missing_ok=True)
+
+
+def check_storage_readiness() -> None:
+    """Check that the configured Supabase bucket exists and is private."""
+    validate_storage_configuration()
+    if not is_remote_storage():
+        return
+    url = settings.SUPABASE_URL.rstrip("/") + "/storage/v1/bucket"
+    try:
+        with httpx.Client(timeout=settings.STORAGE_TIMEOUT_SECONDS) as client:
+            response = client.get(url, headers=_remote_headers())
+            response.raise_for_status()
+            buckets = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        raise ArtifactStorageError(f"Remote storage readiness check failed (HTTP {status or 'invalid response'})") from exc
+    bucket = next((item for item in buckets if item.get("id") == settings.SUPABASE_BUCKET or item.get("name") == settings.SUPABASE_BUCKET), None)
+    if bucket is None:
+        raise ArtifactStorageError("Configured Supabase bucket does not exist")
+    if bucket.get("public") is True:
+        raise ArtifactStorageError("Evidence bucket must be private")
