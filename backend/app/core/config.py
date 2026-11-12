@@ -111,8 +111,6 @@ class Settings(BaseSettings):
                 raise ValueError("Production requires explicit DATABASE_URL")
             if self.DATABASE_URL.startswith("sqlite") and not self.ALLOW_SQLITE_PRODUCTION:
                 raise ValueError("Production recommends PostgreSQL; SQLite requires explicit ALLOW_SQLITE_PRODUCTION approval")
-            if self.EVIDENCE_STORAGE_BACKEND != "supabase":
-                raise ValueError("Production requires durable Supabase object storage; local storage is ephemeral on free hosts")
             if len(self.SECRET_KEY) < 32 or len(set(self.SECRET_KEY)) < 16 or "change-in-production" in self.SECRET_KEY:
                 raise ValueError("Production requires a random SECRET_KEY of at least 32 characters")
             if self.DEBUG or "*" in self.CORS_ORIGINS:
