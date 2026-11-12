@@ -825,3 +825,107 @@ button:not(:disabled) {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Motion system: restrained, purposeful transitions for the analyst workspace. */
+:root {
+  scroll-behavior: smooth;
+  --motion-fast: 160ms;
+  --motion-base: 220ms;
+  --motion-enter: 320ms;
+  --motion-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+@keyframes workspace-content-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.workspace-main > * {
+  animation: workspace-content-enter var(--motion-enter) var(--motion-ease) both;
+}
+
+.nav-link,
+.icon-button,
+.primary-action,
+.secondary-action,
+.sidebar-action,
+button,
+a {
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-base) var(--motion-ease),
+    transform var(--motion-base) var(--motion-ease),
+    opacity var(--motion-fast) var(--motion-ease);
+}
+
+.metric-card,
+.insight-card,
+.panel-card,
+.case-card,
+.alert-row,
+.investigation-row {
+  transition:
+    border-color var(--motion-base) var(--motion-ease),
+    box-shadow var(--motion-base) var(--motion-ease),
+    transform var(--motion-base) var(--motion-ease);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .metric-card:hover,
+  .insight-card:hover,
+  .panel-card:hover,
+  .case-card:hover,
+  .alert-row:hover,
+  .investigation-row:hover {
+    transform: translateY(-2px);
+    border-color: #36556a;
+    box-shadow: 0 12px 28px #00000024;
+  }
+
+  .primary-action:active,
+  .secondary-action:active,
+  .sidebar-action:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  .nav-link:active,
+  .icon-button:active {
+    transform: scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    scroll-behavior: auto;
+  }
+
+  .workspace-main > * {
+    animation: none;
+  }
+
+  .metric-card,
+  .insight-card,
+  .panel-card,
+  .case-card,
+  .alert-row,
+  .investigation-row,
+  .nav-link,
+  .icon-button,
+  .primary-action,
+  .secondary-action,
+  .sidebar-action,
+  button,
+  a {
+    transition: none !important;
+    transform: none !important;
+  }
+}
