@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.config import settings
 from backend.app.database.session import get_db
-from backend.app.services.artifact_storage import is_remote_storage, validate_storage_configuration
+from backend.app.services.artifact_storage import check_storage_readiness, is_remote_storage
 
 router = APIRouter()
 
@@ -31,7 +31,7 @@ async def ready(db: AsyncSession = Depends(get_db)):
         if revision != "0003":
             raise RuntimeError("Migration required")
 
-        validate_storage_configuration()
+        check_storage_readiness()
         if not is_remote_storage():
             for directory in (settings.UPLOAD_DIR, settings.REPORTS_DIR):
                 Path(directory).mkdir(parents=True, exist_ok=True, mode=0o700)
