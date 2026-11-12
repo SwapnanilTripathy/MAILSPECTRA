@@ -22,7 +22,8 @@ def test_source_references_and_honest_manifest(tmp_path,monkeypatch):
     assert attachment.source_location['mime_part_index']==3
     assert attachment.source_location['filename']=='sample.bin'
     assert a.evidence_manifest['verification_status']=='PRESENT_UNVERIFIED'
-    assert path.read_bytes()==raw
+    from backend.app.services.artifact_storage import get_bytes
+    assert get_bytes(path)==raw
 
 
 def test_crypto_status_is_scoped_to_verified_mechanism(tmp_path,monkeypatch,benign_eml_bytes):
@@ -44,16 +45,19 @@ async def test_pdf_tamper_is_separate_from_original(auth_headers):
     from backend.app.main import app
     from backend.app.database.session import AsyncSessionLocal
     from backend.app.models.entities import CaseRecord
-    from pathlib import Path
+    from backend.app.services.artifact_storage import delete_object, get_bytes, put_bytes
     async with AsyncClient(transport=ASGITransport(app=app),base_url='http://test',headers=auth_headers) as client:
         a=(await client.post('/api/v1/analyze/raw',json={'raw_content':'From: fixture@example.test\nSubject: Separate digest regression\n\nSynthetic message'})).json()
         cid=a['case_id']
         assert (await client.post(f'/api/v1/reports/generate/{cid}?mask_pii=true')).status_code==200
         async with AsyncSessionLocal() as db:
-            path=Path((await db.get(CaseRecord,cid)).report_path)
-        original=path.read_bytes()
+            report_key=(await db.get(CaseRecord,cid)).report_path
+        original=get_bytes(report_key)
         try:
-            path.write_bytes(b'synthetic tamper')
+            delete_object(report_key)
+            put_bytes(report_key,b'synthetic tamper','application/pdf')
             assert not (await client.get(f'/api/v1/reports/{cid}/verify')).json()['integrity_verified']
             assert (await client.get(f'/api/v1/cases/{cid}/evidence/verify')).json()['integrity_verified']
-        finally: path.write_bytes(original)
+        finally:
+            delete_object(report_key)
+            put_bytes(report_key,original,'application/pdf')
