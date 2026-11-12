@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_BUCKET: str = "mailspectra-evidence"
     STORAGE_TIMEOUT_SECONDS: float = 30.0
+    SHAP_ENABLED: bool = True
 
     # Optional Intelligence APIs & Provider Settings
     INTELLIGENCE_MODE: str = "offline"  # "offline" or "live"
