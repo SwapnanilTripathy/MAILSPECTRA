@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 import json
 import hashlib
@@ -153,3 +154,11 @@ async def verify_evidence(case_id: str, request: Request, db: AsyncSession = Dep
     db.add(AuditLogRecord(case_id=case_id, action="EVIDENCE_VERIFIED", actor=request.state.user.username, details="Digest comparison performed"))
     await db.commit()
     return {"artifact_id": artifact.artifact_id, "expected_sha256": artifact.sha256, "actual_sha256": actual, "integrity_verified": actual == artifact.sha256}
+
+
+@router.get("/{case_id}/audit")
+async def case_audit(case_id: str, db: AsyncSession = Depends(get_db)):
+    if not await db.get(CaseRecord, case_id):
+        raise HTTPException(404, "Case not found")
+    rows = (await db.scalars(select(AuditLogRecord).where(AuditLogRecord.case_id == case_id).order_by(AuditLogRecord.id))).all()
+    return {"items": [{"id": row.id, "action": row.action, "actor": row.actor, "details": row.details, "timestamp": row.created_at.isoformat()} for row in rows]}
