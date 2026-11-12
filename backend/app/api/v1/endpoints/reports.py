@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Any, Dict
 
@@ -76,7 +77,7 @@ async def generate_case_report(case_id: str, request: Request, mask_pii: bool = 
             report_meta = ForensicReportGenerator.generate_case_pdf(case_dict, output_dir=temp_dir)
             pdf_bytes = await asyncio.to_thread(Path(report_meta["filepath"]).read_bytes)
 
-        report_key = f"reports/{case_id.replace('/', '_')}/{report_meta['filename']}"
+        report_key = f"reports/{uuid.uuid4().hex}/{report_meta['filename']}"
         # Case IDs originate from the database; the storage adapter rejects traversal keys.
         await asyncio.to_thread(put_bytes, report_key, pdf_bytes, "application/pdf")
 
