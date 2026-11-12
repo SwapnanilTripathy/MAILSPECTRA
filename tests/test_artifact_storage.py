@@ -74,3 +74,23 @@ def test_supabase_storage_maps_missing_object_to_file_not_found(monkeypatch):
     monkeypatch.setattr(artifact_storage.httpx, "Client", lambda **kwargs: original_client(transport=transport, **kwargs))
     with pytest.raises(FileNotFoundError):
         artifact_storage.get_bytes("missing.eml")
+
+
+@pytest.mark.parametrize("is_public, expected_error", [(False, None), (True, artifact_storage.ArtifactStorageError)])
+def test_storage_readiness_requires_private_bucket(monkeypatch, is_public, expected_error):
+    monkeypatch.setattr(settings, "EVIDENCE_STORAGE_BACKEND", "supabase")
+    monkeypatch.setattr(settings, "SUPABASE_URL", "https://project-ref.supabase.co")
+    monkeypatch.setattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "server-only-test-key")
+    monkeypatch.setattr(settings, "SUPABASE_BUCKET", "private-evidence")
+
+    def handler(request):
+        return httpx.Response(200, json=[{"id": "private-evidence", "name": "private-evidence", "public": is_public}], request=request)
+
+    original_client = httpx.Client
+    transport = httpx.MockTransport(handler)
+    monkeypatch.setattr(artifact_storage.httpx, "Client", lambda **kwargs: original_client(transport=transport, **kwargs))
+    if expected_error:
+        with pytest.raises(expected_error):
+            artifact_storage.check_storage_readiness()
+    else:
+        artifact_storage.check_storage_readiness()
