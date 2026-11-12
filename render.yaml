@@ -3,17 +3,13 @@ services:
     name: mailspectra
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: 0.5c-512mb
+    plan: free
     region: singapore
     autoDeployTrigger: off
     healthCheckPath: /api/v1/ready
-    # Run migrations at startup so the service's mounted evidence disk is available.
-    # Back up PostgreSQL and the evidence disk together before upgrades.
+    # Keep evidence and reports in the configured private Supabase Storage bucket.
+    # The Render free filesystem is ephemeral; no persistent disk is attached.
     dockerCommand: sh -c 'python -m alembic upgrade head && python backend/run.py'
-    disk:
-      name: evidence
-      mountPath: /app/storage
-      sizeGB: 10
     envVars:
       - key: APP_ENV
         value: production
@@ -22,24 +18,28 @@ services:
       - key: INTELLIGENCE_MODE
         value: offline
       - key: DATABASE_URL
-        fromDatabase:
-          name: mailspectra-db
-          property: connectionString
-      - key: UPLOAD_DIR
-        value: /app/storage/uploads
-      - key: REPORTS_DIR
-        value: /app/storage/reports
-      - key: CORS_ORIGINS
         sync: false
+      - key: EVIDENCE_STORAGE_BACKEND
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: mailspectra-evidence
+      - key: STORAGE_TIMEOUT_SECONDS
+        value: "30"
+      - key: SHAP_ENABLED
+        value: "false"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: UPLOAD_DIR
+        value: /tmp/mailspectra/uploads
+      - key: REPORTS_DIR
+        value: /tmp/mailspectra/reports
+      - key: CORS_ORIGINS
+        value: "[]"
       - key: SECRET_KEY
         generateValue: true
-
-databases:
-  - name: mailspectra-db
-    databaseName: mailspectra
-    user: mailspectra
-    postgresMajorVersion: "17"
-    plan: 0.1c-256mb
-    region: singapore
-    # Empty allowlist keeps database access on Render's private network.
-    ipAllowList: []

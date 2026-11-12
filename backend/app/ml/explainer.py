@@ -1,9 +1,7 @@
 from typing import Any, Dict, List, Optional
-import numpy as np
-from scipy import sparse
-import shap
 
 from backend.app.core.logging import logger
+from backend.app.core.config import settings
 from backend.app.ml.feature_extractor import FeatureExtractor
 from backend.app.ml.model_loader import ModelBundle, ModelLoader
 from backend.app.ml.schemas import SHAPExplanation, SHAPFeatureContribution, ThreatClass
@@ -63,11 +61,11 @@ class ThreatExplainer:
     def explain(
         self,
         predicted_class: str,
-        X: Optional[sparse.csr_matrix],
+        X: Optional[Any],
         structured_features: Dict[str, float],
     ) -> SHAPExplanation:
         """Generate SHAP explanation for the given prediction and feature matrix."""
-        if not self.bundle or X is None:
+        if not settings.SHAP_ENABLED or not self.bundle or X is None:
             return self._fallback_explanation(predicted_class, structured_features)
 
         try:
@@ -79,9 +77,12 @@ class ThreatExplainer:
     def _compute_shap_explanation(
         self,
         predicted_class: str,
-        X: sparse.csr_matrix,
+        X: Any,
         structured_features: Dict[str, float],
     ) -> SHAPExplanation:
+        import numpy as np
+        import shap
+
         clf = self.bundle.classifier
         vec = self.bundle.vectorizer
         classes = list(self.bundle.classes)
