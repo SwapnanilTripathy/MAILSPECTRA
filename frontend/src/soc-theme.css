@@ -520,3 +520,19 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .soc-nav-link, .metric-card, .soc-new-case { transition: none !important; }
 }
+
+/* Consistent, high-contrast severity language used throughout case and alert tables. */
+.severity-badge {
+  border-radius: 999px !important;
+  font-weight: 800;
+  letter-spacing: .055em;
+  white-space: nowrap;
+}
+.severity-indicator { box-shadow: 0 0 7px currentColor; }
+.severity-critical { color: #ff8294 !important; background: rgba(166,43,65,.16) !important; border-color: rgba(255,100,125,.34) !important; }
+.severity-high { color: #ffad77 !important; background: rgba(173,87,37,.16) !important; border-color: rgba(255,155,91,.34) !important; }
+.severity-medium { color: #f5cd76 !important; background: rgba(147,108,35,.16) !important; border-color: rgba(246,189,96,.32) !important; }
+.severity-low { color: #71dfbd !important; background: rgba(28,122,94,.15) !important; border-color: rgba(75,213,168,.3) !important; }
+.severity-info { color: #83c6f7 !important; background: rgba(42,107,159,.16) !important; border-color: rgba(93,173,232,.3) !important; }
+.severity-purple { color: #c4abff !important; background: rgba(111,75,170,.16) !important; border-color: rgba(165,135,237,.3) !important; }
+.severity-neutral { color: #a7bbc9 !important; background: rgba(85,108,126,.16) !important; border-color: rgba(128,157,178,.3) !important; }
