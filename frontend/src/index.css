@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-[#0B0F19] text-slate-200 antialiased;
+    @apply bg-[#050608] text-slate-200 antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 }
@@ -15,7 +15,7 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0f19;
+  background: #050608;
 }
 ::-webkit-scrollbar-thumb {
   background: #1e293b;
@@ -27,7 +27,7 @@
 
 /* Leaflet Map Dark Theme Overrides */
 .leaflet-container {
-  background-color: #0b0f19 !important;
+  background-color: #050608 !important;
   font-family: inherit !important;
 }
 .leaflet-popup-content-wrapper {
@@ -44,7 +44,7 @@
 
 /* React Flow Dark Styling */
 .react-flow__background {
-  background-color: #0b0f19 !important;
+  background-color: #050608 !important;
 }
 .react-flow__controls {
   background: #111827 !important;
