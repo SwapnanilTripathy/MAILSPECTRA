@@ -846,7 +846,7 @@ body,
   --soc-cyan: #c27a45; --soc-cyan-soft: #f3e5d9; --soc-teal: #277b63;
   --soc-shadow: 0 16px 42px rgba(54,43,31,.09);
 }
-:root[data-theme] html, :root[data-theme] body, :root[data-theme] #root { background: var(--soc-bg); }
+:root[data-theme], :root[data-theme] body, :root[data-theme] #root { background: var(--soc-bg); }
 :root[data-theme] body, :root[data-theme] .app-shell, :root[data-theme] .soc-shell,
 :root[data-theme] .soc-workspace { background-color: var(--soc-bg); color: var(--soc-text); }
 :root[data-theme] ::selection { background: color-mix(in srgb, var(--soc-cyan) 28%, transparent); color: var(--soc-text); }
