@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
-  Bell,
   ChevronRight,
   Cpu,
   Eye,
@@ -18,7 +17,6 @@ import {
   Radio,
   Search,
   Settings,
-  ShieldAlert,
   X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
