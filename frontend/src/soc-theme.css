@@ -536,3 +536,6 @@ body {
 .severity-info { color: #83c6f7 !important; background: rgba(42,107,159,.16) !important; border-color: rgba(93,173,232,.3) !important; }
 .severity-purple { color: #c4abff !important; background: rgba(111,75,170,.16) !important; border-color: rgba(165,135,237,.3) !important; }
 .severity-neutral { color: #a7bbc9 !important; background: rgba(85,108,126,.16) !important; border-color: rgba(128,157,178,.3) !important; }
+
+.soc-status-light.is-live { background: var(--soc-teal); box-shadow: 0 0 0 3px rgba(66,214,176,.1), 0 0 12px rgba(66,214,176,.35); }
+.soc-status-light.is-offline { background: #7db6e8; box-shadow: 0 0 0 3px rgba(125,182,232,.1), 0 0 10px rgba(125,182,232,.25); }
