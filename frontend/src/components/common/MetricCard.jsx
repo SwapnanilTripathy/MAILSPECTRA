@@ -9,20 +9,20 @@ export default function MetricCard({
   trend,
 }) {
   return (
-    <div className={`metric-card metric-${color}`}>
+    <article className={`metric-card metric-${color}`} aria-label={`${title}: ${value}`}>
       <div className="flex items-start justify-between gap-3">
         <p className="metric-title">{title}</p>
         {Icon && (
-          <span className="metric-icon">
-            <Icon size={19} aria-hidden="true" />
+          <span className="metric-icon" aria-hidden="true">
+            <Icon size={18} strokeWidth={1.8} />
           </span>
         )}
       </div>
-      <p className="metric-value">{value}</p>
+      <p className="metric-value" aria-live="polite">{value}</p>
       <div className="metric-footer">
         <span>{subtitle}</span>
         {trend && <span className="metric-trend">{trend}</span>}
       </div>
-    </div>
+    </article>
   );
 }
