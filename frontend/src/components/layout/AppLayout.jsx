@@ -12,15 +12,18 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
   Network,
   Plus,
   Radio,
   Search,
   Settings,
+  Sun,
   X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePrivacy } from '../../context/PrivacyContext';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../api/client';
 
 const navigationGroups = [
@@ -64,6 +67,7 @@ const pageMeta = {
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const { masked, setMasked } = usePrivacy();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [systemMode, setSystemMode] = useState('UNKNOWN');
@@ -201,6 +205,20 @@ export default function AppLayout() {
               <span className={`soc-status-light ${systemMode === 'UNKNOWN' ? 'is-unknown' : systemMode === 'OFFLINE' ? 'is-offline' : systemMode === 'LIVE' ? 'is-live' : ''}`} />
               <span>{systemMode === 'UNKNOWN' ? 'STATUS UNKNOWN' : `INTEL · ${systemMode}`}</span>
             </div>
+            <button
+              type="button"
+              className="soc-theme-toggle"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} theme`}
+            >
+              {theme === 'dark' ? (
+                <Sun size={16} aria-hidden="true" />
+              ) : (
+                <Moon size={16} aria-hidden="true" />
+              )}
+              <span>{theme === 'dark' ? 'LIGHT MODE' : 'DARK MODE'}</span>
+            </button>
             <span className="soc-topbar-divider" />
             <button
               className={`soc-privacy-toggle ${masked ? 'is-enabled' : ''}`}
