@@ -58,6 +58,7 @@ const pageMeta = {
   Intelligence: { eyebrow: 'EXTERNAL CONTEXT', title: 'Threat intelligence', note: 'Enrich domains, IP addresses and other indicators.' },
   Reports: { eyebrow: 'FORENSIC OUTPUT', title: 'Evidence reports', note: 'Generate, download and verify investigation reports.' },
   Settings: { eyebrow: 'PLATFORM ADMINISTRATION', title: 'System settings', note: 'Review deployment, intelligence and privacy diagnostics.' },
+  'Case detail': { eyebrow: 'CASE INVESTIGATION', title: 'Case detail', note: 'Review findings, evidence integrity and the investigation timeline.' },
 };
 
 export default function AppLayout() {
@@ -82,10 +83,13 @@ export default function AppLayout() {
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
 
-  const currentPage = allItems.find((item) =>
-    item.path === location.pathname ||
-    (item.path !== '/' && location.pathname.startsWith(`${item.path}/`))
-  )?.label || 'Dashboard';
+  const currentPage = location.pathname.startsWith('/cases/')
+    ? 'Case detail'
+    : allItems.find((item) =>
+        item.path === location.pathname ||
+        (item.path !== '/' && location.pathname.startsWith(`${item.path}/`))
+      )?.label || 'Dashboard';
+  const activeNavPage = currentPage === 'Case detail' ? 'Cases' : currentPage;
   const meta = pageMeta[currentPage] || pageMeta.Dashboard;
   const initials = (user?.username || 'AN').slice(0, 2).toUpperCase();
   const modeLabel = systemMode === 'UNKNOWN'
@@ -109,7 +113,7 @@ export default function AppLayout() {
             >
               <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
               <span>{label}</span>
-              {label === currentPage && <span className="soc-nav-indicator" aria-hidden="true" />}
+              {label === activeNavPage && <span className="soc-nav-indicator" aria-hidden="true" />}
             </NavLink>
           ))}
         </div>
@@ -194,7 +198,7 @@ export default function AppLayout() {
 
           <div className="soc-topbar-right">
             <div className="soc-live-status" title={modeLabel}>
-              <span className={`soc-status-light ${systemMode === 'UNKNOWN' ? 'is-unknown' : ''}`} />
+              <span className={`soc-status-light ${systemMode === 'UNKNOWN' ? 'is-unknown' : systemMode === 'OFFLINE' ? 'is-offline' : systemMode === 'LIVE' ? 'is-live' : ''}`} />
               <span>{systemMode === 'UNKNOWN' ? 'STATUS UNKNOWN' : `INTEL · ${systemMode}`}</span>
             </div>
             <span className="soc-topbar-divider" />
