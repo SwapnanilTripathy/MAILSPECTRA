@@ -873,3 +873,176 @@ input:focus,select:focus,textarea:focus{
     transition:none!important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PERFORMANCE + QUICK-FLUID FEEL
+   Faster response, shorter reveal, fewer expensive paint effects.
+═══════════════════════════════════════════════════════════════ */
+:root{
+  --motion-slow:240ms;
+  --motion-medium:190ms;
+  --motion-fast:140ms;
+  --motion-fluid:cubic-bezier(.2,.8,.2,1);
+  --motion-soft:cubic-bezier(.22,.75,.25,1);
+}
+
+/* Keep the aurora moving on the compositor instead of repainting its gradient. */
+@keyframes aurora-drift{
+  0%{transform:translate3d(-.35%,0,0) scale(1.015)}
+  50%{transform:translate3d(.35%,-.25%,0) scale(1.035)}
+  100%{transform:translate3d(-.2%,.2%,0) scale(1.02)}
+}
+body::before{
+  background-size:155% 155%;
+  animation:aurora-drift 76s cubic-bezier(.45,0,.55,1) infinite alternate;
+  will-change:auto;
+}
+body::after{
+  filter:blur(42px);
+  animation:aurora-breathe 38s cubic-bezier(.45,0,.55,1) infinite;
+  will-change:auto;
+}
+
+/* Page and section reveals should feel immediate, not like a loading delay. */
+.soc-page-content>*{
+  animation:motion-page-enter 390ms var(--motion-fluid) both;
+}
+.soc-page-content>*:nth-child(2){animation-delay:18ms}
+.soc-page-content>*:nth-child(3){animation-delay:36ms}
+.soc-page-content>*:nth-child(4){animation-delay:54ms}
+.soc-page-content>*:nth-child(5){animation-delay:72ms}
+.dashboard>section,
+.dashboard>.overview-hero,
+.aurora-settings>section,
+.aurora-settings>.aurora-settings-header,
+.aurora-settings>.aurora-settings-footer{
+  animation-duration:430ms;
+}
+.dashboard>section:nth-of-type(1),
+.aurora-settings>section:nth-of-type(1){animation-delay:20ms}
+.dashboard>section:nth-of-type(2),
+.aurora-settings>section:nth-of-type(2){animation-delay:45ms}
+.dashboard>section:nth-of-type(3),
+.aurora-settings>section:nth-of-type(3){animation-delay:70ms}
+.dashboard>section:nth-of-type(4),
+.aurora-settings>section:nth-of-type(4){animation-delay:95ms}
+.dashboard>section:nth-of-type(5),
+.aurora-settings>section:nth-of-type(5){animation-delay:120ms}
+
+/* Quick feedback for controls; keep the easing polished without waiting. */
+button,a,[role="button"],input,select,textarea{
+  transition-duration:200ms!important;
+  transition-timing-function:var(--motion-fluid)!important;
+}
+.soc-nav-link{
+  transition:
+    color 190ms var(--motion-fluid),
+    background-color 210ms var(--motion-fluid),
+    border-color 210ms var(--motion-fluid),
+    box-shadow 230ms var(--motion-fluid),
+    transform 190ms var(--motion-fluid);
+}
+.soc-nav-link svg{
+  transition:transform 210ms var(--motion-fluid),color 190ms var(--motion-fluid),filter 210ms var(--motion-fluid);
+}
+.soc-nav-link::after{
+  transition:opacity 210ms var(--motion-fluid),transform 240ms var(--motion-fluid);
+}
+.soc-brand-mark,.soc-topbar-avatar,.soc-user-card .profile-avatar,
+.soc-topbar button svg,.soc-user-card button svg,
+.aurora-provider-icon,.aurora-metric-icon,.aurora-panel-icon,
+.aurora-preference-icon,.aurora-orb-core>svg{
+  transition-duration:220ms!important;
+  transition-timing-function:var(--motion-fluid)!important;
+}
+.soc-new-case,.login-submit,.soc-page-content .primary-action,
+.soc-page-content button[class*="bg-cyan-700"]{
+  transition:
+    transform 190ms var(--motion-fluid),
+    box-shadow 220ms var(--motion-fluid),
+    filter 220ms var(--motion-fluid),
+    background-position 420ms var(--motion-fluid),
+    border-color 220ms var(--motion-fluid)!important;
+}
+.soc-new-case::after,.login-submit::after,
+.soc-page-content .primary-action::after{
+  animation-duration:720ms!important;
+}
+.metric-card,.insight-card,.recent-card,.soc-alert-feed,
+.soc-page-content .rounded-xl,.soc-page-content .rounded-lg,
+.aurora-metric,.aurora-panel,.aurora-provider,.aurora-health-card{
+  transition:
+    transform 220ms var(--motion-fluid),
+    border-color 220ms var(--motion-fluid),
+    box-shadow 240ms var(--motion-fluid),
+    background-color 220ms var(--motion-fluid)!important;
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .metric-card:hover,.insight-card:hover,.recent-card:hover,.soc-alert-feed:hover,
+  .soc-page-content .rounded-xl:hover,.soc-page-content .rounded-lg:hover,
+  .aurora-metric:hover,.aurora-panel:hover,.aurora-provider:hover{
+    transform:translate3d(0,-2px,0);
+    filter:none;
+    box-shadow:0 16px 38px rgba(76,83,190,.12);
+  }
+  .soc-nav-link:hover{transform:translate3d(2px,0,0)}
+}
+.category-legend-track span,.risk-breakdown-track span{
+  animation-duration:560ms;
+  transition:width 520ms var(--motion-fluid),filter 220ms var(--motion-fluid);
+}
+.category-legend-item,.risk-breakdown-row{animation-duration:380ms}
+.category-legend-item:nth-child(2),.risk-breakdown-row:nth-child(2){animation-delay:24ms}
+.category-legend-item:nth-child(3),.risk-breakdown-row:nth-child(3){animation-delay:48ms}
+.category-legend-item:nth-child(4),.risk-breakdown-row:nth-child(4){animation-delay:72ms}
+.category-legend-item:nth-child(5),.risk-breakdown-row:nth-child(5){animation-delay:96ms}
+.category-legend-item:nth-child(6),.risk-breakdown-row:nth-child(6){animation-delay:120ms}
+.recent-table tbody tr{transition:background-color 190ms var(--motion-fluid),border-color 190ms var(--motion-fluid)}
+.recent-table tbody tr:nth-child(n){animation-duration:360ms}
+.recent-table tbody tr:nth-child(1){animation-delay:20ms}
+.recent-table tbody tr:nth-child(2){animation-delay:40ms}
+.recent-table tbody tr:nth-child(3){animation-delay:60ms}
+.recent-table tbody tr:nth-child(4){animation-delay:80ms}
+.recent-table tbody tr:nth-child(5){animation-delay:100ms}
+.recent-table tbody tr:nth-child(6){animation-delay:120ms}
+input,select,textarea{
+  transition:
+    border-color 190ms var(--motion-fluid),
+    background-color 190ms var(--motion-fluid),
+    box-shadow 210ms var(--motion-fluid),
+    color 190ms var(--motion-fluid)!important;
+}
+.aurora-preference{
+  transition:
+    transform 190ms var(--motion-fluid),
+    border-color 200ms var(--motion-fluid),
+    background-color 200ms var(--motion-fluid),
+    box-shadow 220ms var(--motion-fluid),
+    color 190ms var(--motion-fluid)!important;
+}
+.soc-page-heading{
+  transition:transform 220ms var(--motion-fluid),box-shadow 240ms var(--motion-fluid),border-color 220ms var(--motion-fluid)!important;
+}
+
+/* Native SVG doughnut: no charting runtime needed on the first Dashboard load. */
+.category-donut-svg{
+  display:block;
+  width:100%;
+  height:100%;
+  overflow:visible;
+}
+.category-donut-svg circle{
+  transition:stroke-dasharray 520ms var(--motion-fluid),stroke 220ms var(--motion-fluid);
+}
+
+/* OS and app-level Reduced Motion overrides remain authoritative. */
+@media(prefers-reduced-motion:reduce){
+  body::before,body::after{animation:none!important}
+  .category-donut-svg circle{transition:none!important}
+}
+:root[data-motion="reduced"] body::before,
+:root[data-motion="reduced"] body::after{
+  animation:none!important;
+}
+:root[data-motion="reduced"] .category-donut-svg circle{transition:none!important}
