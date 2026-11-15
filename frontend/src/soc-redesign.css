@@ -1,0 +1,109 @@
+/* MAILSPECTRA redesign layer. Load AFTER soc-theme.css (see main.jsx).
+   Black canvas, static colour backdrop, frosted glass panels with visible borders,
+   one blue-violet accent, Fraunces headings with an italic accent word. */
+:root,:root[data-theme="dark"]{
+  --rd-ink:#f4f1ea;--rd-mute:#a9a9b5;--rd-dim:#8a8a96;--rd-sig:#9aa5ff;
+  --rd-glass:rgba(14,14,19,.8);--rd-rail:rgba(8,8,11,.7);--rd-gb:rgba(255,255,255,.4);
+  --rd-line:#2c2c36;--rd-l1:#0d0d11;--rd-l2:#15151b;--rd-pri:#f4f1ea;--rd-onpri:#0b0b0d;
+  --rd-a1:#4f5bff;--rd-a2:#b44cff;--rd-a3:#ff4f7a;--rd-a4:#22c7ff;--rd-ao:.5;
+  --soc-bg:#000;--soc-sidebar:#08080b;--soc-topbar:#000;--soc-surface:#0d0d11;--soc-surface-raised:#15151b;
+  --soc-surface-soft:#0a0a0e;--soc-border:#2c2c36;--soc-border-strong:#3b3b48;--soc-text:#f4f1ea;
+  --soc-muted:#a9a9b5;--soc-subtle:#8a8a96;--soc-cyan:#9aa5ff;--soc-cyan-soft:#1c2050;--soc-teal:#5ee0a9;
+  --soc-red:#ff5d6c;--soc-amber:#ffb454;
+}
+:root[data-theme="light"]{
+  --rd-ink:#0b1226;--rd-mute:#4a566c;--rd-dim:#5f6a80;--rd-sig:#2f5bff;
+  --rd-glass:rgba(255,255,255,.82);--rd-rail:rgba(255,255,255,.78);--rd-gb:rgba(30,45,95,.58);
+  --rd-line:#cdd5e6;--rd-l1:#ffffff;--rd-l2:#f3f6fb;--rd-pri:#0b1226;--rd-onpri:#ffffff;
+  --rd-a1:#8fb0ff;--rd-a2:#cdb6ff;--rd-a3:#ffc4a8;--rd-a4:#8be8d3;--rd-ao:.7;
+  --soc-bg:#edf1f8;--soc-sidebar:#f6f8fd;--soc-topbar:#ffffff;--soc-surface:#ffffff;--soc-surface-raised:#f3f6fb;
+  --soc-surface-soft:#f7f9fd;--soc-border:#cdd5e6;--soc-border-strong:#b3bfd8;--soc-text:#0b1226;
+  --soc-muted:#4a566c;--soc-subtle:#5f6a80;--soc-cyan:#2f5bff;--soc-cyan-soft:#e1e8ff;--soc-teal:#067a58;
+  --soc-red:#e0213f;--soc-amber:#a45700;
+}
+:root{--rd-serif:'Fraunces','Iowan Old Style',Georgia,serif;--rd-sans:'Geist','Inter',system-ui,sans-serif;--rd-mono:'Geist Mono','JetBrains Mono',ui-monospace,monospace}
+
+/* Fonts */
+body,button,input,select,textarea,.font-sans,.soc-shell{font-family:var(--rd-sans)}
+code,pre,.font-mono,[class*="font-mono"],.soc-page-eyebrow,.section-kicker,.soc-page-context strong,.soc-page-chip,.soc-build-tag,.soc-breadcrumb{font-family:var(--rd-mono)}
+
+/* Static colour backdrop behind the whole app */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:var(--rd-ao);
+  background:radial-gradient(42% 52% at 10% 8%,var(--rd-a1),transparent 70%),radial-gradient(36% 46% at 92% 12%,var(--rd-a2),transparent 70%),
+  radial-gradient(42% 52% at 86% 96%,var(--rd-a3),transparent 70%),radial-gradient(36% 46% at 8% 92%,var(--rd-a4),transparent 70%)}
+:root[data-theme] body{background-color:var(--soc-bg)}
+:root[data-theme] #root{position:relative;z-index:1;background:transparent}
+:root[data-theme] .app-shell,:root[data-theme] .soc-shell,:root[data-theme] .soc-workspace,:root[data-theme] .soc-main,:root[data-theme] .login-page{background:transparent}
+
+/* Sidebar and topbar: frosted */
+:root[data-theme] .soc-sidebar{background:var(--rd-rail);border-right-color:var(--rd-line);box-shadow:none;-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}
+:root[data-theme] .soc-topbar{background:color-mix(in srgb,var(--soc-bg) 55%,transparent);border-bottom-color:var(--rd-line);box-shadow:none;-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}
+:root[data-theme] .soc-brand,:root[data-theme] .soc-sidebar-bottom,:root[data-theme] .soc-user-card{border-color:var(--rd-line)}
+:root[data-theme] .soc-brand-mark,:root[data-theme] .soc-topbar-avatar,:root[data-theme] .soc-user-card .profile-avatar{color:var(--rd-sig);background:var(--rd-l2);border-color:var(--rd-line)}
+:root[data-theme] .brand-name,:root[data-theme] .soc-breadcrumb strong,:root[data-theme] .soc-user-card .profile-name{color:var(--rd-ink)}
+:root[data-theme] .brand-name span{color:var(--rd-sig)}
+:root[data-theme] .brand-caption,:root[data-theme] .soc-breadcrumb,:root[data-theme] .soc-nav-label,:root[data-theme] .soc-live-status,:root[data-theme] .soc-user-card .profile-role{color:var(--rd-dim)}
+:root[data-theme] .soc-build-tag,:root[data-theme] .soc-page-chip{color:var(--rd-sig);background:transparent;border-color:var(--rd-line);font-size:12px}
+:root[data-theme] .soc-sidebar-context,:root[data-theme] .soc-mode-card{color:var(--rd-mute);background:color-mix(in srgb,var(--rd-l2) 70%,transparent);border-color:var(--rd-line)}
+:root[data-theme] .soc-mode-card strong{color:var(--rd-ink)}
+:root[data-theme] .soc-mode-card p{color:var(--rd-dim)}
+:root[data-theme] .soc-mode-icon{color:var(--rd-sig)}
+:root[data-theme] .soc-nav-link{color:var(--rd-mute)}
+:root[data-theme] .soc-nav-link:hover{color:var(--rd-ink);background:var(--rd-l2);border-color:var(--rd-line)}
+:root[data-theme] .soc-nav-link.is-active{color:var(--rd-ink);background:linear-gradient(90deg,color-mix(in srgb,var(--rd-sig) 18%,transparent),transparent);border-color:transparent;box-shadow:inset 2px 0 var(--rd-sig)}
+:root[data-theme] .soc-nav-link.is-active svg,:root[data-theme] .soc-nav-link.is-accent:not(.is-active) svg,:root[data-theme] .soc-page-eyebrow,:root[data-theme] .soc-main .section-kicker,:root[data-theme] .heading-period{color:var(--rd-sig)}
+:root[data-theme] .soc-nav-indicator{background:var(--rd-sig);box-shadow:none}
+:root[data-theme] .soc-topbar-divider{background:var(--rd-line)}
+:root[data-theme] .soc-topbar-user{color:var(--rd-mute)}
+:root[data-theme] .soc-privacy-toggle{color:var(--rd-mute);background:var(--rd-l2);border-color:var(--rd-line)}
+:root[data-theme] .soc-privacy-toggle:hover,:root[data-theme] .soc-privacy-toggle.is-enabled{color:var(--rd-sig);background:color-mix(in srgb,var(--rd-sig) 14%,transparent);border-color:var(--rd-sig)}
+
+/* Primary actions: solid, no gradient */
+:root[data-theme] .soc-new-case,:root[data-theme] .login-submit,:root[data-theme] .soc-page-content .primary-action,:root[data-theme] .soc-page-content button[class*="bg-cyan-700"]{color:var(--rd-onpri)!important;background:var(--rd-pri)!important;border-color:var(--rd-pri)!important;box-shadow:none}
+:root[data-theme] .soc-shortcut{color:var(--rd-onpri);background:transparent;opacity:.6}
+:root[data-theme] .soc-page-content .text-cyan-400,:root[data-theme] .soc-page-content .text-cyan-300,:root[data-theme] .soc-page-content .text-link{color:var(--rd-sig)!important}
+:root[data-theme] .soc-page-content .text-white{color:var(--rd-ink)!important}
+
+/* Page header: glass card, mono eyebrow, serif title with italic accent word */
+:root[data-theme] .soc-page-heading{margin:0 auto 32px;padding:24px 32px;border:1px solid var(--rd-gb);border-radius:20px;background:color-mix(in srgb,var(--rd-glass) 62%,transparent);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}
+:root[data-theme] .soc-page-eyebrow{font:500 12px var(--rd-mono);letter-spacing:.14em}
+:root[data-theme] .soc-page-title-row h1,:root[data-theme] .overview-hero h1,:root[data-theme] .login-intro h1{font-family:var(--rd-serif);font-weight:500;font-size:clamp(36px,4.5vw,48px);line-height:1.1;letter-spacing:-.01em;color:var(--rd-ink)}
+:root[data-theme] .soc-page-title-row h1 em,:root[data-theme] .soc-main .section-heading h2 em{font-style:italic;font-weight:400}
+:root[data-theme] .soc-page-note,:root[data-theme] .soc-main .section-aside{color:var(--rd-mute);font-size:14px;line-height:1.5}
+:root[data-theme] .soc-page-context strong{font-size:12px;color:var(--rd-mute)}
+:root[data-theme] .soc-main .section-kicker{font:500 12px var(--rd-mono);letter-spacing:.14em}
+:root[data-theme] .soc-main .section-heading h2,:root[data-theme] .recent-heading h2,:root[data-theme] .card-heading h3,:root[data-theme] .soc-alert-feed-heading{font-family:var(--rd-serif);font-weight:500;color:var(--rd-ink);letter-spacing:-.01em}
+:root[data-theme] .soc-main .section-heading h2{font-size:28px;line-height:1.15}
+:root[data-theme] .recent-heading h2,:root[data-theme] .card-heading h3{font-size:22px;line-height:1.2}
+:root[data-theme] .card-heading p,:root[data-theme] .recent-heading p{color:var(--rd-mute)}
+
+/* Cards and panels: frosted glass with a visible 1px border (>=3:1) */
+:root[data-theme] .metric-card,:root[data-theme] .insight-card,:root[data-theme] .recent-card,:root[data-theme] .soc-alert-feed,:root[data-theme] .login-card,:root[data-theme] .soc-page-content [class*="bg-[#111827]"]{background:var(--rd-glass)!important;border-color:var(--rd-gb)!important;box-shadow:none;-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}
+:root[data-theme] .soc-page-content [class*="bg-slate-900"],:root[data-theme] .soc-page-content [class*="bg-gray-900"],:root[data-theme] .soc-page-content [class*="bg-slate-950"],:root[data-theme] .soc-page-content [class*="bg-[#050608]"],:root[data-theme] .soc-page-content [class*="bg-black"]{background-color:var(--rd-glass)!important}
+:root[data-theme] .soc-page-content [class*="bg-slate-800"],:root[data-theme] .soc-page-content [class*="bg-gray-800"]{background-color:var(--rd-l2)!important}
+:root[data-theme] .soc-page-content [class*="border-slate-800"],:root[data-theme] .soc-page-content [class*="border-slate-700"],:root[data-theme] .soc-page-content [class*="border-gray-800"],:root[data-theme] .soc-page-content [class*="border-gray-700"]{border-color:var(--rd-line)!important}
+:root[data-theme] .metric-card::after{background:linear-gradient(90deg,transparent,var(--rd-sig),transparent)}
+:root[data-theme] .metric-card:hover{border-color:var(--rd-sig)!important}
+:root[data-theme] .metric-title{color:var(--rd-mute)!important}
+:root[data-theme] .metric-value{color:var(--rd-ink)!important}
+:root[data-theme] .metric-footer{color:var(--rd-dim)!important}
+:root[data-theme] .metric-icon,:root[data-theme] .card-heading-icon,:root[data-theme] .empty-icon{color:var(--rd-sig)!important;background:var(--rd-l2)!important;border-color:var(--rd-line)!important}
+:root[data-theme] .recent-heading,:root[data-theme] .soc-alert-item{border-color:var(--rd-line)}
+:root[data-theme] .soc-alert-item p:first-child{color:var(--rd-ink)}
+:root[data-theme] .soc-alert-actions button{color:var(--rd-sig);background:transparent;border-color:var(--rd-line)}
+
+/* Dashboard hero */
+:root[data-theme] .overview-hero{background:linear-gradient(135deg,color-mix(in srgb,var(--rd-sig) 14%,var(--rd-glass)),var(--rd-glass) 65%);border-color:var(--rd-gb);-webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5)}
+:root[data-theme] .overview-hero::after{background-image:linear-gradient(color-mix(in srgb,var(--rd-sig) 6%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--rd-sig) 6%,transparent) 1px,transparent 1px)}
+:root[data-theme] .overview-copy>p{color:var(--rd-mute)}
+:root[data-theme] .hero-shield{background:var(--rd-l2);border-color:var(--rd-line);box-shadow:none}
+:root[data-theme] .hero-orbit{border-color:var(--rd-line)}
+:root[data-theme] .hero-orbit-dot{background:var(--rd-sig);box-shadow:none}
+
+/* Login */
+:root[data-theme] .login-input:focus{border-color:var(--rd-sig)}
+
+/* Honour reduced motion */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* Fallback when backdrop-filter is unsupported: opaque surfaces */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){:root[data-theme] .soc-sidebar,:root[data-theme] .soc-topbar,:root[data-theme] .soc-page-heading,:root[data-theme] .overview-hero,:root[data-theme] .metric-card,:root[data-theme] .insight-card,:root[data-theme] .recent-card,:root[data-theme] .soc-alert-feed,:root[data-theme] .login-card{background:var(--rd-l1)!important}}
