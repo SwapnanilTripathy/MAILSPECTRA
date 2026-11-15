@@ -1,145 +1,157 @@
 import AlertFeed from '../components/common/AlertFeed';
 import { useMasked } from '../context/PrivacyContext';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ShieldAlert,
-  Search,
-  FolderGit2,
-  Network,
-  UploadCloud,
-  ArrowRight,
-  Clock,
-  Zap,
-  PieChart as PieIcon,
-  BarChart3,
-  Inbox,
-} from 'lucide-react';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-} from 'recharts';
+import { ArrowRight, Inbox, UploadCloud } from 'lucide-react';
 import api from '../api/client';
-import MetricCard from '../components/common/MetricCard';
 import SeverityBadge from '../components/common/SeverityBadge';
 import AccentTitle from '../components/common/AccentTitle.jsx';
 
-const COLORS = [
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#10b981',
-  '#a855f7',
-  '#06b6d4',
-];
+const CATEGORY_COLORS = ['#ff5b78', '#ed70c4', '#ffb454', '#bd83ec', '#53d9a8', '#69c9ff'];
+const RISK_COLORS = {
+  CRITICAL: '#ff5b78',
+  HIGH: '#ffb454',
+  MEDIUM: '#9da9ff',
+  LOW: '#53d9a8',
+};
+
+const formatLabel = (value = 'UNKNOWN') =>
+  String(value).replace(/_/g, ' ').toLowerCase().replace(/\\b\\w/g, (letter) => letter.toUpperCase());
+
+const categoryColor = (name, index) => {
+  const key = String(name || '').toUpperCase();
+  if (key.includes('PHISH')) return '#ff5b78';
+  if (key.includes('CREDENTIAL')) return '#ed70c4';
+  if (key.includes('BUSINESS') || key.includes('COMPROMISE')) return '#ffb454';
+  if (key.includes('FRAUD')) return '#bd83ec';
+  if (key.includes('LEGIT')) return '#53d9a8';
+  return CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+};
+
+function DistributionBars({ items, maxValue, colorFor, emptyTitle, emptyDescription, loading, unavailable }) {
+  if (!items?.length) {
+    return (
+      <div className="distribution-empty">
+        <strong>{loading ? 'Loading data…' : unavailable ? 'Data unavailable' : emptyTitle}</strong>
+        <span>{loading ? 'Please wait while the dashboard loads.' : unavailable ? 'Check the backend connection and refresh.' : emptyDescription}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="distribution-list">
+      {items.map((item, index) => {
+        const value = Math.max(0, Number(item.value) || 0);
+        const percent = Math.max(0, Math.min(100, (value / Math.max(1, maxValue)) * 100));
+        const color = colorFor(item.name, index);
+        return (
+          <div className="distribution-row" key={`${item.name}-${index}`}>
+            <span className="distribution-label">{formatLabel(item.name)}</span>
+            <span
+              className="distribution-track"
+              role="progressbar"
+              aria-label={`${formatLabel(item.name)} distribution`}
+              aria-valuemin={0}
+              aria-valuemax={maxValue}
+              aria-valuenow={value}
+            >
+              <span className="distribution-fill" style={{ width: `${percent}%`, '--bar-color': color }} />
+            </span>
+            <span className="distribution-value">{value}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const statusTone = (status = 'OPEN') => {
+  const normalized = String(status).toUpperCase();
+  if (normalized === 'RESOLVED') return 'resolved';
+  if (normalized === 'INVESTIGATING') return 'investigating';
+  if (normalized === 'ARCHIVED') return 'archived';
+  return 'open';
+};
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [rawrecentCases, setRecentCases] = useState(null);
-  const recentCases = useMasked(rawrecentCases);
+  const [rawRecentCases, setRecentCases] = useState(null);
+  const recentCases = useMasked(rawRecentCases);
   const [distribution, setDistribution] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
+    let active = true;
     const fetchDashboardData = async () => {
       const [statsRes, recentRes, distRes] = await Promise.all([
         api.getDashboardStats().catch(() => null),
         api.getDashboardRecent().catch(() => null),
         api.getDashboardDistribution().catch(() => null),
       ]);
+      if (!active) return;
       setStats(statsRes);
       setRecentCases(recentRes?.items || (recentRes ? [] : null));
       setDistribution(distRes);
       setLoading(false);
     };
     fetchDashboardData();
+    return () => { active = false; };
   }, []);
 
-  const handleQuickUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const handleQuickUpload = async (event) => {
+    const file = event.target.files?.[0];
     if (!file) return;
     setUploading(true);
     try {
-      const res = await api.analyzeEmailFile(file);
-      navigate('/investigate', { state: { initialAnalysis: res } });
-    } catch (err) {
-      alert(`Analysis error: ${err.message}`);
+      const result = await api.analyzeEmailFile(file);
+      navigate('/investigate', { state: { initialAnalysis: result } });
+    } catch (error) {
+      alert(`Analysis error: ${error.message}`);
     } finally {
       setUploading(false);
-      e.target.value = '';
+      event.target.value = '';
     }
   };
+
   const metricValue = (value) => (loading ? '…' : stats ? value : '—');
-  const emptyText = (message) =>
-    loading
-      ? 'Loading data…'
-      : !distribution
-        ? 'Data is currently unavailable.'
-        : message;
+  const categoryItems = distribution?.category_distribution || [];
+  const riskItems = distribution?.risk_distribution || [];
+  const categoryMax = Math.max(1, ...categoryItems.map((item) => Number(item.value) || 0));
+  const riskMax = Math.max(1, ...riskItems.map((item) => Number(item.value) || 0));
 
   return (
-    <div className="dashboard space-y-6 max-w-7xl mx-auto">
+    <div className="dashboard max-w-7xl mx-auto">
       <AlertFeed />
-      <section className="overview-hero">
+
+      <section className="overview-hero dashboard-command-hero" aria-labelledby="command-center-title">
         <div className="overview-copy">
           <div className="eyebrow">
-            <span className="eyebrow-line" /> EMAIL SECURITY WORKSPACE
+            <span className="eyebrow-line" /> SECURITY OPERATIONS
           </div>
-          <h1>
-            Security overview<span className="heading-period">.</span>
-          </h1>
-          <p>
-            Everything you need to investigate suspicious emails and understand
-            the threats behind them.
-          </p>
-          <div className="hero-actions">
-            <label
-              className={`primary-action ${uploading ? 'opacity-60' : ''}`}
-            >
-              <UploadCloud size={17} aria-hidden="true" />
-              <span>
-                {uploading ? 'Processing email…' : 'Quick email triage'}
-              </span>
-              <input
-                type="file"
-                accept=".eml,.msg,.txt"
-                onChange={handleQuickUpload}
-                disabled={uploading}
-                className="sr-only"
-              />
-            </label>
-            <button
-              onClick={() => navigate('/investigate')}
-              className="secondary-action"
-            >
-              Open workspace <ArrowRight size={16} aria-hidden="true" />
-            </button>
-          </div>
+          <h1 id="command-center-title"><AccentTitle text="Command center" /></h1>
+          <p>A consolidated view of your email security workload.</p>
         </div>
-        <div className="hero-visual" aria-hidden="true">
-          <div className="hero-orbit hero-orbit-outer" />
-          <div className="hero-orbit hero-orbit-inner" />
-          <div className="hero-shield">
-            <ShieldAlert size={42} strokeWidth={1.3} />
-          </div>
-          <span className="hero-orbit-dot dot-one" />
-          <span className="hero-orbit-dot dot-two" />
-          <span className="hero-cross cross-one">+</span>
-          <span className="hero-cross cross-two">+</span>
+        <div className="hero-actions">
+          <label className={`dashboard-quick-upload ${uploading ? 'is-uploading' : ''}`} title="Quick email triage">
+            <UploadCloud size={15} aria-hidden="true" />
+            <span>{uploading ? 'Processing…' : 'Quick triage'}</span>
+            <input
+              type="file"
+              accept=".eml,.msg,.txt"
+              onChange={handleQuickUpload}
+              disabled={uploading}
+              className="sr-only"
+            />
+          </label>
+          <button onClick={() => navigate('/investigate')} className="dashboard-open-workspace">
+            Open workspace <ArrowRight size={15} aria-hidden="true" />
+          </button>
         </div>
       </section>
 
-      <section aria-labelledby="overview-heading">
+      <section className="dashboard-stats-section" aria-labelledby="overview-heading">
         <div className="section-heading">
           <div>
             <p className="section-kicker">AT A GLANCE</p>
@@ -147,52 +159,34 @@ export default function DashboardPage() {
           </div>
           <span className="section-aside">Overview</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <MetricCard
-            title="Emails analyzed"
-            value={metricValue(stats?.total_analyzed ?? 0)}
-            subtitle="Processed artifacts"
-            icon={FolderGit2}
-            color="cyan"
-          />
-          <MetricCard
-            title="Threats identified"
-            value={metricValue(stats?.threats_detected ?? 0)}
-            subtitle={
-              stats
-                ? `${stats.critical_threats ?? 0} critical / high severity`
-                : 'Critical / high severity'
-            }
-            icon={ShieldAlert}
-            color="red"
-          />
-          <MetricCard
-            title="Active campaigns"
-            value={metricValue(stats?.active_campaigns ?? 0)}
-            subtitle="Correlated threat clusters"
-            icon={Network}
-            color="purple"
-          />
-          <MetricCard
-            title="Average risk score"
-            value={metricValue(`${stats?.average_risk_score ?? 0}/100`)}
-            subtitle={
-              stats
-                ? `${stats.open_cases ?? 0} active triage cases`
-                : 'Across analyzed emails'
-            }
-            icon={Zap}
-            color="amber"
-          />
+        <div className="dashboard-metrics-ribbon">
+          <article className="dashboard-stat">
+            <span>Emails analyzed</span>
+            <strong>{metricValue(stats?.total_analyzed ?? 0)}</strong>
+            <small>Processed artifacts</small>
+          </article>
+          <article className="dashboard-stat">
+            <span>Threats identified</span>
+            <strong>{metricValue(stats?.threats_detected ?? 0)}</strong>
+            <small>{stats ? `${stats.critical_threats ?? 0} critical / high severity` : 'Confirmed threats'}</small>
+          </article>
+          <article className="dashboard-stat">
+            <span>Active campaigns</span>
+            <strong>{metricValue(stats?.active_campaigns ?? 0)}</strong>
+            <small>Correlated threat clusters</small>
+          </article>
+          <article className="dashboard-stat">
+            <span>Average risk score</span>
+            <strong>{metricValue(stats?.average_risk_score ?? 0)}</strong>
+            <small>Across all cases</small>
+          </article>
         </div>
         {!loading && !stats && (
-          <p className="data-note" role="status">
-            Dashboard statistics are unavailable. Check the backend connection.
-          </p>
+          <p className="data-note" role="status">Dashboard statistics are unavailable. Check the backend connection.</p>
         )}
       </section>
 
-      <section aria-labelledby="insights-heading">
+      <section aria-labelledby="insights-heading" className="dashboard-insights-section">
         <div className="section-heading">
           <div>
             <p className="section-kicker">THREAT INTELLIGENCE</p>
@@ -200,225 +194,118 @@ export default function DashboardPage() {
           </div>
           <span className="section-aside">Based on analyzed emails</span>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="insight-card">
+        <div className="dashboard-insights-grid">
+          <article className="insight-card">
             <div className="card-heading">
               <div>
                 <h3>Threat classification</h3>
                 <p>Distribution by classification</p>
               </div>
-              <span className="card-heading-icon">
-                <PieIcon size={18} aria-hidden="true" />
-              </span>
             </div>
-            <div className="chart-area">
-              {distribution?.category_distribution?.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={distribution.category_distribution}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="48%"
-                      innerRadius={55}
-                      outerRadius={80}
-                      paddingAngle={4}
-                    >
-                      {distribution.category_distribution.map(
-                        (entry, index) => (
-                          <Cell
-                            key={`${entry.name}-${index}`}
-                            aria-label={`${entry.name}: ${entry.value} cases`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ),
-                      )}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        background: '#111c2d',
-                        border: '1px solid #334155',
-                        borderRadius: 8,
-                      }}
-                    />
-                    <Legend
-                      verticalAlign="bottom"
-                      height={36}
-                      formatter={(value) => (
-                        <span className="text-xs text-slate-300">{value}</span>
-                      )}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="empty-chart">
-                  <div className="empty-icon">
-                    <PieIcon size={22} aria-hidden="true" />
-                  </div>
-                  <strong>
-                    {loading
-                      ? 'Loading classification'
-                      : !distribution
-                        ? 'Classification unavailable'
-                        : 'No classification data'}
-                  </strong>
-                  <span>
-                    {emptyText(
-                      'Analyze an email to see your threat breakdown.',
-                    )}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="insight-card">
+            <DistributionBars
+              items={categoryItems}
+              maxValue={categoryMax}
+              colorFor={categoryColor}
+              emptyTitle="No classification data"
+              emptyDescription="Analyze an email to see your threat breakdown."
+              loading={loading}
+              unavailable={!distribution}
+            />
+          </article>
+          <article className="insight-card">
             <div className="card-heading">
               <div>
                 <h3>Risk distribution</h3>
                 <p>Cases grouped by severity</p>
               </div>
-              <span className="card-heading-icon">
-                <BarChart3 size={18} aria-hidden="true" />
-              </span>
             </div>
-            <div className="chart-area">
-              {distribution?.risk_distribution?.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={distribution.risk_distribution}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  >
-                    <XAxis
-                      dataKey="name"
-                      stroke="#64748b"
-                      tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    />
-                    <YAxis
-                      stroke="#64748b"
-                      tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: '#111c2d',
-                        border: '1px solid #334155',
-                        borderRadius: 8,
-                      }}
-                    />
-                    <Bar dataKey="value" fill="#22d3ee" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="empty-chart">
-                  <div className="empty-icon">
-                    <BarChart3 size={22} aria-hidden="true" />
-                  </div>
-                  <strong>
-                    {loading
-                      ? 'Loading risk data'
-                      : !distribution
-                        ? 'Risk data unavailable'
-                        : 'No risk data yet'}
-                  </strong>
-                  <span>
-                    {emptyText(
-                      'Risk scores will appear as cases are analyzed.',
-                    )}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
+            <DistributionBars
+              items={riskItems}
+              maxValue={riskMax}
+              colorFor={(name) => RISK_COLORS[String(name || '').toUpperCase()] || '#9da9ff'}
+              emptyTitle="No risk data yet"
+              emptyDescription="Risk scores will appear as cases are analyzed."
+              loading={loading}
+              unavailable={!distribution}
+            />
+          </article>
         </div>
       </section>
 
-      <section className="recent-card" aria-labelledby="recent-heading">
-        <div className="recent-heading">
-          <div className="flex items-center gap-3">
-            <span className="card-heading-icon">
-              <Clock size={18} aria-hidden="true" />
-            </span>
-            <div>
-              <h2 id="recent-heading"><AccentTitle text="Recent investigations" /></h2>
-              <p>Your latest triage activity</p>
-            </div>
+      <section className="recent-section" aria-labelledby="recent-heading">
+        <div className="section-heading">
+          <div>
+            <p className="section-kicker">TRIAGE</p>
+            <h2 id="recent-heading"><AccentTitle text="Recent investigations" /></h2>
           </div>
-          <button onClick={() => navigate('/cases')} className="text-link">
-            View all cases <ArrowRight size={15} aria-hidden="true" />
-          </button>
+          <span className="section-aside">Your latest triage activity</span>
         </div>
-        {!recentCases?.length ? (
-          <div className="recent-empty">
-            <Inbox size={22} aria-hidden="true" />
-            <span>
-              {loading
-                ? 'Loading investigations…'
-                : !recentCases
-                  ? 'Recent investigations are currently unavailable.'
-                  : 'No investigations yet. Start by analyzing an email.'}
-            </span>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-900/40 text-slate-400 border-b border-slate-800">
-                <tr>
-                  <th className="px-5 py-3">Case ID</th>
-                  <th className="px-5 py-3">Subject / Artifact</th>
-                  <th className="px-5 py-3">Sender</th>
-                  <th className="px-5 py-3">Verdict</th>
-                  <th className="px-5 py-3">Risk Score</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {recentCases.map((c, i) => (
-                  <tr
-                    key={c.case_id || i}
-                    className="hover:bg-slate-800/30 transition"
-                  >
-                    <td className="px-5 py-3 font-bold text-cyan-400">
-                      {c.case_id}
-                    </td>
-                    <td
-                      className="px-5 py-3 text-slate-200 truncate max-w-xs font-sans"
-                      title={c.subject}
-                    >
-                      {c.subject || c.filename}
-                    </td>
-                    <td className="px-5 py-3 text-slate-400 truncate max-w-[180px]">
-                      {c.from_address || 'N/A'}
-                    </td>
-                    <td className="px-5 py-3">
-                      <SeverityBadge severity={c.classification} size="sm" />
-                    </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`font-bold ${c.risk_score >= 60 ? 'text-red-400' : c.risk_score >= 30 ? 'text-amber-400' : 'text-emerald-400'}`}
-                      >
-                        {c.risk_score}/100
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                        {c.status || 'OPEN'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => navigate(`/cases/${c.case_id}`)}
-                        className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 text-[11px] transition"
-                      >
-                        Inspect
-                      </button>
-                    </td>
+
+        <div className="recent-investigations-card">
+          {!recentCases?.length ? (
+            <div className="recent-empty">
+              <Inbox size={22} aria-hidden="true" />
+              <span>
+                {loading
+                  ? 'Loading investigations…'
+                  : !recentCases
+                    ? 'Recent investigations are currently unavailable.'
+                    : 'No investigations yet. Start by analyzing an email.'}
+              </span>
+              {!loading && (
+                <button onClick={() => navigate('/cases')} className="recent-open-btn">View all cases</button>
+              )}
+            </div>
+          ) : (
+            <div className="recent-table-wrap">
+              <table className="recent-table">
+                <thead>
+                  <tr>
+                    <th>Case ID</th>
+                    <th>Subject and artifact</th>
+                    <th>Sender</th>
+                    <th>Verdict</th>
+                    <th>Risk score</th>
+                    <th>Status</th>
+                    <th>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {recentCases.map((item, index) => {
+                    const score = Math.max(0, Math.min(100, Number(item.risk_score) || 0));
+                    const status = item.status || 'OPEN';
+                    return (
+                      <tr key={item.case_id || index}>
+                        <td className="recent-case-id">{item.case_id || '—'}</td>
+                        <td className="recent-subject" title={item.subject || item.filename || ''}>
+                          {item.subject || item.filename || 'Untitled artifact'}
+                        </td>
+                        <td className="recent-sender" title={item.from_address || ''}>{item.from_address || 'N/A'}</td>
+                        <td><span className="recent-verdict">{formatLabel(item.classification || 'UNKNOWN')}</span></td>
+                        <td>
+                          <span className="recent-risk">
+                            <span className="recent-risk-track"><i style={{ width: `${score}%` }} /></span>
+                            <b>{score}</b>
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`recent-status recent-status--${statusTone(status)}`}>
+                            <i />{formatLabel(status)}
+                          </span>
+                        </td>
+                        <td>
+                          <button onClick={() => navigate(`/cases/${item.case_id}`)} className="recent-open-btn">
+                            Open
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );
