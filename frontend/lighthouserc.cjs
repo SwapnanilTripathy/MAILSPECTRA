@@ -1,15 +1,15 @@
-const preset = process.env.LHCI_PRESET === 'desktop' ? 'desktop' : 'mobile';
+const isDesktop = process.env.LHCI_PRESET === 'desktop';
 
 module.exports = {
   ci: {
     collect: {
       numberOfRuns: 3,
       startServerCommand: 'npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
-      startServerReadyPattern: 'http://127.0.0.1:4173',
+      startServerReadyPattern: '4173',
       startServerReadyTimeout: 30000,
       url: ['http://127.0.0.1:4173/login'],
       settings: {
-        preset,
+        ...(isDesktop ? { preset: 'desktop' } : {}),
         chromeFlags: '--no-sandbox --disable-dev-shm-usage',
       },
     },
