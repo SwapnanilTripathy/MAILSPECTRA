@@ -1,5 +1,5 @@
 import { useMasked } from '../context/PrivacyContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FolderGit2,
@@ -18,6 +18,7 @@ import {
 import api from '../api/client';
 import SeverityBadge from '../components/common/SeverityBadge';
 import DefangedIndicator from '../components/common/DefangedIndicator';
+import { TableLoadingSkeleton } from '../components/common/LoadingSkeleton';
 
 export default function CasesPage() {
   const navigate = useNavigate();
@@ -186,10 +187,7 @@ export default function CasesPage() {
       {/* Cases Table */}
       <div className="rounded-xl bg-[#111827] border border-slate-800 overflow-hidden shadow-xl">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
-            <div className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
-            <span>Loading investigation cases from database...</span>
-          </div>
+          <TableLoadingSkeleton rows={6} columns={7} />
         ) : error ? (
           <div role="alert" className="p-8 text-center text-amber-300 text-sm">
             {error}{' '}
