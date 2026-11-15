@@ -108,10 +108,12 @@ export default function CampaignsPage() {
               {campaigns.map((camp) => {
                 const isSelected = selectedCampaignId === camp.campaign_id;
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={camp.campaign_id}
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedCampaignId(camp.campaign_id)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                    className={`campaign-select-button p-4 rounded-xl border cursor-pointer transition-all ${
                       isSelected
                         ? 'bg-cyan-950/30 border-cyan-500/80 shadow-lg shadow-cyan-950/40 ring-1 ring-cyan-500/40'
                         : 'bg-[#111827] border-slate-800 hover:border-slate-700'
@@ -134,7 +136,7 @@ export default function CampaignsPage() {
                           : 'Recent'}
                       </span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -285,10 +287,12 @@ export default function CampaignsPage() {
 
                   <div className="divide-y divide-slate-800 font-mono text-xs">
                     {(campaignDetail.member_cases || []).map((mc) => (
-                      <div
+                      <button
+                        type="button"
                         key={mc.case_id}
+                        aria-label={`Open case ${mc.case_id}: ${mc.subject || mc.filename}`}
                         onClick={() => navigate(`/cases/${mc.case_id}`)}
-                        className="p-4 hover:bg-slate-800/30 transition cursor-pointer flex items-center justify-between"
+                        className="campaign-case-button p-4 hover:bg-slate-800/30 transition cursor-pointer"
                       >
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -310,7 +314,7 @@ export default function CampaignsPage() {
                           </span>
                           <ChevronRight className="w-4 h-4 text-slate-400" />
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
