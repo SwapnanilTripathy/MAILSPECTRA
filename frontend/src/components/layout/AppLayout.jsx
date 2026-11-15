@@ -64,6 +64,21 @@ const pageMeta = {
   'Case detail': { eyebrow: 'CASE INVESTIGATION', title: 'Case detail', note: 'Review findings, evidence integrity and the investigation timeline.' },
 };
 
+const routePreloaders = {
+  '/': () => import('../../pages/DashboardPage'),
+  '/investigate': () => import('../../pages/InvestigatePage'),
+  '/cases': () => import('../../pages/CasesPage'),
+  '/campaigns': () => import('../../pages/CampaignsPage'),
+  '/intelligence': () => import('../../pages/IntelligencePage'),
+  '/reports': () => import('../../pages/ReportsPage'),
+  '/settings': () => import('../../pages/SettingsPage'),
+};
+
+const preloadRoute = (path) => {
+  const preload = routePreloaders[path];
+  if (preload) void preload();
+};
+
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const { masked, setMasked } = usePrivacy();
@@ -123,6 +138,8 @@ export default function AppLayout() {
               to={path}
               end={path === '/'}
               onClick={() => mobile && setMobileOpen(false)}
+              onPointerEnter={() => preloadRoute(path)}
+              onFocus={() => preloadRoute(path)}
               className={({ isActive }) =>
                 `soc-nav-link ${isActive ? 'is-active' : ''} ${accent ? 'is-accent' : ''}`
               }

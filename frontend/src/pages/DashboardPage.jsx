@@ -16,13 +16,6 @@ import {
   BarChart3,
   Inbox,
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from 'recharts';
 import api from '../api/client';
 import MetricCard from '../components/common/MetricCard';
 import SeverityBadge from '../components/common/SeverityBadge';
@@ -279,46 +272,50 @@ export default function DashboardPage() {
               {categoryItems.length > 0 && categoryTotal > 0 ? (
                 <div className="category-visual">
                   <div className="category-donut-frame">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={categoryItems}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius="68%"
-                          outerRadius="88%"
-                          paddingAngle={categoryItems.length > 1 ? 3 : 0}
-                          stroke="none"
-                          isAnimationActive={true}
-                          animationDuration={950}
-                        >
-                          {categoryItems.map((entry, index) => (
-                            <Cell
-                              key={`${entry.name}-${index}`}
-                              aria-label={`${formatDistributionLabel(entry.name)}: ${entry.value} cases`}
-                              fill={getClassificationColor(entry.name, index)}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value, name) => [
-                            value,
-                            formatDistributionLabel(name),
-                          ]}
-                          contentStyle={{
-                            background: 'rgba(12, 13, 22, .96)',
-                            border: '1px solid rgba(151, 157, 199, .32)',
-                            borderRadius: 10,
-                            color: '#f4f1ea',
-                            boxShadow: '0 12px 32px rgba(0,0,0,.3)',
-                          }}
-                          itemStyle={{ color: '#eeeaf3' }}
-                          labelStyle={{ color: '#a9a9bd' }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <svg
+                      className="category-donut-svg"
+                      viewBox="0 0 100 100"
+                      role="img"
+                      aria-label="Threat classification distribution"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="none"
+                        stroke="rgba(139, 143, 174, .13)"
+                        strokeWidth="16"
+                      />
+                      {(() => {
+                        let offset = 0;
+                        return categoryItems.map((entry, index) => {
+                          const count = Math.max(0, Number(entry.value) || 0);
+                          const share = categoryTotal > 0 ? (count / categoryTotal) * 100 : 0;
+                          const gap = categoryItems.length > 1 ? 0.8 : 0;
+                          const segment = Math.max(0, share - gap);
+                          const dashOffset = -offset;
+                          offset += share;
+                          return (
+                            <circle
+                              key={`${entry.name}-segment`}
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              pathLength="100"
+                              fill="none"
+                              stroke={getClassificationColor(entry.name, index)}
+                              strokeWidth="16"
+                              strokeLinecap="butt"
+                              strokeDasharray={`${segment} ${100 - segment}`}
+                              strokeDashoffset={dashOffset}
+                              transform="rotate(-90 50 50)"
+                            >
+                              <title>{formatDistributionLabel(entry.name)}: {count} cases</title>
+                            </circle>
+                          );
+                        });
+                      })()}
+                    </svg>
                     <div className="category-donut-center" aria-label={`${categoryTotal} classified emails`}>
                       <strong>{categoryTotal.toLocaleString()}</strong>
                       <span>CLASSIFIED</span>
