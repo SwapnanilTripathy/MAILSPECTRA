@@ -20,26 +20,52 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
   Tooltip,
-  Legend,
 } from 'recharts';
 import api from '../api/client';
 import MetricCard from '../components/common/MetricCard';
 import SeverityBadge from '../components/common/SeverityBadge';
 import AccentTitle from '../components/common/AccentTitle.jsx';
 
-const COLORS = [
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#10b981',
-  '#a855f7',
-  '#06b6d4',
-];
+const CLASSIFICATION_COLORS = {
+  PHISHING: '#ff647d',
+  CREDENTIAL_HARVESTING: '#eb78d4',
+  BUSINESS_EMAIL_COMPROMISE: '#ffb65e',
+  IMPERSONATION: '#9b91ff',
+  FRAUD: '#bd8cff',
+  SUSPICIOUS: '#f1c76e',
+  LEGITIMATE: '#55d7a6',
+  UNKNOWN: '#6bc9e8',
+};
+
+const RISK_COLORS = {
+  CRITICAL: '#ff647d',
+  HIGH: '#ffb65e',
+  MEDIUM: '#9ca8ff',
+  LOW: '#55d7a6',
+};
+
+const RISK_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+
+const normalizeBucketName = (value) =>
+  String(value || 'UNKNOWN').trim().replace(/[\s-]+/g, '_').toUpperCase();
+
+const formatDistributionLabel = (value) =>
+  String(value || 'Unknown')
+    .replace(/[_-]+/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const getClassificationColor = (name, index) => {
+  const key = normalizeBucketName(name);
+  if (CLASSIFICATION_COLORS[key]) return CLASSIFICATION_COLORS[key];
+  if (key.includes('PHISH')) return CLASSIFICATION_COLORS.PHISHING;
+  if (key.includes('CREDENTIAL')) return CLASSIFICATION_COLORS.CREDENTIAL_HARVESTING;
+  return ['#6bc9e8', '#a8a0ff', '#e58cb5', '#9bcca8'][index % 4];
+};
+
+const getRiskColor = (name) =>
+  RISK_COLORS[normalizeBucketName(name)] || '#9ca8ff';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -86,6 +112,36 @@ export default function DashboardPage() {
       : !distribution
         ? 'Data is currently unavailable.'
         : message;
+
+  const categoryItems = distribution?.category_distribution || [];
+  const sortedCategoryItems = [...categoryItems].sort(
+    (a, b) => (Number(b.value) || 0) - (Number(a.value) || 0),
+  );
+  const categoryTotal = categoryItems.reduce(
+    (total, item) => total + Math.max(0, Number(item.value) || 0),
+    0,
+  );
+
+  const riskItems = distribution?.risk_distribution || [];
+  const riskMap = new Map(
+    riskItems.map((item) => [normalizeBucketName(item.name), item]),
+  );
+  const riskRows = [
+    ...RISK_ORDER.map((name) => ({
+      name,
+      value: Math.max(0, Number(riskMap.get(name)?.value) || 0),
+    })),
+    ...riskItems
+      .filter((item) => !RISK_ORDER.includes(normalizeBucketName(item.name)))
+      .map((item) => ({
+        name: normalizeBucketName(item.name),
+        value: Math.max(0, Number(item.value) || 0),
+      })),
+  ];
+  const riskTotal = riskItems.reduce(
+    (total, item) => total + Math.max(0, Number(item.value) || 0),
+    0,
+  );
 
   return (
     <div className="dashboard space-y-6 max-w-7xl mx-auto">
@@ -200,57 +256,96 @@ export default function DashboardPage() {
           </div>
           <span className="section-aside">Based on analyzed emails</span>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="insight-card">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 insight-grid">
+          <div className="insight-card insight-card--classification">
             <div className="card-heading">
               <div>
                 <h3>Threat classification</h3>
                 <p>Distribution by classification</p>
               </div>
-              <span className="card-heading-icon">
+              <span className="card-heading-icon insight-card-icon--violet">
                 <PieIcon size={18} aria-hidden="true" />
               </span>
             </div>
-            <div className="chart-area">
-              {distribution?.category_distribution?.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={distribution.category_distribution}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="48%"
-                      innerRadius={55}
-                      outerRadius={80}
-                      paddingAngle={4}
-                    >
-                      {distribution.category_distribution.map(
-                        (entry, index) => (
-                          <Cell
-                            key={`${entry.name}-${index}`}
-                            aria-label={`${entry.name}: ${entry.value} cases`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ),
-                      )}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        background: '#111c2d',
-                        border: '1px solid #334155',
-                        borderRadius: 8,
-                      }}
-                    />
-                    <Legend
-                      verticalAlign="bottom"
-                      height={36}
-                      formatter={(value) => (
-                        <span className="text-xs text-slate-300">{value}</span>
-                      )}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+            <div className="chart-area chart-area--distribution">
+              {categoryItems.length > 0 && categoryTotal > 0 ? (
+                <div className="category-visual">
+                  <div className="category-donut-frame">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categoryItems}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius="68%"
+                          outerRadius="88%"
+                          paddingAngle={categoryItems.length > 1 ? 3 : 0}
+                          stroke="none"
+                          isAnimationActive={true}
+                          animationDuration={950}
+                        >
+                          {categoryItems.map((entry, index) => (
+                            <Cell
+                              key={`${entry.name}-${index}`}
+                              aria-label={`${formatDistributionLabel(entry.name)}: ${entry.value} cases`}
+                              fill={getClassificationColor(entry.name, index)}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value, name) => [
+                            value,
+                            formatDistributionLabel(name),
+                          ]}
+                          contentStyle={{
+                            background: 'rgba(12, 13, 22, .96)',
+                            border: '1px solid rgba(151, 157, 199, .32)',
+                            borderRadius: 10,
+                            color: '#f4f1ea',
+                            boxShadow: '0 12px 32px rgba(0,0,0,.3)',
+                          }}
+                          itemStyle={{ color: '#eeeaf3' }}
+                          labelStyle={{ color: '#a9a9bd' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="category-donut-center" aria-label={`${categoryTotal} classified emails`}>
+                      <strong>{categoryTotal.toLocaleString()}</strong>
+                      <span>CLASSIFIED</span>
+                    </div>
+                  </div>
+
+                  <div className="category-legend" role="list" aria-label="Classification totals">
+                    {sortedCategoryItems.map((entry, index) => {
+                      const count = Math.max(0, Number(entry.value) || 0);
+                      const share = categoryTotal > 0 ? (count / categoryTotal) * 100 : 0;
+                      const color = getClassificationColor(entry.name, index);
+                      return (
+                        <div className="category-legend-item" role="listitem" key={`${entry.name}-legend`}>
+                          <div className="category-legend-heading">
+                            <span className="category-legend-name">
+                              <i style={{ background: color }} />
+                              {formatDistributionLabel(entry.name)}
+                            </span>
+                            <strong>{count.toLocaleString()}</strong>
+                          </div>
+                          <div
+                            className="category-legend-track"
+                            role="progressbar"
+                            aria-label={`${formatDistributionLabel(entry.name)} share`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={Math.round(share)}
+                          >
+                            <span style={{ width: `${share}%`, background: color }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               ) : (
                 <div className="empty-chart">
                   <div className="empty-icon">
@@ -272,42 +367,64 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-          <div className="insight-card">
+
+          <div className="insight-card insight-card--risk">
             <div className="card-heading">
               <div>
                 <h3>Risk distribution</h3>
                 <p>Cases grouped by severity</p>
               </div>
-              <span className="card-heading-icon">
+              <span className="card-heading-icon insight-card-icon--cyan">
                 <BarChart3 size={18} aria-hidden="true" />
               </span>
             </div>
-            <div className="chart-area">
-              {distribution?.risk_distribution?.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={distribution.risk_distribution}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                  >
-                    <XAxis
-                      dataKey="name"
-                      stroke="#64748b"
-                      tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    />
-                    <YAxis
-                      stroke="#64748b"
-                      tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: '#111c2d',
-                        border: '1px solid #334155',
-                        borderRadius: 8,
-                      }}
-                    />
-                    <Bar dataKey="value" fill="#22d3ee" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+            <div className="chart-area chart-area--distribution">
+              {riskItems.length > 0 ? (
+                <div className="risk-distribution">
+                  <div className="risk-distribution-summary">
+                    <div>
+                      <strong>{riskTotal.toLocaleString()}</strong>
+                      <span>risk-scored cases</span>
+                    </div>
+                    <span className="risk-distribution-tag">SEVERITY MIX</span>
+                  </div>
+                  <div className="risk-breakdown-list" role="list" aria-label="Cases by risk severity">
+                    {riskRows.map((entry) => {
+                      const count = entry.value;
+                      const share = riskTotal > 0 ? (count / riskTotal) * 100 : 0;
+                      const color = getRiskColor(entry.name);
+                      return (
+                        <div
+                          className="risk-breakdown-row"
+                          role="listitem"
+                          key={entry.name}
+                          style={{ '--risk-color': color }}
+                        >
+                          <div className="risk-breakdown-heading">
+                            <span className="risk-level">
+                              <i />
+                              {formatDistributionLabel(entry.name)}
+                            </span>
+                            <span className="risk-breakdown-value">
+                              <strong>{count.toLocaleString()}</strong>
+                              <small>{Math.round(share)}%</small>
+                            </span>
+                          </div>
+                          <div
+                            className="risk-breakdown-track"
+                            role="progressbar"
+                            aria-label={`${formatDistributionLabel(entry.name)} share`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={Math.round(share)}
+                          >
+                            <span style={{ width: `${share}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               ) : (
                 <div className="empty-chart">
                   <div className="empty-icon">
