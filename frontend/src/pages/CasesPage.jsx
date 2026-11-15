@@ -37,6 +37,42 @@ export default function CasesPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState('RESOLVED');
   const [statusComment, setStatusComment] = useState('');
+  const statusDialogRef = useRef(null);
+  const statusDialogCloseRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedCase) return undefined;
+    const previousFocus = document.activeElement;
+    statusDialogCloseRef.current?.focus();
+
+    const handleDialogKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSelectedCase(null);
+        return;
+      }
+      if (event.key !== 'Tab' || !statusDialogRef.current) return;
+      const focusable = statusDialogRef.current.querySelectorAll(
+        'a[href],button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleDialogKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleDialogKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [selectedCase]);
 
   useEffect(() => {
     fetchCases();
@@ -313,12 +349,22 @@ export default function CasesPage() {
       {/* Case Status Modal */}
       {selectedCase && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 font-mono">
+          <div
+            ref={statusDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="case-status-dialog-title"
+            tabIndex={-1}
+            className="dialog-surface w-full max-w-md bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 font-mono"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white uppercase">
+              <h3 id="case-status-dialog-title" className="text-sm font-bold text-white uppercase">
                 Update Case Lifecycle
               </h3>
               <button
+                ref={statusDialogCloseRef}
+                type="button"
+                aria-label="Close case status dialog"
                 onClick={() => setSelectedCase(null)}
                 className="text-slate-400 hover:text-white"
               >
@@ -337,10 +383,11 @@ export default function CasesPage() {
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1">
+                <label htmlFor="case-status-select" className="text-slate-400 block mb-1">
                   Investigation Status:
                 </label>
                 <select
+                  id="case-status-select"
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
                   className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 focus:border-cyan-500"
@@ -359,10 +406,11 @@ export default function CasesPage() {
               </div>
 
               <div>
-                <label className="text-slate-400 block mb-1">
+                <label htmlFor="case-status-comment" className="text-slate-400 block mb-1">
                   Analyst Notes / Triage Justification:
                 </label>
                 <textarea
+                  id="case-status-comment"
                   value={statusComment}
                   onChange={(e) => setStatusComment(e.target.value)}
                   placeholder="e.g., Domain blocked on edge firewall, user password reset issued."
