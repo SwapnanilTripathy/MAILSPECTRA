@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   UploadCloud,
@@ -26,15 +26,32 @@ import { DEMO_SAMPLE_FILES } from '../demoSamples';
 import { maskAnalysis } from '../utils/privacy';
 import { usePrivacy } from '../context/PrivacyContext';
 import VerdictBanner from '../components/investigation/VerdictBanner';
-import HeadersForensicsView from '../components/investigation/HeadersForensicsView';
-import RelayHopsView from '../components/investigation/RelayHopsView';
-import GeoIntelligenceView from '../components/investigation/GeoIntelligenceView';
-import DnsRdapView from '../components/investigation/DnsRdapView';
-import ThreatGraphView from '../components/investigation/ThreatGraphView';
-import ShapExplainerView from '../components/investigation/ShapExplainerView';
-import ObservablesView from '../components/investigation/ObservablesView';
-import CampaignAttributionView from '../components/investigation/CampaignAttributionView';
-import ContentIntelligenceView from '../components/investigation/ContentIntelligenceView';
+const HeadersForensicsView = lazy(() => import('../components/investigation/HeadersForensicsView'));
+const RelayHopsView = lazy(() => import('../components/investigation/RelayHopsView'));
+const GeoIntelligenceView = lazy(() => import('../components/investigation/GeoIntelligenceView'));
+const DnsRdapView = lazy(() => import('../components/investigation/DnsRdapView'));
+const ThreatGraphView = lazy(() => import('../components/investigation/ThreatGraphView'));
+const ShapExplainerView = lazy(() => import('../components/investigation/ShapExplainerView'));
+const ObservablesView = lazy(() => import('../components/investigation/ObservablesView'));
+const CampaignAttributionView = lazy(() => import('../components/investigation/CampaignAttributionView'));
+const ContentIntelligenceView = lazy(() => import('../components/investigation/ContentIntelligenceView'));
+
+const investigationTabLoaders = {
+  summary: () => import('../components/investigation/HeadersForensicsView'),
+  nlp: () => import('../components/investigation/ContentIntelligenceView'),
+  relay: () => import('../components/investigation/RelayHopsView'),
+  geo: () => import('../components/investigation/GeoIntelligenceView'),
+  dns: () => import('../components/investigation/DnsRdapView'),
+  graph: () => import('../components/investigation/ThreatGraphView'),
+  shap: () => import('../components/investigation/ShapExplainerView'),
+  observables: () => import('../components/investigation/ObservablesView'),
+  campaign: () => import('../components/investigation/CampaignAttributionView'),
+};
+
+const preloadInvestigationTab = (tabId) => {
+  const preload = investigationTabLoaders[tabId];
+  if (preload) void preload();
+};
 
 export default function InvestigatePage() {
   const location = useLocation();
@@ -457,6 +474,8 @@ export default function InvestigatePage() {
                 <button
                   key={t.id}
                   onClick={() => setActiveTab(t.id)}
+                  onPointerEnter={() => preloadInvestigationTab(t.id)}
+                  onFocus={() => preloadInvestigationTab(t.id)}
                   className={`flex items-center gap-2 px-4 py-2.5 border-b-2 text-xs font-mono font-semibold transition whitespace-nowrap ${
                     isActive
                       ? 'border-cyan-400 text-cyan-400 bg-cyan-500/5'
@@ -472,6 +491,14 @@ export default function InvestigatePage() {
 
           {/* Tab Panes */}
           <div className="pt-2">
+            <Suspense
+              fallback={
+                <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 px-5 py-4 text-xs text-slate-400" role="status">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400/25 border-t-cyan-400" />
+                  Preparing forensic view…
+                </div>
+              }
+            >
             {activeTab === 'evidence' && <section className="space-y-3"><h2 className="text-xl">Evidence manifest</h2><p>Original bytes and derived analysis are stored separately. Hash verification compares the current artifact with its stored digest.</p><pre className="whitespace-pre-wrap break-all text-xs">{JSON.stringify(displayAnalysis.evidence_manifest || { status: 'Unavailable for this legacy case' }, null, 2)}</pre></section>}
             {activeTab === 'summary' && (
               <div className="space-y-6">
@@ -547,6 +574,7 @@ export default function InvestigatePage() {
                 attributionSupport={displayAnalysis.attribution_support}
               />
             )}
+            </Suspense>
           </div>
         </div>
       )}
