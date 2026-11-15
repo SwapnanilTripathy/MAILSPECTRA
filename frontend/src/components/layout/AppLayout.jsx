@@ -25,6 +25,7 @@ import { useAuth } from '../../context/AuthContext';
 import { usePrivacy } from '../../context/PrivacyContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../api/client';
+import AccentTitle from '../common/AccentTitle.jsx';
 
 const navigationGroups = [
   {
@@ -254,7 +255,7 @@ export default function AppLayout() {
             <div>
               <p className="soc-page-eyebrow"><Activity size={13} aria-hidden="true" /> {meta.eyebrow}</p>
               <div className="soc-page-title-row">
-                <h1>{meta.title}</h1>
+                <h1><AccentTitle text={meta.title} /></h1>
                 {currentPage === 'Dashboard' && <span className="soc-page-chip">OVERVIEW</span>}
               </div>
               <p className="soc-page-note">{meta.note}</p>
