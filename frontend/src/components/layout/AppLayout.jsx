@@ -256,7 +256,7 @@ export default function AppLayout() {
           </div>
         )}
 
-        <main id="main-content" tabIndex="-1" className="workspace-main soc-main flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main id="main-content" tabIndex="-1" className={`workspace-main soc-main flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 ${currentPage === 'Dashboard' ? 'soc-main--dashboard' : ''}`}>
 {currentPage !== 'Dashboard' && (
             <div className="soc-page-heading">
               <div>
