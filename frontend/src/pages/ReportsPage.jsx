@@ -1,5 +1,5 @@
 import { useMasked } from '../context/PrivacyContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   FileDown,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 import SeverityBadge from '../components/common/SeverityBadge';
+import { TableLoadingSkeleton } from '../components/common/LoadingSkeleton';
 
 export default function ReportsPage() {
   const [rawcases, setCases] = useState([]);
@@ -92,10 +93,7 @@ export default function ReportsPage() {
       {/* Reports Table */}
       <div className="rounded-xl bg-[#111827] border border-slate-800 overflow-hidden shadow-xl">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
-            <div className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
-            <span>Loading forensic reports repository...</span>
-          </div>
+          <TableLoadingSkeleton rows={6} columns={5} />
         ) : error ? (
           <div role="alert" className="p-8 text-center text-amber-300 text-sm">
             {error}{' '}
