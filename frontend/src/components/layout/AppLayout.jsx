@@ -50,12 +50,6 @@ const navigationGroups = [
       { label: 'Settings', path: '/settings', icon: Settings },
     ],
   },
-  {
-    label: 'ACCOUNT',
-    items: [
-      { label: 'Settings', path: '/settings', icon: Settings },
-    ],
-  },
 ];
 
 const allItems = navigationGroups.flatMap((group) => group.items);
@@ -256,23 +250,21 @@ export default function AppLayout() {
           </div>
         )}
 
-        <main id="main-content" tabIndex="-1" className={`workspace-main soc-main flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 ${currentPage === 'Dashboard' ? 'soc-main--dashboard' : ''}`}>
-{currentPage !== 'Dashboard' && (
-            <div className="soc-page-heading">
-              <div>
-                <p className="soc-page-eyebrow"><Activity size={13} aria-hidden="true" /> {meta.eyebrow}</p>
-                <div className="soc-page-title-row">
-                  <h1><AccentTitle text={meta.title} /></h1>
-                  {currentPage === 'Dashboard' && <span className="soc-page-chip">OVERVIEW</span>}
-                </div>
-                <p className="soc-page-note">{meta.note}</p>
+        <main id="main-content" tabIndex="-1" className="workspace-main soc-main flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="soc-page-heading">
+            <div>
+              <p className="soc-page-eyebrow"><Activity size={13} aria-hidden="true" /> {meta.eyebrow}</p>
+              <div className="soc-page-title-row">
+                <h1><AccentTitle text={meta.title} /></h1>
+                {currentPage === 'Dashboard' && <span className="soc-page-chip">OVERVIEW</span>}
               </div>
-              <div className="soc-page-context">
-                <span className="soc-context-label">WORKSPACE</span>
-                <strong>MAILSPECTRA / {currentPage.toUpperCase()}</strong>
-              </div>
+              <p className="soc-page-note">{meta.note}</p>
             </div>
-          )}
+            <div className="soc-page-context">
+              <span className="soc-context-label">WORKSPACE</span>
+              <strong>MAILSPECTRA / {currentPage.toUpperCase()}</strong>
+            </div>
+          </div>
           <div className="soc-page-content">
             <Outlet />
           </div>
