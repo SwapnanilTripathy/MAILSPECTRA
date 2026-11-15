@@ -25,6 +25,42 @@ export default function ReportsPage() {
   const pageSize = 50;
   const [verifyingId, setVerifyingId] = useState(null);
   const [verificationModalData, setVerificationModalData] = useState(null);
+  const verificationDialogRef = useRef(null);
+  const verificationDialogCloseRef = useRef(null);
+
+  useEffect(() => {
+    if (!verificationModalData) return undefined;
+    const previousFocus = document.activeElement;
+    verificationDialogCloseRef.current?.focus();
+
+    const handleDialogKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setVerificationModalData(null);
+        return;
+      }
+      if (event.key !== 'Tab' || !verificationDialogRef.current) return;
+      const focusable = verificationDialogRef.current.querySelectorAll(
+        'a[href],button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleDialogKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleDialogKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [verificationModalData]);
 
   useEffect(() => {
     fetchReports();
@@ -216,15 +252,25 @@ export default function ReportsPage() {
       {/* Cryptographic Verification Modal */}
       {verificationModalData && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 font-mono">
+          <div
+            ref={verificationDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-verification-dialog-title"
+            tabIndex={-1}
+            className="dialog-surface w-full max-w-lg bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 font-mono"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white uppercase">
+                <h3 id="report-verification-dialog-title" className="text-sm font-bold text-white uppercase">
                   Cryptographic Integrity Attestation
                 </h3>
               </div>
               <button
+                ref={verificationDialogCloseRef}
+                type="button"
+                aria-label="Close report verification dialog"
                 onClick={() => setVerificationModalData(null)}
                 className="text-slate-400 hover:text-white"
               >
