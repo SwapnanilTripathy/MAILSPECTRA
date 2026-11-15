@@ -450,3 +450,87 @@ body::after {
 @media(prefers-reduced-motion:reduce){
   :root[data-theme] .overview-hero h1 .hero-title-accent{animation:none!important}
 }
+
+
+/* Settings identity emblem: a little more definition, without changing the orb. */
+.aurora-orb-core{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  border-color:rgba(188,180,255,.66);
+  background:
+    radial-gradient(circle at 28% 18%,rgba(177,211,255,.20),transparent 45%),
+    linear-gradient(145deg,rgba(91,97,255,.52),rgba(143,70,235,.42) 58%,rgba(63,47,124,.54));
+  box-shadow:
+    0 0 0 1px rgba(126,125,255,.08),
+    0 0 35px rgba(122,91,255,.30),
+    0 9px 25px rgba(0,0,0,.18),
+    inset 0 1px rgba(255,255,255,.28),
+    inset 0 -12px 24px rgba(22,17,61,.16);
+}
+.aurora-orb-core::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  inset:7px;
+  border:1px solid rgba(209,207,255,.20);
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(255,255,255,.055),transparent 62%);
+  box-shadow:inset 0 1px rgba(255,255,255,.075);
+  pointer-events:none;
+}
+.aurora-orb-core::after{
+  content:"";
+  position:absolute;
+  z-index:1;
+  top:-34%;
+  left:-48%;
+  width:34%;
+  height:170%;
+  transform:rotate(28deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);
+  opacity:0;
+  animation:aurora-emblem-glint 7.5s ease-in-out 1.2s infinite;
+  pointer-events:none;
+}
+@keyframes aurora-emblem-glint{
+  0%,58%,100%{left:-48%;opacity:0}
+  64%{opacity:.72}
+  80%{left:118%;opacity:0}
+}
+.aurora-orb-core>svg{
+  position:relative;
+  z-index:2;
+  width:35px;
+  height:35px;
+  color:#e9faff;
+  stroke-width:1.85;
+  filter:
+    drop-shadow(0 0 4px rgba(113,229,247,.34))
+    drop-shadow(0 2px 8px rgba(135,112,255,.30));
+  transition:transform .55s cubic-bezier(.22,1,.36,1),filter .55s ease;
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .aurora-health-card:hover .aurora-orb-core>svg{
+    transform:scale(1.07) translateY(-1px);
+    filter:
+      drop-shadow(0 0 7px rgba(113,229,247,.48))
+      drop-shadow(0 2px 11px rgba(135,112,255,.38));
+  }
+}
+:root[data-theme="light"] .aurora-orb-core{
+  border-color:rgba(113,105,210,.42);
+  background:
+    radial-gradient(circle at 28% 18%,rgba(255,255,255,.34),transparent 45%),
+    linear-gradient(145deg,#6877ed,#9164df 58%,#6555b6);
+  box-shadow:0 0 32px rgba(104,105,226,.18),inset 0 1px rgba(255,255,255,.48);
+}
+:root[data-theme="light"] .aurora-orb-core::before{
+  border-color:rgba(255,255,255,.32);
+}
+@media(prefers-reduced-motion:reduce){
+  .aurora-orb-core::after{animation:none!important;opacity:0!important}
+  .aurora-orb-core>svg{transition:none!important}
+}
+:root[data-motion="reduced"] .aurora-orb-core::after{animation:none!important;opacity:0!important}
+:root[data-motion="reduced"] .aurora-orb-core>svg{transition:none!important}
