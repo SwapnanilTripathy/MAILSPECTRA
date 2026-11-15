@@ -54,31 +54,6 @@ async def test_dashboard_overview_matches_legacy_dashboard_endpoints(auth_header
 
 
 @pytest.mark.asyncio
-async def test_dashboard_overview_matches_legacy_dashboard_endpoints(auth_headers):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
-        overview_response = await client.get("/api/v1/dashboard/overview")
-        assert overview_response.status_code == 200
-        overview = overview_response.json()
-
-        stats_response = await client.get("/api/v1/dashboard/stats")
-        recent_response = await client.get("/api/v1/dashboard/recent")
-        distribution_response = await client.get("/api/v1/dashboard/distribution")
-        assert stats_response.status_code == 200
-        assert recent_response.status_code == 200
-        assert distribution_response.status_code == 200
-
-        assert overview["stats"] == stats_response.json()
-        assert overview["recent"] == recent_response.json()
-        assert overview["distribution"] == distribution_response.json()
-
-        total = overview["stats"]["total_analyzed"]
-        assert sum(item["value"] for item in overview["distribution"]["category_distribution"]) == total
-        assert sum(item["value"] for item in overview["distribution"]["risk_distribution"]) == total
-        assert len(overview["recent"]["items"]) <= 10
-        assert all("full_analysis" not in item and "full_analysis_json" not in item for item in overview["recent"]["items"])
-
-
-@pytest.mark.asyncio
 async def test_3_case_creation_and_retrieval(auth_headers):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers=auth_headers) as client:
         case_payload = {
