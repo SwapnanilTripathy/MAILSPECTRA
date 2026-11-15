@@ -30,6 +30,7 @@ import {
 import api from '../api/client';
 import MetricCard from '../components/common/MetricCard';
 import SeverityBadge from '../components/common/SeverityBadge';
+import AccentTitle from '../components/common/AccentTitle.jsx';
 
 const COLORS = [
   '#ef4444',
@@ -142,7 +143,7 @@ export default function DashboardPage() {
         <div className="section-heading">
           <div>
             <p className="section-kicker">AT A GLANCE</p>
-            <h2 id="overview-heading">Your security landscape</h2>
+            <h2 id="overview-heading"><AccentTitle text="Your security landscape" /></h2>
           </div>
           <span className="section-aside">Overview</span>
         </div>
@@ -195,7 +196,7 @@ export default function DashboardPage() {
         <div className="section-heading">
           <div>
             <p className="section-kicker">THREAT INTELLIGENCE</p>
-            <h2 id="insights-heading">Analysis insights</h2>
+            <h2 id="insights-heading"><AccentTitle text="Analysis insights" /></h2>
           </div>
           <span className="section-aside">Based on analyzed emails</span>
         </div>
@@ -338,7 +339,7 @@ export default function DashboardPage() {
               <Clock size={18} aria-hidden="true" />
             </span>
             <div>
-              <h2 id="recent-heading">Recent investigations</h2>
+              <h2 id="recent-heading"><AccentTitle text="Recent investigations" /></h2>
               <p>Your latest triage activity</p>
             </div>
           </div>
