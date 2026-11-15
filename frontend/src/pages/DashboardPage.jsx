@@ -48,13 +48,13 @@ const RISK_COLORS = {
 const RISK_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
 const normalizeBucketName = (value) =>
-  String(value || 'UNKNOWN').trim().replace(/[\\s-]+/g, '_').toUpperCase();
+  String(value || 'UNKNOWN').trim().replace(/[\s-]+/g, '_').toUpperCase();
 
 const formatDistributionLabel = (value) =>
   String(value || 'Unknown')
     .replace(/[_-]+/g, ' ')
     .toLowerCase()
-    .replace(/\\b\\w/g, (letter) => letter.toUpperCase());
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 const getClassificationColor = (name, index) => {
   const key = normalizeBucketName(name);
