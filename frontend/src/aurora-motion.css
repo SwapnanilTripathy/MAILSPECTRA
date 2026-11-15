@@ -117,3 +117,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 :root[data-motion="reduced"] body::before,:root[data-motion="reduced"] body::after,:root[data-motion="reduced"] .soc-nav-indicator,:root[data-motion="reduced"] .hero-shield,:root[data-motion="reduced"] .hero-orbit-outer,:root[data-motion="reduced"] .hero-orbit-inner,:root[data-motion="reduced"] .aurora-health-glow,:root[data-motion="reduced"] .aurora-orbit,:root[data-motion="reduced"] .aurora-orb-core,:root[data-motion="reduced"] .aurora-live-label i{animation:none!important}
 :root[data-motion="reduced"] *,:root[data-motion="reduced"] *::before,:root[data-motion="reduced"] *::after{transition-duration:.01ms!important}
 @media(prefers-reduced-motion:reduce){body::before,body::after,.soc-nav-indicator,.hero-shield,.hero-orbit-outer,.hero-orbit-inner,.aurora-orbit,.aurora-orb-core,.aurora-live-label i{animation:none!important}.soc-page-content>*{animation:none!important}}
+
+/* The in-app reduced-motion preference also disables route entrance and decorative motion. */
+:root[data-motion="reduced"] .soc-page-content>*,
+:root[data-motion="reduced"] .aurora-spark,
+:root[data-motion="reduced"] .aurora-spin,
+:root[data-motion="reduced"] .hero-orbit-dot,
+:root[data-motion="reduced"] .soc-nav-indicator {
+  animation: none !important;
+}
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: .01ms !important;
+}
