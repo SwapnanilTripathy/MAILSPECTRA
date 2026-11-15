@@ -15,6 +15,7 @@ import {
 import api from '../api/client';
 import DefangedIndicator from '../components/common/DefangedIndicator';
 import SeverityBadge from '../components/common/SeverityBadge';
+import { CardListLoadingSkeleton } from '../components/common/LoadingSkeleton';
 
 export default function CampaignsPage() {
   const navigate = useNavigate();
@@ -80,10 +81,7 @@ export default function CampaignsPage() {
       </div>
 
       {loading ? (
-        <div className="p-16 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
-          <div className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
-          <span>Discovering correlated campaign clusters...</span>
-        </div>
+        <CardListLoadingSkeleton rows={3} />
       ) : error ? (
         <div role="alert" className="p-8 text-center text-amber-300 text-sm">
           {error}{' '}
