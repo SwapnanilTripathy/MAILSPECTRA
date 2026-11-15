@@ -1,4 +1,4 @@
-const isDesktop = process.env.LHCI_PRESET === 'desktop';
+const isDesktop = process.env.MAILSPECTRA_AUDIT_FORM_FACTOR === 'desktop';
 
 module.exports = {
   ci: {
