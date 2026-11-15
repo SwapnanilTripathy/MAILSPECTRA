@@ -20,6 +20,7 @@ import api from '../api/client';
 import MetricCard from '../components/common/MetricCard';
 import SeverityBadge from '../components/common/SeverityBadge';
 import AccentTitle from '../components/common/AccentTitle.jsx';
+import { ChartLoadingSkeleton, TableLoadingSkeleton } from '../components/common/LoadingSkeleton';
 
 const CLASSIFICATION_COLORS = {
   PHISHING: '#ff647d',
@@ -275,7 +276,9 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="chart-area chart-area--distribution">
-              {categoryItems.length > 0 && categoryTotal > 0 ? (
+              {loading ? (
+                <ChartLoadingSkeleton variant="donut" rows={4} />
+              ) : categoryItems.length > 0 && categoryTotal > 0 ? (
                 <div className="category-visual">
                   <div className="category-donut-frame">
                     <svg
@@ -390,7 +393,9 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="chart-area chart-area--distribution">
-              {riskItems.length > 0 ? (
+              {loading ? (
+                <ChartLoadingSkeleton variant="bars" rows={4} />
+              ) : riskItems.length > 0 ? (
                 <div className="risk-distribution">
                   <div className="risk-distribution-summary">
                     <div>
@@ -475,7 +480,9 @@ export default function DashboardPage() {
             View all cases <ArrowRight size={15} aria-hidden="true" />
           </button>
         </div>
-        {!recentCases?.length ? (
+        {loading ? (
+          <TableLoadingSkeleton rows={4} columns={7} />
+        ) : !recentCases?.length ? (
           <div className="recent-empty">
             <Inbox size={22} aria-hidden="true" />
             <span>
