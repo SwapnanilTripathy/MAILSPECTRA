@@ -95,7 +95,20 @@ export default function ReportsPage() {
   const handleGenerate = async (caseId) => {
     try {
       await api.generateReport(caseId);
-      fetchReports();
+      await fetchReports();
+      await api.downloadReport(caseId);
+    } catch (err) {
+      alert(`Report error: ${err.message}`);
+    }
+  };
+
+  const handleDownload = async (caseId) => {
+    try {
+      // When privacy masking is enabled, refresh the stored PDF with a
+      // redacted version before download; otherwise use the existing report.
+      if (sessionStorage.getItem('mailspectra_mask') === 'true') {
+        await api.generateReport(caseId, true);
+      }
       await api.downloadReport(caseId);
     } catch (err) {
       alert(`Report error: ${err.message}`);
@@ -200,7 +213,7 @@ export default function ReportsPage() {
                       <td className="px-5 py-3.5 text-right space-x-2">
                         {hasReport ? (
                           <button
-                            onClick={() => api.downloadReport(c.case_id).catch(error => alert(error.message))}
+                            onClick={() => handleDownload(c.case_id)}
                             className="inline-flex items-center gap-1 px-3 py-1 rounded bg-cyan-700 hover:bg-cyan-800 text-white font-medium text-[11px] transition shadow-sm"
                           >
                             <FileDown className="w-3.5 h-3.5" />
