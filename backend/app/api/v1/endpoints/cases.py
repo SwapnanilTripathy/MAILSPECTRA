@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import load_only, selectinload
 
 from backend.app.core.logging import logger
 from backend.app.core.assessment import severity_for_score
@@ -53,7 +53,29 @@ async def list_cases(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
-    stmt = select(CaseRecord).order_by(desc(CaseRecord.created_at))
+    # Case tables never need the full forensic JSON snapshot. Exclude it from
+    # the list query so large investigations do not inflate every page response.
+    stmt = (
+        select(CaseRecord)
+        .options(load_only(
+            CaseRecord.case_id,
+            CaseRecord.filename,
+            CaseRecord.subject,
+            CaseRecord.from_address,
+            CaseRecord.sender_domain,
+            CaseRecord.origin_ip,
+            CaseRecord.classification,
+            CaseRecord.risk_score,
+            CaseRecord.confidence,
+            CaseRecord.status,
+            CaseRecord.priority,
+            CaseRecord.assigned_to,
+            CaseRecord.sha256,
+            CaseRecord.report_sha256,
+            CaseRecord.created_at,
+        ))
+        .order_by(desc(CaseRecord.created_at))
+    )
     if status_filter:
         stmt = stmt.where(CaseRecord.status == status_filter.upper())
     if classification_filter:
