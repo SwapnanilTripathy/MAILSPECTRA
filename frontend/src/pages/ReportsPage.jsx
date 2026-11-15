@@ -1,5 +1,5 @@
 import { useMasked } from '../context/PrivacyContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   FileDown,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 import SeverityBadge from '../components/common/SeverityBadge';
+import { TableLoadingSkeleton } from '../components/common/LoadingSkeleton';
 
 export default function ReportsPage() {
   const [rawcases, setCases] = useState([]);
@@ -24,6 +25,42 @@ export default function ReportsPage() {
   const pageSize = 50;
   const [verifyingId, setVerifyingId] = useState(null);
   const [verificationModalData, setVerificationModalData] = useState(null);
+  const verificationDialogRef = useRef(null);
+  const verificationDialogCloseRef = useRef(null);
+
+  useEffect(() => {
+    if (!verificationModalData) return undefined;
+    const previousFocus = document.activeElement;
+    verificationDialogCloseRef.current?.focus();
+
+    const handleDialogKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setVerificationModalData(null);
+        return;
+      }
+      if (event.key !== 'Tab' || !verificationDialogRef.current) return;
+      const focusable = verificationDialogRef.current.querySelectorAll(
+        'a[href],button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleDialogKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleDialogKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [verificationModalData]);
 
   useEffect(() => {
     fetchReports();
@@ -58,7 +95,20 @@ export default function ReportsPage() {
   const handleGenerate = async (caseId) => {
     try {
       await api.generateReport(caseId);
-      fetchReports();
+      await fetchReports();
+      await api.downloadReport(caseId);
+    } catch (err) {
+      alert(`Report error: ${err.message}`);
+    }
+  };
+
+  const handleDownload = async (caseId) => {
+    try {
+      // When privacy masking is enabled, refresh the stored PDF with a
+      // redacted version before download; otherwise use the existing report.
+      if (sessionStorage.getItem('mailspectra_mask') === 'true') {
+        await api.generateReport(caseId, true);
+      }
       await api.downloadReport(caseId);
     } catch (err) {
       alert(`Report error: ${err.message}`);
@@ -92,10 +142,7 @@ export default function ReportsPage() {
       {/* Reports Table */}
       <div className="rounded-xl bg-[#111827] border border-slate-800 overflow-hidden shadow-xl">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
-            <div className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
-            <span>Loading forensic reports repository...</span>
-          </div>
+          <TableLoadingSkeleton rows={6} columns={5} />
         ) : error ? (
           <div role="alert" className="p-8 text-center text-amber-300 text-sm">
             {error}{' '}
@@ -166,7 +213,7 @@ export default function ReportsPage() {
                       <td className="px-5 py-3.5 text-right space-x-2">
                         {hasReport ? (
                           <button
-                            onClick={() => api.downloadReport(c.case_id).catch(error => alert(error.message))}
+                            onClick={() => handleDownload(c.case_id)}
                             className="inline-flex items-center gap-1 px-3 py-1 rounded bg-cyan-700 hover:bg-cyan-800 text-white font-medium text-[11px] transition shadow-sm"
                           >
                             <FileDown className="w-3.5 h-3.5" />
@@ -218,15 +265,25 @@ export default function ReportsPage() {
       {/* Cryptographic Verification Modal */}
       {verificationModalData && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 font-mono">
+          <div
+            ref={verificationDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-verification-dialog-title"
+            tabIndex={-1}
+            className="dialog-surface w-full max-w-lg bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 font-mono"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white uppercase">
+                <h3 id="report-verification-dialog-title" className="text-sm font-bold text-white uppercase">
                   Cryptographic Integrity Attestation
                 </h3>
               </div>
               <button
+                ref={verificationDialogCloseRef}
+                type="button"
+                aria-label="Close report verification dialog"
                 onClick={() => setVerificationModalData(null)}
                 className="text-slate-400 hover:text-white"
               >

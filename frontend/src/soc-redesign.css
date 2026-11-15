@@ -602,3 +602,131 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opa
   :root[data-theme] .soc-brand-mark::after{animation:none!important;opacity:0!important}
 }
 :root[data-motion="reduced"] .soc-brand-mark::after{animation:none!important;opacity:0!important}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Loading states + keyboard affordances
+═══════════════════════════════════════════════════════════════ */
+.mailspectra-skeleton-block{
+  display:block;
+  min-width:0;
+  height:10px;
+  border-radius:999px;
+  background:linear-gradient(100deg,
+    color-mix(in srgb,var(--rd-line) 70%,transparent) 22%,
+    color-mix(in srgb,var(--rd-sig) 23%,var(--rd-l2)) 44%,
+    color-mix(in srgb,var(--rd-line) 70%,transparent) 66%);
+  background-size:220% 100%;
+  animation:mailspectra-skeleton-shimmer 1.45s ease-in-out infinite;
+}
+@keyframes mailspectra-skeleton-shimmer{
+  0%{background-position:100% 0}
+  100%{background-position:-120% 0}
+}
+.mailspectra-table-skeleton{
+  display:grid;
+  gap:0;
+  width:100%;
+  padding:0 18px;
+}
+.mailspectra-skeleton-row{
+  display:grid;
+  grid-template-columns:repeat(var(--skeleton-columns,6),minmax(38px,1fr));
+  align-items:center;
+  gap:clamp(10px,2vw,22px);
+  min-height:53px;
+  border-bottom:1px solid color-mix(in srgb,var(--rd-line) 65%,transparent);
+}
+.mailspectra-skeleton-row:last-child{border-bottom:0}
+.mailspectra-skeleton-row .mailspectra-skeleton-block:nth-child(2){height:12px}
+.mailspectra-skeleton-row.is-heading{
+  min-height:43px;
+  border-bottom-color:var(--rd-line);
+}
+.mailspectra-skeleton-row.is-heading .mailspectra-skeleton-block{
+  width:58%;
+  height:7px;
+  opacity:.62;
+}
+.mailspectra-chart-skeleton{
+  display:grid;
+  grid-template-columns:minmax(115px,170px) minmax(0,1fr);
+  align-items:center;
+  gap:clamp(12px,2vw,24px);
+  min-height:210px;
+  padding:8px 2px;
+}
+.mailspectra-skeleton-donut{
+  width:min(100%,164px);
+  aspect-ratio:1;
+  justify-self:center;
+  border-radius:50%;
+  background:radial-gradient(circle,transparent 51%,rgba(150,155,190,.13) 52%,rgba(150,155,190,.13) 66%,transparent 67%);
+  border:0;
+}
+.mailspectra-skeleton-bars{
+  display:grid;
+  gap:17px;
+}
+.mailspectra-skeleton-bars .mailspectra-skeleton-block{height:8px}
+.mailspectra-skeleton-legend{
+  display:grid;
+  gap:13px;
+}
+.mailspectra-skeleton-legend>div{
+  display:grid;
+  gap:7px;
+}
+.mailspectra-skeleton-legend>div span:first-child{width:46%;height:8px}
+.mailspectra-skeleton-legend>div span:last-child{width:100%;height:5px;opacity:.7}
+.mailspectra-card-skeleton-list{display:grid;gap:12px}
+.mailspectra-card-skeleton{
+  display:grid;
+  gap:12px;
+  min-height:74px;
+  padding:17px;
+  border:1px solid var(--rd-line);
+  border-radius:13px;
+  background:color-mix(in srgb,var(--rd-glass) 70%,transparent);
+}
+.mailspectra-card-skeleton .mailspectra-skeleton-block:first-child{width:54%;height:10px}
+.mailspectra-card-skeleton .mailspectra-skeleton-block:last-child{width:78%;height:8px}
+
+/* Visible focus for keyboard users, without affecting the resting design. */
+:root[data-theme] :where(a,button,input,select,textarea,[role="button"],[tabindex]):focus-visible{
+  outline:2px solid var(--rd-sig);
+  outline-offset:3px;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--rd-sig) 18%,transparent);
+}
+:root[data-theme] .soc-nav-link:focus-visible,
+:root[data-theme] .soc-brand:focus-visible{outline-offset:2px}
+:root[data-theme] button:disabled,
+:root[data-theme] [aria-disabled="true"]{cursor:not-allowed}
+:root[data-theme] :where(button,a,[role="button"]){touch-action:manipulation}
+:root[data-theme] .campaign-select-button{text-align:left;width:100%;font:inherit}
+:root[data-theme] .campaign-select-button:focus-visible{position:relative;z-index:1}
+:root[data-theme] .campaign-case-button{
+  display:flex;
+  width:100%;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  text-align:left;
+}
+:root[data-theme] .dialog-surface{max-height:min(88dvh,760px);overflow:auto;overscroll-behavior:contain}
+@media(max-width:640px){
+  .mailspectra-table-skeleton{padding:0 12px}
+  .mailspectra-skeleton-row{grid-template-columns:repeat(var(--skeleton-columns,5),minmax(32px,1fr));gap:8px;min-height:47px}
+  .mailspectra-chart-skeleton{grid-template-columns:minmax(105px,135px) minmax(0,1fr);gap:10px}
+  .mailspectra-skeleton-donut{width:100%}
+  .mailspectra-skeleton-legend{gap:10px}
+}
+@media(max-width:380px){
+  .mailspectra-chart-skeleton{grid-template-columns:1fr}
+  .mailspectra-skeleton-donut{width:130px}
+  .mailspectra-skeleton-legend{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){
+  .mailspectra-skeleton-block{animation:none!important}
+}
+:root[data-motion="reduced"] .mailspectra-skeleton-block{animation:none!important}

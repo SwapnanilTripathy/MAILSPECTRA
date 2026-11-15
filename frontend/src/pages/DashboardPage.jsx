@@ -20,6 +20,7 @@ import api from '../api/client';
 import MetricCard from '../components/common/MetricCard';
 import SeverityBadge from '../components/common/SeverityBadge';
 import AccentTitle from '../components/common/AccentTitle.jsx';
+import { ChartLoadingSkeleton, TableLoadingSkeleton } from '../components/common/LoadingSkeleton';
 
 const CLASSIFICATION_COLORS = {
   PHISHING: '#ff647d',
@@ -71,18 +72,25 @@ export default function DashboardPage() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
+    let active = true;
     const fetchDashboardData = async () => {
-      const [statsRes, recentRes, distRes] = await Promise.all([
-        api.getDashboardStats().catch(() => null),
-        api.getDashboardRecent().catch(() => null),
-        api.getDashboardDistribution().catch(() => null),
-      ]);
-      setStats(statsRes);
-      setRecentCases(recentRes?.items || (recentRes ? [] : null));
-      setDistribution(distRes);
-      setLoading(false);
+      try {
+        const overview = await api.getDashboardOverview();
+        if (!active) return;
+        setStats(overview?.stats || null);
+        setRecentCases(overview?.recent?.items || (overview ? [] : null));
+        setDistribution(overview?.distribution || null);
+      } catch {
+        if (!active) return;
+        setStats(null);
+        setRecentCases(null);
+        setDistribution(null);
+      } finally {
+        if (active) setLoading(false);
+      }
     };
     fetchDashboardData();
+    return () => { active = false; };
   }, []);
 
   const handleQuickUpload = async (e) => {
@@ -162,7 +170,7 @@ export default function DashboardPage() {
               </span>
               <input
                 type="file"
-                accept=".eml,.msg,.txt"
+                accept=".eml"
                 onChange={handleQuickUpload}
                 disabled={uploading}
                 className="sr-only"
@@ -177,10 +185,9 @@ export default function DashboardPage() {
           </div>
           <div className="hero-supported-files" aria-label="Supported email formats">
             <FileText size={13} aria-hidden="true" />
-            <span>SUPPORTED FORMATS</span>
+            <span>SUPPORTED INPUTS</span>
             <i>.EML</i>
-            <i>.MSG</i>
-            <i>.TXT</i>
+            <i>RAW TEXT</i>
           </div>
         </div>
         <div className="hero-visual" aria-hidden="true">
@@ -269,7 +276,9 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="chart-area chart-area--distribution">
-              {categoryItems.length > 0 && categoryTotal > 0 ? (
+              {loading ? (
+                <ChartLoadingSkeleton variant="donut" rows={4} />
+              ) : categoryItems.length > 0 && categoryTotal > 0 ? (
                 <div className="category-visual">
                   <div className="category-donut-frame">
                     <svg
@@ -384,7 +393,9 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="chart-area chart-area--distribution">
-              {riskItems.length > 0 ? (
+              {loading ? (
+                <ChartLoadingSkeleton variant="bars" rows={4} />
+              ) : riskItems.length > 0 ? (
                 <div className="risk-distribution">
                   <div className="risk-distribution-summary">
                     <div>
@@ -469,7 +480,9 @@ export default function DashboardPage() {
             View all cases <ArrowRight size={15} aria-hidden="true" />
           </button>
         </div>
-        {!recentCases?.length ? (
+        {loading ? (
+          <TableLoadingSkeleton rows={4} columns={7} />
+        ) : !recentCases?.length ? (
           <div className="recent-empty">
             <Inbox size={22} aria-hidden="true" />
             <span>

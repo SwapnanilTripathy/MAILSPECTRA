@@ -71,6 +71,7 @@ export const api = {
   getAlertConfig: () => apiClient.get('/alerts/config'),
 
   // Dashboard Metrics
+  getDashboardOverview: () => apiClient.get('/dashboard/overview'),
   getDashboardStats: () => apiClient.get('/dashboard/stats'),
   getDashboardRecent: () => apiClient.get('/dashboard/recent'),
   getDashboardDistribution: () => apiClient.get('/dashboard/distribution'),
@@ -90,8 +91,8 @@ export const api = {
   verifyEvidence: (caseId) => apiClient.get(`/cases/${caseId}/evidence/verify`),
   verifyReport: (caseId) => apiClient.get(`/reports/${caseId}/verify`),
   listReports: () => apiClient.get('/reports'),
+  // Generate separately before downloading; never rebuild the PDF implicitly here.
   downloadReport: async (caseId) => {
-    if (sessionStorage.getItem("mailspectra_mask") === "true") await api.generateReport(caseId, true);
     const blob = await apiClient.get(`/reports/${caseId}/download`, { responseType: 'blob' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a'); link.href = url; link.download = `${caseId}.pdf`; link.click();
