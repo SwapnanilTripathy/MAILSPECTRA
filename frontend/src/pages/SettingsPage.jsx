@@ -138,8 +138,7 @@ export default function SettingsPage() {
           <div className="aurora-detail-list">
             <div><span>Platform</span><strong>{systemStatus?.platform || 'MAILSPECTRA'}</strong></div>
             <div><span>Version</span><strong>{systemStatus?.version || systemSettings?.version || 'Unavailable'}</strong></div>
-            <div><span>Team</span><strong>{systemStatus?.team || 'DEEP thinkers'}</strong></div>
-            <div><span>Problem statement</span><strong>{systemStatus?.problem_statement || 'SIH26106'}</strong></div>
+            <div><span>Created by</span><strong>Swamp</strong></div>
             <div><span>Environment</span><strong>{systemStatus?.environment || 'Not reported'}</strong></div>
           </div>
         </section>
