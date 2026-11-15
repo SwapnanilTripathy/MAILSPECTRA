@@ -3,7 +3,6 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
   ChevronRight,
-  Cpu,
   Eye,
   EyeOff,
   FileText,
@@ -137,9 +136,33 @@ export default function AppLayout() {
 
       <aside className="app-sidebar soc-sidebar hidden lg:flex w-[264px] shrink-0 flex-col">
         <div className="soc-brand">
-          <div className="soc-brand-mark"><Cpu size={21} strokeWidth={1.8} aria-hidden="true" /></div>
-          <div className="min-w-0">
-            <div className="brand-name">MAIL<span>SPECTRA</span></div>
+          <div className="soc-brand-mark" aria-hidden="true">
+            <svg className="mailspectra-mark-svg" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="mailspectra-mark-stroke" x1="8" y1="8" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#6DE7E2" />
+                  <stop offset=".52" stopColor="#82B9FF" />
+                  <stop offset="1" stopColor="#B48BFF" />
+                </linearGradient>
+                <linearGradient id="mailspectra-mark-fold" x1="14" y1="19" x2="34" y2="33" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#E7FFFF" />
+                  <stop offset="1" stopColor="#A8B4FF" />
+                </linearGradient>
+              </defs>
+              <path d="M24 4.5 39 10v12.1c0 10.1-6 17-15 21.4-9-4.4-15-11.3-15-21.4V10L24 4.5Z"
+                fill="rgba(117,139,255,.075)" stroke="url(#mailspectra-mark-stroke)" strokeWidth="1.7" strokeLinejoin="round"/>
+              <path d="M15.7 18.8h16.6c1.3 0 2.3 1 2.3 2.3v10.1c0 1.3-1 2.3-2.3 2.3H15.7c-1.3 0-2.3-1-2.3-2.3V21.1c0-1.3 1-2.3 2.3-2.3Z"
+                fill="rgba(10,18,38,.5)" stroke="url(#mailspectra-mark-fold)" strokeWidth="1.55"/>
+              <path d="m14.2 20.5 9.8 7.6 9.8-7.6" stroke="url(#mailspectra-mark-fold)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="m17 31.1 5.1-4M31 31.1l-5.1-4" stroke="url(#mailspectra-mark-stroke)" strokeWidth="1.45" strokeLinecap="round"/>
+              <circle cx="35.6" cy="13.1" r="2" fill="#F18BD0"/>
+              <circle cx="35.6" cy="13.1" r="4.1" stroke="#F18BD0" strokeOpacity=".24"/>
+            </svg>
+          </div>
+          <div className="soc-brand-copy">
+            <div className="brand-name" aria-label="MAILSPECTRA">
+              <span className="brand-name-primary">MAIL</span><span className="brand-name-accent">SPECTRA</span>
+            </div>
             <div className="brand-caption">EMAIL FORENSICS PLATFORM</div>
           </div>
           <span className="soc-build-tag">SOC</span>
