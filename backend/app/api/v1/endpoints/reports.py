@@ -74,7 +74,11 @@ async def generate_case_report(case_id: str, request: Request, mask_pii: bool = 
     try:
         # ReportLab needs a local output path; only the completed bytes are persisted.
         with tempfile.TemporaryDirectory(prefix="mailspectra-report-") as temp_dir:
-            report_meta = ForensicReportGenerator.generate_case_pdf(case_dict, output_dir=temp_dir)
+            report_meta = await asyncio.to_thread(
+                ForensicReportGenerator.generate_case_pdf,
+                case_dict,
+                output_dir=temp_dir,
+            )
             pdf_bytes = await asyncio.to_thread(Path(report_meta["filepath"]).read_bytes)
 
         report_key = f"reports/{uuid.uuid4().hex}/{report_meta['filename']}"
