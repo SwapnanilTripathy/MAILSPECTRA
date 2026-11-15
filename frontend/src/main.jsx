@@ -4,6 +4,7 @@ import App from './App.jsx';
 import './index.css';
 import './soc-theme.css';
 import './soc-redesign.css';
+import './aurora-motion.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
