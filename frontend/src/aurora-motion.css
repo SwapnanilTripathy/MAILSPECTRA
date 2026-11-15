@@ -134,3 +134,85 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
   scroll-behavior: auto !important;
   transition-duration: .01ms !important;
 }
+
+/* Smoothness polish: longer, softer easing without removing the aurora character. */
+@keyframes aurora-drift {
+  0% { background-position: 0% 0%; transform: scale(1) rotate(0deg); }
+  50% { background-position: 48% 30%; transform: scale(1.035) rotate(.45deg); }
+  100% { background-position: 100% 100%; transform: scale(1.015) rotate(-.35deg); }
+}
+@keyframes aurora-breathe {
+  0%, 100% { opacity: .46; transform: translate3d(-1%, 0, 0) scale(1); }
+  50% { opacity: .7; transform: translate3d(1%, -.5%, 0) scale(1.035); }
+}
+@keyframes page-arrive {
+  from { opacity: 0; transform: translate3d(0, 9px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes soft-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -5px, 0); }
+}
+@keyframes status-pulse {
+  0%, 100% { opacity: .78; transform: scale(.97); }
+  50% { opacity: 1; transform: scale(1.045); }
+}
+
+:root { scroll-behavior: smooth; }
+body::before {
+  animation: aurora-drift 72s cubic-bezier(.45, 0, .55, 1) infinite alternate;
+}
+body::after {
+  animation: aurora-breathe 34s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+.soc-page-content>* {
+  animation: page-arrive .72s cubic-bezier(.22, 1, .36, 1) both;
+}
+.soc-sidebar,.soc-topbar,.soc-page-heading,.soc-nav-link,
+.soc-brand-mark,.soc-topbar-avatar,.soc-user-card .profile-avatar,
+.metric-card,.insight-card,.recent-card,.soc-alert-feed,
+.overview-hero,.aurora-metric,.aurora-panel,.aurora-provider,
+.aurora-preference,.aurora-refresh {
+  transition-duration: .48s;
+  transition-timing-function: cubic-bezier(.22, 1, .36, 1);
+}
+.soc-nav-link:hover { transform: translateX(2px); }
+.soc-page-heading:hover { transform: translateY(-1px); }
+:root[data-theme] .soc-new-case,
+:root[data-theme] .login-submit,
+:root[data-theme] .soc-page-content .primary-action,
+:root[data-theme] .soc-page-content button[class*="bg-cyan-700"] {
+  transition-duration: .52s !important;
+  transition-timing-function: cubic-bezier(.22, 1, .36, 1) !important;
+  background-position: 0% 50% !important;
+}
+:root[data-theme] .soc-new-case:hover,
+:root[data-theme] .login-submit:hover,
+:root[data-theme] .soc-page-content .primary-action:hover,
+:root[data-theme] .soc-page-content button[class*="bg-cyan-700"]:hover {
+  transform: translateY(-1px);
+  background-position: 100% 50% !important;
+}
+.metric-card::after { transition-duration: .7s; }
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .metric-card:hover,.insight-card:hover,.recent-card:hover,.soc-alert-feed:hover,
+  .soc-page-content .rounded-xl:hover,.soc-page-content .rounded-lg:hover {
+    transform: translateY(-2px);
+  }
+}
+.aurora-metric:hover,.aurora-provider:hover,.aurora-preference:hover,.aurora-refresh:hover {
+  transform: translateY(-1px);
+}
+.aurora-orbit.orbit-a { animation-duration: 30s; }
+.aurora-orbit.orbit-b { animation-duration: 26s; }
+.aurora-orb-core { animation-duration: 6.5s; }
+.aurora-spark { animation-duration: 3.2s; }
+.aurora-live-label i { animation-duration: 3.4s; }
+:root[data-theme] .soc-page-title-row h1 em,
+:root[data-theme] .soc-main .section-heading h2 em,
+:root[data-theme] .aurora-settings-header h2 em {
+  animation-duration: 20s;
+}
+@media(prefers-reduced-motion:reduce) {
+  :root { scroll-behavior: auto; }
+}
