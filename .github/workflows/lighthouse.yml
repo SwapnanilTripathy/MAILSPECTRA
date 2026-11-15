@@ -34,6 +34,50 @@ jobs:
         run: npx --yes @lhci/cli@0.14.0 autorun --config=./lighthouserc.cjs
         env:
           MAILSPECTRA_AUDIT_FORM_FACTOR: ${{ matrix.form_factor }}
+      - name: Summarize Lighthouse scores
+        if: always()
+        working-directory: frontend
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const dir = '.lighthouseci';
+          if (!fs.existsSync(dir)) {
+            console.log('No Lighthouse output directory was produced.');
+            process.exit(0);
+          }
+          const files = fs.readdirSync(dir)
+            .filter((name) => name.endsWith('.json') && name !== 'manifest.json')
+            .sort();
+          if (!files.length) {
+            console.log('No Lighthouse report JSON files were found.');
+            process.exit(0);
+          }
+          const percent = (value) => Number.isFinite(value) ? Math.round(value * 100) : null;
+          const metric = (lhr, id) => {
+            const value = lhr.audits?.[id]?.numericValue;
+            if (!Number.isFinite(value)) return null;
+            return id === 'cumulative-layout-shift'
+              ? Number(value.toFixed(3))
+              : Math.round(value);
+          };
+          const reports = files.map((name) => {
+            const lhr = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
+            return {
+              report: name,
+              performance: percent(lhr.categories?.performance?.score),
+              accessibility: percent(lhr.categories?.accessibility?.score),
+              bestPractices: percent(lhr.categories?.['best-practices']?.score),
+              fcpMs: metric(lhr, 'first-contentful-paint'),
+              lcpMs: metric(lhr, 'largest-contentful-paint'),
+              cls: metric(lhr, 'cumulative-layout-shift'),
+              tbtMs: metric(lhr, 'total-blocking-time'),
+              speedIndexMs: metric(lhr, 'speed-index'),
+            };
+          });
+          console.log('MAILSPECTRA Lighthouse ' + process.env.MAILSPECTRA_AUDIT_FORM_FACTOR + ' results');
+          for (const report of reports) console.log(JSON.stringify(report));
+          NODE
       - name: Upload Lighthouse reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -41,4 +85,5 @@ jobs:
           name: lighthouse-${{ matrix.form_factor }}
           path: frontend/.lighthouseci
           if-no-files-found: warn
+          include-hidden-files: true
           retention-days: 14
