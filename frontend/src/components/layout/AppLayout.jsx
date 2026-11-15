@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -72,6 +72,18 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const [systemMode, setSystemMode] = useState('UNKNOWN');
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    let savedMotion = 'smooth';
+    try {
+      savedMotion = localStorage.getItem('mailspectra-motion') === 'reduced'
+        ? 'reduced'
+        : 'smooth';
+    } catch {
+      // Default to smooth motion when browser storage is unavailable.
+    }
+    document.documentElement.dataset.motion = savedMotion;
+  }, []);
 
   useEffect(() => {
     let active = true;

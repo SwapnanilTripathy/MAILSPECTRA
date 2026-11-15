@@ -534,3 +534,342 @@ body::after {
 }
 :root[data-motion="reduced"] .aurora-orb-core::after{animation:none!important;opacity:0!important}
 :root[data-motion="reduced"] .aurora-orb-core>svg{transition:none!important}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   MAILSPECTRA LIVING MOTION  ·  fluid, layered, deliberately calm
+   Ambient motion + responsive micro-interactions + route reveals.
+   Every continuous animation is transform/opacity-only where possible.
+═══════════════════════════════════════════════════════════════ */
+:root{
+  --motion-fluid:cubic-bezier(.16,1,.3,1);
+  --motion-soft:cubic-bezier(.22,1,.36,1);
+  --motion-spring:cubic-bezier(.2,.85,.25,1);
+  --motion-slow:760ms;
+  --motion-medium:560ms;
+  --motion-fast:360ms;
+}
+
+@keyframes motion-page-enter{
+  0%{opacity:0;transform:translate3d(0,12px,0)}
+  68%{opacity:1}
+  100%{opacity:1;transform:translate3d(0,0,0)}
+}
+@keyframes motion-section-enter{
+  0%{opacity:0;transform:translate3d(0,15px,0) scale(.994)}
+  100%{opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@keyframes motion-status-breathe{
+  0%,100%{opacity:.76;transform:scale(.94)}
+  50%{opacity:1;transform:scale(1.08)}
+}
+@keyframes motion-soft-glow{
+  0%,100%{opacity:.34;transform:scale(.96)}
+  50%{opacity:.72;transform:scale(1.04)}
+}
+@keyframes motion-bar-grow{
+  0%{transform:scaleX(.02);opacity:.35}
+  72%{opacity:1}
+  100%{transform:scaleX(1);opacity:1}
+}
+@keyframes motion-number-arrive{
+  0%{opacity:0;transform:translate3d(0,7px,0);filter:blur(2px)}
+  100%{opacity:1;transform:translate3d(0,0,0);filter:blur(0)}
+}
+@keyframes motion-sheen{
+  0%,65%,100%{transform:translate3d(-150%,0,0) skewX(-18deg);opacity:0}
+  72%{opacity:.62}
+  88%{transform:translate3d(460%,0,0) skewX(-18deg);opacity:0}
+}
+@keyframes motion-icon-settle{
+  0%{transform:translate3d(0,2px,0) scale(.94)}
+  100%{transform:translate3d(0,0,0) scale(1)}
+}
+@keyframes motion-border-breathe{
+  0%,100%{border-color:color-mix(in srgb,var(--rd-gb) 88%,transparent)}
+  50%{border-color:color-mix(in srgb,var(--rd-sig) 35%,var(--rd-gb))}
+}
+
+/* Slow ambient colour: broad movement, no sharp hue flicker. */
+body::before{
+  animation-duration:84s;
+  animation-timing-function:cubic-bezier(.45,0,.55,1);
+  transform-origin:50% 50%;
+}
+body::after{
+  animation-duration:42s;
+  animation-timing-function:cubic-bezier(.45,0,.55,1);
+  will-change:transform,opacity;
+}
+.soc-shell{isolation:isolate}
+.soc-workspace{min-width:0}
+.soc-main{scroll-behavior:smooth;overscroll-behavior:contain}
+.soc-page-content>*{
+  animation:motion-page-enter 820ms var(--motion-fluid) both;
+}
+.soc-page-content>*:nth-child(2){animation-delay:35ms}
+.soc-page-content>*:nth-child(3){animation-delay:70ms}
+.soc-page-content>*:nth-child(4){animation-delay:105ms}
+.soc-page-content>*:nth-child(5){animation-delay:140ms}
+
+/* Stagger real dashboard and Settings sections, not every nested text node. */
+.dashboard>section,
+.dashboard>.overview-hero,
+.aurora-settings>section,
+.aurora-settings>.aurora-settings-header,
+.aurora-settings>.aurora-settings-footer{
+  animation:motion-section-enter 860ms var(--motion-fluid) both;
+}
+.dashboard>section:nth-of-type(1),
+.aurora-settings>section:nth-of-type(1){animation-delay:45ms}
+.dashboard>section:nth-of-type(2),
+.aurora-settings>section:nth-of-type(2){animation-delay:95ms}
+.dashboard>section:nth-of-type(3),
+.aurora-settings>section:nth-of-type(3){animation-delay:145ms}
+.dashboard>section:nth-of-type(4),
+.aurora-settings>section:nth-of-type(4){animation-delay:195ms}
+.dashboard>section:nth-of-type(5),
+.aurora-settings>section:nth-of-type(5){animation-delay:245ms}
+
+/* One shared, long-eased interaction language across controls. */
+button,a,[role="button"],input,select,textarea,
+.soc-nav-link,.soc-brand-mark,.soc-topbar-avatar,
+.metric-card,.insight-card,.recent-card,.soc-alert-feed,
+.aurora-metric,.aurora-panel,.aurora-provider,.aurora-preference,
+.aurora-refresh,.overview-hero,.soc-page-heading{
+  transition-duration:var(--motion-slow);
+  transition-timing-function:var(--motion-fluid);
+}
+button,a,[role="button"],.soc-nav-link{
+  -webkit-tap-highlight-color:transparent;
+}
+button:not(:disabled),a,[role="button"]{
+  will-change:auto;
+}
+button:active:not(:disabled),[role="button"]:active{
+  transform:translate3d(0,0,0) scale(.985);
+  transition-duration:150ms!important;
+}
+button:disabled{cursor:not-allowed}
+
+/* Sidebar: subtle icon lift and a travelling active edge. */
+.soc-nav-link{
+  position:relative;
+  overflow:hidden;
+  transition:
+    color var(--motion-slow) var(--motion-fluid),
+    background-color var(--motion-slow) var(--motion-fluid),
+    border-color var(--motion-slow) var(--motion-fluid),
+    box-shadow var(--motion-slow) var(--motion-fluid),
+    transform var(--motion-slow) var(--motion-fluid);
+}
+.soc-nav-link::after{
+  content:"";
+  position:absolute;
+  left:12px;
+  right:12px;
+  bottom:0;
+  height:1px;
+  border-radius:99px;
+  background:linear-gradient(90deg,transparent,var(--rd-sig),transparent);
+  opacity:0;
+  transform:scaleX(.35);
+  transition:opacity 620ms var(--motion-fluid),transform 820ms var(--motion-fluid);
+  pointer-events:none;
+}
+.soc-nav-link svg{
+  transform-origin:50% 50%;
+  transition:transform 720ms var(--motion-fluid),filter 720ms var(--motion-fluid),color 620ms var(--motion-fluid);
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .soc-nav-link:hover{transform:translate3d(3px,0,0)}
+  .soc-nav-link:hover::after,.soc-nav-link.is-active::after{opacity:.52;transform:scaleX(1)}
+  .soc-nav-link:hover svg{transform:translate3d(0,-1px,0) scale(1.09);filter:drop-shadow(0 0 7px color-mix(in srgb,var(--rd-sig) 38%,transparent))}
+  .soc-nav-link.is-active svg{filter:drop-shadow(0 0 7px color-mix(in srgb,var(--rd-sig) 30%,transparent))}
+}
+.soc-nav-indicator,.soc-context-led,.soc-mode-dot,.soc-status-light,
+.aurora-live-label i,.aurora-spark,.aurora-pill--success i{
+  animation:motion-status-breathe 4.2s cubic-bezier(.45,0,.55,1) infinite;
+}
+.soc-nav-indicator{animation-duration:3.8s}
+.soc-mode-dot.is-unknown,.soc-status-light.is-unknown,
+.soc-status-light.is-offline{animation:none;opacity:.62}
+.aurora-pill--warning i{animation:motion-status-breathe 5.2s ease-in-out infinite}
+.aurora-pill--danger i{animation:motion-status-breathe 3.4s ease-in-out infinite}
+
+/* Wordmark, avatar and icons respond softly instead of snapping. */
+.soc-brand-mark,.soc-topbar-avatar,.soc-user-card .profile-avatar{
+  transition:transform 780ms var(--motion-fluid),box-shadow 780ms var(--motion-fluid),border-color 650ms var(--motion-fluid),filter 780ms var(--motion-fluid);
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .soc-brand-mark:hover{transform:translate3d(0,-2px,0) scale(1.035);filter:saturate(1.12)}
+  .soc-topbar-avatar:hover,.soc-user-card .profile-avatar:hover{transform:translate3d(0,-1px,0) scale(1.06)}
+  .soc-topbar button:hover svg,.soc-user-card button:hover svg{transform:scale(1.1) rotate(-3deg)}
+}
+.soc-topbar button svg,.soc-user-card button svg{
+  transition:transform 650ms var(--motion-fluid),filter 650ms var(--motion-fluid);
+}
+
+/* Buttons: a slow reflected highlight, soft lift and decisive press. */
+.soc-new-case,.login-submit,.soc-page-content .primary-action,
+.soc-page-content button[class*="bg-cyan-700"]{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  transform:translateZ(0);
+  transition:
+    transform 680ms var(--motion-fluid),
+    box-shadow 760ms var(--motion-fluid),
+    filter 760ms var(--motion-fluid),
+    background-position 1250ms var(--motion-fluid),
+    border-color 760ms var(--motion-fluid)!important;
+}
+.soc-new-case::after,.login-submit::after,
+.soc-page-content .primary-action::after{
+  content:"";
+  position:absolute;
+  z-index:0;
+  top:-35%;
+  left:0;
+  width:22%;
+  height:170%;
+  opacity:0;
+  transform:translate3d(-150%,0,0) skewX(-18deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
+  pointer-events:none;
+}
+.soc-new-case:hover::after,.login-submit:hover::after,
+.soc-page-content .primary-action:hover::after{
+  animation:motion-sheen 1.35s var(--motion-fluid) 1;
+}
+.soc-new-case>* ,.login-submit>* ,.soc-page-content .primary-action>*{
+  position:relative;
+  z-index:1;
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .soc-new-case:hover,.login-submit:hover,.soc-page-content .primary-action:hover{
+    transform:translate3d(0,-2px,0) scale(1.012);
+  }
+  .soc-page-content .secondary-action:hover,
+  .aurora-refresh:hover{
+    transform:translate3d(0,-2px,0);
+  }
+}
+
+/* Panels and cards: calm at rest, tactile on pointer hover. */
+.metric-card,.insight-card,.recent-card,.soc-alert-feed,
+.soc-page-content .rounded-xl,.soc-page-content .rounded-lg,
+.aurora-metric,.aurora-panel,.aurora-provider,.aurora-health-card{
+  transition:
+    transform 820ms var(--motion-fluid),
+    border-color 820ms var(--motion-fluid),
+    box-shadow 900ms var(--motion-fluid),
+    background-color 820ms var(--motion-fluid),
+    filter 820ms var(--motion-fluid);
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .metric-card:hover,.insight-card:hover,.recent-card:hover,.soc-alert-feed:hover,
+  .soc-page-content .rounded-xl:hover,.soc-page-content .rounded-lg:hover,
+  .aurora-metric:hover,.aurora-panel:hover,.aurora-provider:hover{
+    transform:translate3d(0,-3px,0) scale(1.003);
+    filter:saturate(1.035);
+    box-shadow:0 20px 52px rgba(76,83,190,.14);
+  }
+  .aurora-health-card:hover{transform:translate3d(0,-2px,0)}
+  .aurora-provider:hover .aurora-provider-icon,
+  .aurora-metric:hover .aurora-metric-icon,
+  .aurora-panel:hover .aurora-panel-icon{
+    transform:translate3d(0,-1px,0) scale(1.055);
+  }
+}
+.aurora-provider-icon,.aurora-metric-icon,.aurora-panel-icon,
+.aurora-preference-icon,.aurora-orb-core>svg{
+  transition:transform 760ms var(--motion-fluid),filter 760ms var(--motion-fluid),box-shadow 760ms var(--motion-fluid);
+}
+
+/* Charts and tabular information: animate into place once, never jitter. */
+.category-legend-track span,.risk-breakdown-track span{
+  transform-origin:left center;
+  animation:motion-bar-grow 1050ms var(--motion-fluid) both;
+  transition:width 1100ms var(--motion-fluid),filter 700ms var(--motion-fluid);
+}
+.category-legend-item,.risk-breakdown-row{
+  animation:motion-page-enter 760ms var(--motion-fluid) both;
+}
+.category-legend-item:nth-child(2),.risk-breakdown-row:nth-child(2){animation-delay:45ms}
+.category-legend-item:nth-child(3),.risk-breakdown-row:nth-child(3){animation-delay:90ms}
+.category-legend-item:nth-child(4),.risk-breakdown-row:nth-child(4){animation-delay:135ms}
+.category-legend-item:nth-child(5),.risk-breakdown-row:nth-child(5){animation-delay:180ms}
+.category-legend-item:nth-child(6),.risk-breakdown-row:nth-child(6){animation-delay:225ms}
+.recent-table tbody tr{
+  transition:background-color 650ms var(--motion-fluid),border-color 650ms var(--motion-fluid);
+}
+.recent-table tbody tr:nth-child(1){animation:motion-page-enter 720ms var(--motion-fluid) 35ms both}
+.recent-table tbody tr:nth-child(2){animation:motion-page-enter 720ms var(--motion-fluid) 75ms both}
+.recent-table tbody tr:nth-child(3){animation:motion-page-enter 720ms var(--motion-fluid) 115ms both}
+.recent-table tbody tr:nth-child(4){animation:motion-page-enter 720ms var(--motion-fluid) 155ms both}
+.recent-table tbody tr:nth-child(5){animation:motion-page-enter 720ms var(--motion-fluid) 195ms both}
+.recent-table tbody tr:nth-child(6){animation:motion-page-enter 720ms var(--motion-fluid) 235ms both}
+.recharts-pie-sector,.recharts-bar-rectangle path{
+  transition:filter 700ms var(--motion-fluid),opacity 700ms var(--motion-fluid);
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .recharts-pie-sector:hover,.recharts-bar-rectangle:hover path{filter:brightness(1.12) drop-shadow(0 0 5px rgba(126,151,255,.25))}
+}
+
+/* Form controls and toggles: smooth focus, selection and state changes. */
+input,select,textarea{
+  transition:
+    border-color 650ms var(--motion-fluid),
+    background-color 650ms var(--motion-fluid),
+    box-shadow 760ms var(--motion-fluid),
+    color 650ms var(--motion-fluid);
+}
+input:focus,select:focus,textarea:focus{
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--rd-sig) 13%,transparent),0 8px 24px rgba(87,92,220,.08);
+}
+.aurora-preference{
+  transition:
+    transform 720ms var(--motion-fluid),
+    border-color 720ms var(--motion-fluid),
+    background-color 720ms var(--motion-fluid),
+    box-shadow 820ms var(--motion-fluid),
+    color 650ms var(--motion-fluid);
+}
+.aurora-preference-check{transition:background-color 520ms var(--motion-fluid),border-color 520ms var(--motion-fluid),transform 520ms var(--motion-fluid)}
+.aurora-preference.is-active .aurora-preference-check{animation:motion-icon-settle 520ms var(--motion-fluid) both}
+
+/* Keep the ambient hero and Settings orbits alive but unhurried. */
+.hero-orbit-outer{animation-duration:38s}
+.hero-orbit-inner{animation-duration:29s}
+.hero-shield{animation-duration:7.2s}
+.aurora-orbit.orbit-a{animation-duration:34s}
+.aurora-orbit.orbit-b{animation-duration:29s}
+.aurora-orb-core{animation-duration:7s}
+.aurora-spark{animation-duration:3.8s}
+.soc-page-heading{transition:transform 850ms var(--motion-fluid),box-shadow 900ms var(--motion-fluid),border-color 800ms var(--motion-fluid)}
+.soc-page-heading:hover{transform:translate3d(0,-1px,0)}
+:root[data-theme] .soc-page-title-row h1 em,
+:root[data-theme] .soc-main .section-heading h2 em,
+:root[data-theme] .aurora-settings-header h2 em{
+  animation-duration:24s;
+  animation-timing-function:cubic-bezier(.45,0,.55,1);
+}
+
+/* Respect the in-app preference globally, even before Settings is opened. */
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after{
+  animation:none!important;
+  scroll-behavior:auto!important;
+  transition:none!important;
+}
+@media(prefers-reduced-motion:reduce){
+  *,
+  *::before,
+  *::after{
+    animation:none!important;
+    scroll-behavior:auto!important;
+    transition:none!important;
+  }
+}
