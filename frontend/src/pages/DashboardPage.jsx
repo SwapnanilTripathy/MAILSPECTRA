@@ -8,6 +8,7 @@ import {
   FolderGit2,
   Network,
   UploadCloud,
+  FileText,
   ArrowRight,
   Clock,
   Zap,
@@ -152,7 +153,7 @@ export default function DashboardPage() {
             <span className="eyebrow-line" /> EMAIL SECURITY WORKSPACE
           </div>
           <h1>
-            Security overview<span className="heading-period">.</span>
+            Security <em className="hero-title-accent">overview</em><span className="heading-period">.</span>
           </h1>
           <p>
             Everything you need to investigate suspicious emails and understand
@@ -180,6 +181,13 @@ export default function DashboardPage() {
             >
               Open workspace <ArrowRight size={16} aria-hidden="true" />
             </button>
+          </div>
+          <div className="hero-supported-files" aria-label="Supported email formats">
+            <FileText size={13} aria-hidden="true" />
+            <span>SUPPORTED FORMATS</span>
+            <i>.EML</i>
+            <i>.MSG</i>
+            <i>.TXT</i>
           </div>
         </div>
         <div className="hero-visual" aria-hidden="true">
