@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Inbox, UploadCloud } from 'lucide-react';
 import api from '../api/client';
-import SeverityBadge from '../components/common/SeverityBadge';
 import AccentTitle from '../components/common/AccentTitle.jsx';
 
 const CATEGORY_COLORS = ['#ff5b78', '#ed70c4', '#ffb454', '#bd83ec', '#53d9a8', '#69c9ff'];
@@ -16,7 +15,7 @@ const RISK_COLORS = {
 };
 
 const formatLabel = (value = 'UNKNOWN') =>
-  String(value).replace(/_/g, ' ').toLowerCase().replace(/\\b\\w/g, (letter) => letter.toUpperCase());
+  String(value).replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 const categoryColor = (name, index) => {
   const key = String(name || '').toUpperCase();
