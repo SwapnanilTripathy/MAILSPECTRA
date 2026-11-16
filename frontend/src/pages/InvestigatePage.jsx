@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   UploadCloud,
   FileCode,
@@ -55,6 +55,7 @@ const preloadInvestigationTab = (tabId) => {
 
 export default function InvestigatePage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [analysis, setAnalysis] = useState(
     location.state?.initialAnalysis || null,
   );
@@ -68,10 +69,23 @@ export default function InvestigatePage() {
   const [alertMessage, setAlertMessage] = useState(null);
 
   useEffect(() => {
+    if (location.state?.startNewInvestigation) {
+      setAnalysis(null);
+      setActiveTab('summary');
+      setLoading(false);
+      setRawText('');
+      setInputMode('file');
+      setIsSaving(false);
+      setIsExporting(false);
+      setAlertMessage(null);
+      navigate('/investigate', { replace: true, state: null });
+      return;
+    }
+
     if (location.state?.initialAnalysis) {
       setAnalysis(location.state.initialAnalysis);
     }
-  }, [location.state]);
+  }, [location.key, location.state, navigate]);
 
   const handleFileUpload = async (file) => {
     if (!file) return;
