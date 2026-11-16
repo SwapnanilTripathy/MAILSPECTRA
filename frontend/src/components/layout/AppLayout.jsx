@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
@@ -112,6 +112,40 @@ export default function AppLayout() {
     return () => { active = false; };
   }, []);
 
+  const handleNewInvestigation = useCallback(() => {
+    setMobileOpen(false);
+    navigate('/investigate', { state: { startNewInvestigation: true } });
+  }, [navigate]);
+
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      const target = event.target;
+      const isEditableTarget = target instanceof HTMLElement && (
+        target.isContentEditable ||
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+      );
+
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.repeat ||
+        event.key.toLowerCase() !== 'n' ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        isEditableTarget
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      handleNewInvestigation();
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [handleNewInvestigation]);
+
   useEffect(() => setMobileOpen(false), [location.pathname]);
 
   const currentPage = location.pathname.startsWith('/cases/')
@@ -208,10 +242,16 @@ export default function AppLayout() {
         </div>
 
         <div className="soc-sidebar-bottom">
-          <button onClick={() => navigate('/investigate')} className="soc-new-case">
+          <button
+            type="button"
+            onClick={handleNewInvestigation}
+            className="soc-new-case"
+            aria-keyshortcuts="N"
+            title="Start a new investigation (N)"
+          >
             <Plus size={16} aria-hidden="true" />
             <span>New investigation</span>
-            <span className="soc-shortcut">N</span>
+            <span className="soc-shortcut" aria-hidden="true">N</span>
           </button>
           <div className="soc-mode-card">
             <div className="soc-mode-icon"><Radio size={15} aria-hidden="true" /></div>
